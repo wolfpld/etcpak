@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <future>
+#include <vector>
 
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
@@ -61,13 +63,19 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
     const uint8* src = bitmap->Data();
     uint64* dst = m_data;
 
-    do
+    std::vector<std::future<void>> vec;
+    uint32 step = cnt / 16;
+    for( uint32 i=0; i<cnt; i+=step )
     {
-        ProcessBlocks( src, dst, 1 );
-        src += 4*4*3;
-        dst++;
+        vec.push_back( std::async( std::launch::async, [src,dst,step,this]{ ProcessBlocks( src, dst, step ); } ) );
+
+        src += 4*4*3 * step;
+        dst += step;
     }
-    while( --cnt );
+    for( auto& f : vec )
+    {
+        f.wait();
+    }
 }
 
 BlockData::~BlockData()
