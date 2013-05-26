@@ -17,8 +17,11 @@ public:
     BitmapPtr Decode();
 
 private:
+    void ProcessBlocks( const uint8* src, uint64* dst, uint num );
+
     uint64* m_data;
     v2i m_size;
+    bool m_perc;
 };
 
 typedef std::shared_ptr<BlockData> BlockDataPtr;
