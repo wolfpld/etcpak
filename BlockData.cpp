@@ -6,13 +6,26 @@
 static v3b Average( const uint8* data )
 {
     uint32 r = 0, g = 0, b = 0;
-    for( int i=0; i<16; i++ )
+    for( int i=0; i<8; i++ )
     {
         b += *data++;
         g += *data++;
         r += *data++;
     }
-    return v3b( r / 16, g / 16, b / 16 );
+    return v3b( r / 8, g / 8, b / 8 );
+}
+
+static uint32 CalcError( const uint8* data, v3b average )
+{
+    uint32 err = 0;
+    for( int i=0; i<8; i++ )
+    {
+        uint32 b = *data++;
+        uint32 g = *data++;
+        uint32 r = *data++;
+        err += sq( r - average.x ) + sq( g - average.y ) + sq( b - average.z );
+    }
+    return err;
 }
 
 BlockData::BlockData( const BlockBitmapPtr& bitmap )
@@ -31,17 +44,41 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap )
     {
         uint64 d = 0;
 
-        v3b avg = Average( src );
-        uint32 r = avg.x & 0xF0;
-        uint32 g = avg.y & 0xF0;
-        uint32 b = avg.z & 0xF0;
+        uint8 b[4][24];
 
-        d |= r << 4;
-        d |= r << 8;
-        d |= g << 12;
-        d |= g << 16;
-        d |= b << 20;
-        d |= b << 24;
+        memcpy( b[1], src, 24 );
+        memcpy( b[0], src+24, 24 );
+
+        for( int i=0; i<4; i++ )
+        {
+            memcpy( b[3]+i*6, src+i*12, 6 );
+            memcpy( b[2]+i*6, src+i*12+6, 6 );
+        }
+
+        v3b a[4];
+        uint32 err[2] = { 0, 0 };
+        for( int i=0; i<4; i++ )
+        {
+            a[i] = Average( b[i] );
+            err[i/2] += CalcError( b[i], a[i] );
+        }
+
+        int base = 0;
+        if( err[0] < err[1] )
+        {
+            d |= 0x1;
+        }
+        else
+        {
+            base = 2;
+        }
+
+        d |= ( a[base+0].x & 0xF0 ) << 4;
+        d |= ( a[base+1].x & 0xF0 ) << 8;
+        d |= ( a[base+0].y & 0xF0 ) << 12;
+        d |= ( a[base+1].y & 0xF0 ) << 16;
+        d |= ( a[base+0].z & 0xF0 ) << 20;
+        d |= ( a[base+1].z & 0xF0 ) << 24;
 
         src += 4*4*3;
         *dst++ = d;

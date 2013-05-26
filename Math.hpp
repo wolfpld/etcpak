@@ -74,4 +74,10 @@ inline uint8 clampu8( int32 val )
     return std::min( std::max( 0, val ), 255 );
 }
 
+template<class T>
+inline T sq( T val )
+{
+    return val * val;
+}
+
 #endif
