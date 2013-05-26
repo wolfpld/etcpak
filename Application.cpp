@@ -32,6 +32,7 @@ int main( int argc, char** argv )
     bb.reset();
 
     auto out = bd->Decode();
+    out->Write( "out.png" );
 
     return 0;
 }

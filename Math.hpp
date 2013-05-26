@@ -69,4 +69,9 @@ inline T SmoothStep( T x )
     return x*x*(3-2*x);
 }
 
+inline uint8 clampu8( int32 val )
+{
+    return std::min( std::max( 0, val ), 255 );
+}
+
 #endif
