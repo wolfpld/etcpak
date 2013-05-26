@@ -2,6 +2,7 @@
 #include <memory>
 
 #include "Bitmap.hpp"
+#include "BlockBitmap.hpp"
 #include "Debug.hpp"
 
 struct DebugCallback_t : public DebugLog::Callback
@@ -22,7 +23,9 @@ int main( int argc, char** argv )
         return 1;
     }
 
-    Bitmap b( argv[1] );
+    auto bmp = std::make_shared<Bitmap>( argv[1] );
+    auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
+    bmp.reset();
 
     return 0;
 }

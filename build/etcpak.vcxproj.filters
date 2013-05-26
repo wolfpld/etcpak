@@ -93,6 +93,7 @@
     <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\Application.cpp" />
+    <ClCompile Include="..\BlockBitmap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -154,5 +155,6 @@
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\Debug.hpp" />
+    <ClInclude Include="..\BlockBitmap.hpp" />
   </ItemGroup>
 </Project>
