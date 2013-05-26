@@ -27,6 +27,19 @@ static float CalcError( Color::Lab* c, v3b average )
     return err;
 }
 
+static float CalcError( const uint8* data, v3b average )
+{
+    float err = 0;
+    for( int i=0; i<8; i++ )
+    {
+        uint32 b = *data++;
+        uint32 g = *data++;
+        uint32 r = *data++;
+        err += sq( r - average.x ) + sq( g - average.y ) + sq( b - average.z );
+    }
+    return err;
+}
+
 static inline Color::Lab ToLab( const uint8* data )
 {
     uint32 b = *data++;
@@ -35,7 +48,7 @@ static inline Color::Lab ToLab( const uint8* data )
     return Color::Lab( v3b( r, g, b ) );
 }
 
-BlockData::BlockData( const BlockBitmapPtr& bitmap )
+BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
     : m_size( bitmap->Size() )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
@@ -62,33 +75,48 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap )
             memcpy( b[2]+i*6, src+i*12+6, 6 );
         }
 
-        Color::Lab lab[4][8];
-        {
-            Color::Lab tmp[16];
-            for( int i=0; i<16; i++ )
-            {
-                tmp[i] = ToLab( src + i*3 );
-            }
-            for( int i=0; i<8; i++ )
-            {
-                lab[1][i] = tmp[i];
-                lab[0][i] = tmp[i+8];
-            }
-            for( int i=0; i<4; i++ )
-            {
-                lab[3][i*2] = tmp[i*4];
-                lab[3][i*2+1] = tmp[i*4+1];
-                lab[2][i*2] = tmp[i*4+2];
-                lab[2][i*2+1] = tmp[i*4+3];
-            }
-        }
-
         v3b a[4];
-        float err[2] = { 0, 0 };
         for( int i=0; i<4; i++ )
         {
             a[i] = Average( b[i] );
-            err[i/2] += CalcError( lab[i], a[i] );
+        }
+
+        float err[2] = { 0, 0 };
+
+        if( perc )
+        {
+            Color::Lab lab[4][8];
+            {
+                Color::Lab tmp[16];
+                for( int i=0; i<16; i++ )
+                {
+                    tmp[i] = ToLab( src + i*3 );
+                }
+                for( int i=0; i<8; i++ )
+                {
+                    lab[1][i] = tmp[i];
+                    lab[0][i] = tmp[i+8];
+                }
+                for( int i=0; i<4; i++ )
+                {
+                    lab[3][i*2] = tmp[i*4];
+                    lab[3][i*2+1] = tmp[i*4+1];
+                    lab[2][i*2] = tmp[i*4+2];
+                    lab[2][i*2+1] = tmp[i*4+3];
+                }
+            }
+
+            for( int i=0; i<4; i++ )
+            {
+                err[i/2] += CalcError( lab[i], a[i] );
+            }
+        }
+        else
+        {
+            for( int i=0; i<4; i++ )
+            {
+                err[i/2] += CalcError( b[i], a[i] );
+            }
         }
 
         int base = 0;

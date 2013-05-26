@@ -11,7 +11,7 @@
 class BlockData
 {
 public:
-    BlockData( const BlockBitmapPtr& bitmap );
+    BlockData( const BlockBitmapPtr& bitmap, bool perc );
     ~BlockData();
 
     BitmapPtr Decode();

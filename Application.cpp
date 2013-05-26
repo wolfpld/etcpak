@@ -28,7 +28,7 @@ int main( int argc, char** argv )
     auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
     bmp.reset();
 
-    auto bd = std::make_shared<BlockData>( bb );
+    auto bd = std::make_shared<BlockData>( bb, false );
     bb.reset();
 
     auto out = bd->Decode();
