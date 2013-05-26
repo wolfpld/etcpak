@@ -10,6 +10,7 @@ class Bitmap
 {
 public:
     Bitmap( const char* fn );
+    Bitmap( const v2i& size );
     ~Bitmap();
 
     void Write( const char* fn );

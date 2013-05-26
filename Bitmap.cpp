@@ -82,6 +82,12 @@ Bitmap::Bitmap( const char* fn )
     fclose( f );
 }
 
+Bitmap::Bitmap( const v2i& size )
+    : m_data( new uint32[size.x*size.y] )
+    , m_size( size )
+{
+}
+
 Bitmap::~Bitmap()
 {
     delete[] m_data;
