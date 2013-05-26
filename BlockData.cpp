@@ -324,6 +324,7 @@ void BlockData::ProcessBlocks( const uint8* src, uint64* dst, uint num )
             for( int i=0; i<4; i++ )
             {
                 err[i/2] += CalcError( lab[i], a[i] );
+                err[2+i/2] += CalcError( lab[i], a[i+4] );
             }
         }
         else
