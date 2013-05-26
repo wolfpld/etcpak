@@ -95,6 +95,7 @@
     <ClCompile Include="..\Application.cpp" />
     <ClCompile Include="..\BlockBitmap.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
+    <ClCompile Include="..\ColorSpace.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -158,5 +159,6 @@
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\BlockBitmap.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
+    <ClInclude Include="..\ColorSpace.hpp" />
   </ItemGroup>
 </Project>

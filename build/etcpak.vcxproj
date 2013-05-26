@@ -80,6 +80,7 @@
     <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\BlockBitmap.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
+    <ClCompile Include="..\ColorSpace.cpp" />
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\libpng\png.c" />
     <ClCompile Include="..\libpng\pngerror.c" />
@@ -113,6 +114,7 @@
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\BlockBitmap.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
+    <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
