@@ -17,7 +17,7 @@ public:
     BitmapPtr Decode();
 
 private:
-    uint8* m_data;
+    uint64* m_data;
     v2i m_size;
 };
 

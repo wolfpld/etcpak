@@ -1,9 +1,52 @@
+#include <assert.h>
+
 #include "BlockData.hpp"
+#include "Debug.hpp"
+
+static v3b Average( const uint8* data )
+{
+    uint32 r = 0, g = 0, b = 0;
+    for( int i=0; i<16; i++ )
+    {
+        b += *data++;
+        g += *data++;
+        r += *data++;
+    }
+    return v3b( r / 16, g / 16, b / 16 );
+}
 
 BlockData::BlockData( const BlockBitmapPtr& bitmap )
-    : m_data( new uint8[bitmap->Size().x * bitmap->Size().y / 2] )
-    , m_size( bitmap->Size() )
+    : m_size( bitmap->Size() )
 {
+    assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
+
+    uint32 cnt = m_size.x * m_size.y / 16;
+    DBGPRINT( cnt << " blocks" );
+    m_data = new uint64[cnt];
+
+    const uint8* src = bitmap->Data();
+    uint64* dst = m_data;
+
+    do
+    {
+        uint64 d = 0;
+
+        v3b avg = Average( src );
+        uint32 r = avg.x & 0xF0;
+        uint32 g = avg.y & 0xF0;
+        uint32 b = avg.z & 0xF0;
+
+        d |= r << 4;
+        d |= r << 8;
+        d |= g << 12;
+        d |= g << 16;
+        d |= b << 20;
+        d |= b << 24;
+
+        src += 4*4*3;
+        *dst++ = d;
+    }
+    while( --cnt );
 }
 
 BlockData::~BlockData()
