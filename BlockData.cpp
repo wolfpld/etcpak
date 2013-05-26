@@ -75,16 +75,31 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
             memcpy( b[2]+i*6, src+i*12+6, 6 );
         }
 
-        v3b a[4];
+        v3b a[8];
         for( int i=0; i<4; i++ )
         {
             a[i] = Average( b[i] );
-            a[i].x &= 0xF0;
-            a[i].y &= 0xF0;
-            a[i].z &= 0xF0;
+        }
+        for( int i=0; i<2; i++ )
+        {
+            for( int j=0; j<3; j++ )
+            {
+                int32 c1 = a[i*2][j] >> 3;
+                int32 c2 = c1 - ( a[i*2+1][j] >> 3 );
+                c2 = std::min( std::max( -4, c2 ), 3 );
+                a[4+i*2][j] = c1 << 3;
+                a[5+i*2][j] = ( c1 + c2 ) << 3;
+            }
+        }
+        for( int i=0; i<4; i++ )
+        {
+            for( int j=0; j<3; j++ )
+            {
+                a[i][j] &= 0xF0;
+            }
         }
 
-        float err[2] = { 0, 0 };
+        float err[4] = { 0, 0, 0, 0 };
 
         if( perc )
         {
@@ -119,25 +134,46 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
             for( int i=0; i<4; i++ )
             {
                 err[i/2] += CalcError( b[i], a[i] );
+                err[2+i/2] += CalcError( b[i], a[i+4] );
             }
         }
 
-        int base = 0;
-        if( err[0] < err[1] )
+        int idx = 0;
+        for( int i=1; i<4; i++ )
         {
-            d |= 0x1;
+            if( err[i] < err[idx] )
+            {
+                idx = i;
+            }
+        }
+
+        d |= idx ^ 0x1;
+        int base = ( idx & 0x1 ) != 0 ? 2 : 0;
+
+        if( ( idx & 0x2 ) == 0 )
+        {
+            d |= a[base+0].x << 4;
+            d |= a[base+1].x << 8;
+            d |= a[base+0].y << 12;
+            d |= a[base+1].y << 16;
+            d |= a[base+0].z << 20;
+            d |= a[base+1].z << 24;
         }
         else
         {
-            base = 2;
+            d |= a[base+4].x << 8;
+            d |= a[base+4].y << 16;
+            d |= a[base+4].z << 24;
+            int8 c = ( a[base+5].x - a[base+4].x ) >> 3;
+            c &= ~0xF8;
+            d |= ((uint32)c) << 8;
+            c = ( a[base+5].y - a[base+4].y ) >> 3;
+            c &= ~0xF8;
+            d |= ((uint32)c) << 16;
+            c = ( a[base+5].z - a[base+4].z ) >> 3;
+            c &= ~0xF8;
+            d |= ((uint32)c) << 24;
         }
-
-        d |= ( a[base+0].x & 0xF0 ) << 4;
-        d |= ( a[base+1].x & 0xF0 ) << 8;
-        d |= ( a[base+0].y & 0xF0 ) << 12;
-        d |= ( a[base+1].y & 0xF0 ) << 16;
-        d |= ( a[base+0].z & 0xF0 ) << 20;
-        d |= ( a[base+1].z & 0xF0 ) << 24;
 
         src += 4*4*3;
         *dst++ = d;
