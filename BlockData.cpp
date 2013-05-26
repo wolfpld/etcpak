@@ -79,6 +79,9 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
         for( int i=0; i<4; i++ )
         {
             a[i] = Average( b[i] );
+            a[i].x &= 0xF0;
+            a[i].y &= 0xF0;
+            a[i].z &= 0xF0;
         }
 
         float err[2] = { 0, 0 };
