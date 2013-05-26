@@ -152,27 +152,21 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
 
         if( ( idx & 0x2 ) == 0 )
         {
-            d |= a[base+0].x << 4;
-            d |= a[base+1].x << 8;
-            d |= a[base+0].y << 12;
-            d |= a[base+1].y << 16;
-            d |= a[base+0].z << 20;
-            d |= a[base+1].z << 24;
+            for( int i=0; i<3; i++ )
+            {
+                d |= a[base+0][i] << ( i*8 + 4 );
+                d |= a[base+1][i] << ( i*8 + 8 );
+            }
         }
         else
         {
-            d |= a[base+4].x << 8;
-            d |= a[base+4].y << 16;
-            d |= a[base+4].z << 24;
-            int8 c = ( a[base+5].x - a[base+4].x ) >> 3;
-            c &= ~0xF8;
-            d |= ((uint32)c) << 8;
-            c = ( a[base+5].y - a[base+4].y ) >> 3;
-            c &= ~0xF8;
-            d |= ((uint32)c) << 16;
-            c = ( a[base+5].z - a[base+4].z ) >> 3;
-            c &= ~0xF8;
-            d |= ((uint32)c) << 24;
+            for( int i=0; i<3; i++ )
+            {
+                d |= a[base+4][i] << ( i*8 + 8 );
+                int8 c = ( a[base+5][i] - a[base+4][i] ) >> 3;
+                c &= ~0xF8;
+                d |= ((uint32)c) << ( i*8 + 8 );
+            }
         }
 
         src += 4*4*3;
