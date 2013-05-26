@@ -15,6 +15,7 @@ public:
 
     void Write( const char* fn );
 
+    uint32* Data() { return m_data; }
     const uint32* Data() const { return m_data; }
     const v2i& Size() const { return m_size; }
 
