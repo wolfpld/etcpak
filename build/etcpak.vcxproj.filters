@@ -90,6 +90,7 @@
     <ClCompile Include="..\libpng\pngwutil.c">
       <Filter>libpng</Filter>
     </ClCompile>
+    <ClCompile Include="..\Debug.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -149,5 +150,6 @@
     <ClInclude Include="..\Math.hpp" />
     <ClInclude Include="..\Types.hpp" />
     <ClInclude Include="..\Vector.hpp" />
+    <ClInclude Include="..\Debug.hpp" />
   </ItemGroup>
 </Project>
