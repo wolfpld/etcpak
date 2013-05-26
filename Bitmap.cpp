@@ -86,3 +86,30 @@ Bitmap::~Bitmap()
 {
     delete[] m_data;
 }
+
+void Bitmap::Write( const char* fn )
+{
+    FILE* f = fopen( fn, "wb" );
+    assert( f );
+
+    png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
+    png_infop info_ptr = png_create_info_struct( png_ptr );
+    setjmp( png_jmpbuf( png_ptr ) );
+    png_init_io( png_ptr, f );
+
+    png_set_IHDR( png_ptr, info_ptr, m_size.x, m_size.y, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE );
+
+    png_write_info( png_ptr, info_ptr );
+
+    uint32* ptr = m_data;
+    for( int i=0; i<m_size.y; i++ )
+    {
+        png_write_rows( png_ptr, (png_bytepp)(&ptr), 1 );
+        ptr += m_size.x;
+    }
+
+    png_write_end( png_ptr, info_ptr );
+    png_destroy_write_struct( &png_ptr, &info_ptr );
+
+    fclose( f );
+}

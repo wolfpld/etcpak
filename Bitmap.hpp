@@ -12,6 +12,8 @@ public:
     Bitmap( const char* fn );
     ~Bitmap();
 
+    void Write( const char* fn );
+
     const uint32* Data() const { return m_data; }
     const v2i& Size() const { return m_size; }
 
