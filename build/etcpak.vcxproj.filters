@@ -91,6 +91,7 @@
       <Filter>libpng</Filter>
     </ClCompile>
     <ClCompile Include="..\Debug.cpp" />
+    <ClCompile Include="..\Application.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
