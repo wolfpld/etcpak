@@ -146,5 +146,8 @@
     <ClInclude Include="..\libpng\pngstruct.h">
       <Filter>libpng</Filter>
     </ClInclude>
+    <ClInclude Include="..\Math.hpp" />
+    <ClInclude Include="..\Types.hpp" />
+    <ClInclude Include="..\Vector.hpp" />
   </ItemGroup>
 </Project>
