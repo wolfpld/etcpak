@@ -3,6 +3,7 @@
 
 #include "Bitmap.hpp"
 #include "BlockBitmap.hpp"
+#include "BlockData.hpp"
 #include "Debug.hpp"
 
 struct DebugCallback_t : public DebugLog::Callback
@@ -26,6 +27,11 @@ int main( int argc, char** argv )
     auto bmp = std::make_shared<Bitmap>( argv[1] );
     auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
     bmp.reset();
+
+    auto bd = std::make_shared<BlockData>( bb );
+    bb.reset();
+
+    auto out = bd->Decode();
 
     return 0;
 }

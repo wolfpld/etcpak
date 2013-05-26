@@ -79,6 +79,7 @@
     <ClCompile Include="..\Application.cpp" />
     <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\BlockBitmap.cpp" />
+    <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\libpng\png.c" />
     <ClCompile Include="..\libpng\pngerror.c" />
@@ -111,6 +112,7 @@
   <ItemGroup>
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\BlockBitmap.hpp" />
+    <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
