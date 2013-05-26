@@ -77,6 +77,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Application.cpp" />
+    <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\libpng\png.c" />
     <ClCompile Include="..\libpng\pngerror.c" />
@@ -107,6 +108,7 @@
     <ClCompile Include="..\zlib\zutil.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
