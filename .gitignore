@@ -1,0 +1,5 @@
+build/Debug
+build/Release
+build/*sdf
+build/*.suo
+build/*.vcxproj.user
