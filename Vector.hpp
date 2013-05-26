@@ -88,6 +88,9 @@ struct Vector3
     bool operator==( const Vector3<T>& rhs ) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
     bool operator!=( const Vector2<T>& rhs ) const { return !( *this == rhs ); }
 
+    T& operator[]( uint idx ) { assert( idx < 3 ); return ((T*)this)[idx]; }
+    const T& operator[]( uint idx ) const { assert( idx < 3 ); return ((T*)this)[idx]; }
+
     Vector3<T> operator+=( const Vector3<T>& rhs )
     {
         x += rhs.x;
