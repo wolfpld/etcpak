@@ -147,12 +147,4 @@
       <Filter>libpng</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <Object Include="..\zlib\inffas32.obj">
-      <Filter>zlib</Filter>
-    </Object>
-    <Object Include="..\zlib\match686.obj">
-      <Filter>zlib</Filter>
-    </Object>
-  </ItemGroup>
 </Project>
