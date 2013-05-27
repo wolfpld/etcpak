@@ -443,15 +443,15 @@ static uint64 ProcessRGB( const uint8* src )
     {
         id[i] = (uint8)GetBufId( i, idx );
     }
-    for( int t=0; t<8; t++ )
+    const uint8* data = src;
+    for( size_t i=0; i<16; i++ )
     {
-        const uint8* data = src;
-        for( size_t i=0; i<16; i++ )
-        {
-            uint8 b = *data++;
-            uint8 g = *data++;
-            uint8 r = *data++;
+        uint8 b = *data++;
+        uint8 g = *data++;
+        uint8 r = *data++;
 
+        for( int t=0; t<8; t++ )
+        {
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
