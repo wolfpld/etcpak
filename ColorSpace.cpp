@@ -65,7 +65,7 @@ namespace Color
         const float g = linear2sRGB( gl );
         const float b = linear2sRGB( bl );
 
-        return v3b( uint8( r * 255 ), uint8( g * 255 ), uint8( b * 255 ) );
+        return v3b( clampu8( r * 255 ), clampu8( g * 255 ), clampu8( b * 255 ) );
     }
 
 
