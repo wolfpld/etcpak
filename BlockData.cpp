@@ -412,6 +412,7 @@ static uint64 ProcessLab( const uint8* src )
     {
         id[i] = (uint8)GetBufId( i, idx );
     }
+    int shift = ( idx & 0x2 ) == 0 ? 4 : 5;
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
@@ -419,13 +420,21 @@ static uint64 ProcessLab( const uint8* src )
         uint8 g = *data++;
         uint8 r = *data++;
 
+        Color::Lab lab( v3b( r, g, b ) );
+
         for( int t=0; t<8; t++ )
         {
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
-                Color::Lab c( v3b( clampu8( r - table[t][j] ), clampu8( g - table[t][j] ), clampu8( b - table[t][j] ) ) );
-                lerr[j] += sq( c.L - la[id[i]].L ) + sq( c.a - la[id[i]].a ) + sq( c.b - la[id[i]].b );
+                v3b crgb = a[id[i]];
+                for( int i=0; i<3; i++ )
+                {
+                    crgb[i] |= crgb[i] >> shift;
+                    crgb[i] = clampu8( crgb[i] + table[t][j] );
+                }
+                Color::Lab c( crgb );
+                lerr[j] += sq( c.L - lab.L ) + sq( c.a - lab.a ) + sq( c.b - lab.b );
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t][i] = (uint8)lidx;
@@ -488,6 +497,7 @@ static uint64 ProcessRGB( const uint8* src )
     {
         id[i] = (uint8)GetBufId( i, idx );
     }
+    int shift = ( idx & 0x2 ) == 0 ? 4 : 5;
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
@@ -500,8 +510,13 @@ static uint64 ProcessRGB( const uint8* src )
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
-                v3b c( clampu8( r - table[t][j] ), clampu8( g - table[t][j] ), clampu8( b - table[t][j] ) );
-                lerr[j] += sq( int32( c.x ) - a[id[i]].x ) + sq( int32( c.y ) - a[id[i]].y ) + sq( int32( c.z ) - a[id[i]].z );
+                v3b c = a[id[i]];
+                for( int i=0; i<3; i++ )
+                {
+                    c[i] |= c[i] >> shift;
+                    c[i] = clampu8( c[i] + table[t][j] );
+                }
+                lerr[j] += sq( int32( c.x ) - r ) + sq( int32( c.y ) - g ) + sq( int32( c.z ) - b );
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t][i] = (uint8)lidx;
