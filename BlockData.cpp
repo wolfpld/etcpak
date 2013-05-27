@@ -28,15 +28,19 @@ static v3b Average( const uint8* data )
     return v3b( r / 8, g / 8, b / 8 );
 }
 
-static float CalcError( Color::Lab* c, const v3b& average )
+static float CalcError( Color::Lab* c, const Color::Lab& avg )
 {
     float err = 0;
-    Color::Lab avg( average );
     for( int i=0; i<8; i++ )
     {
         err += sq( c[i].L - avg.L ) + sq( c[i].a - avg.a ) + sq( c[i].b - avg.b );
     }
     return err;
+}
+
+static float CalcError( Color::Lab* c, const v3b& average )
+{
+    return CalcError( c, Color::Lab( average ) );
 }
 
 static float CalcError( const uint8* data, const v3b& average )
@@ -263,121 +267,141 @@ BitmapPtr BlockData::Decode()
     return ret;
 }
 
+static uint64 ProcessLab( const uint8* src )
+{
+    /*
+    if( m_perc )
+    {
+        Color::Lab lab[4][8];
+        {
+            Color::Lab tmp[16];
+            for( int i=0; i<16; i++ )
+            {
+                tmp[i] = ToLab( src + i*3 );
+            }
+            for( int i=0; i<8; i++ )
+            {
+                lab[1][i] = tmp[i];
+                lab[0][i] = tmp[i+8];
+            }
+            for( int i=0; i<4; i++ )
+            {
+                lab[3][i*2] = tmp[i*4];
+                lab[3][i*2+1] = tmp[i*4+1];
+                lab[2][i*2] = tmp[i*4+2];
+                lab[2][i*2+1] = tmp[i*4+3];
+            }
+        }
+
+        for( int i=0; i<4; i++ )
+        {
+            err[i/2] += CalcError( lab[i], a[i] );
+            err[2+i/2] += CalcError( lab[i], a[i+4] );
+        }
+    }
+    */
+    return 0;
+}
+
+static uint64 ProcessRGB( const uint8* src )
+{
+    uint64 d = 0;
+
+    uint8 b[4][24];
+
+    memcpy( b[1], src, 24 );
+    memcpy( b[0], src+24, 24 );
+
+    for( int i=0; i<4; i++ )
+    {
+        memcpy( b[3]+i*6, src+i*12, 6 );
+        memcpy( b[2]+i*6, src+i*12+6, 6 );
+    }
+
+    v3b a[8];
+    for( int i=0; i<4; i++ )
+    {
+        a[i] = Average( b[i] );
+    }
+    for( int i=0; i<2; i++ )
+    {
+        for( int j=0; j<3; j++ )
+        {
+            int32 c1 = a[i*2][j] >> 3;
+            int32 c2 = c1 - ( a[i*2+1][j] >> 3 );
+            c2 = std::min( std::max( -4, c2 ), 3 );
+            a[4+i*2][j] = c1 << 3;
+            a[5+i*2][j] = ( c1 + c2 ) << 3;
+        }
+    }
+    for( int i=0; i<4; i++ )
+    {
+        for( int j=0; j<3; j++ )
+        {
+            a[i][j] &= 0xF0;
+        }
+    }
+
+    float err[4] = { 0 };
+    for( int i=0; i<4; i++ )
+    {
+        err[i/2] += CalcError( b[i], a[i] );
+        err[2+i/2] += CalcError( b[i], a[i+4] );
+    }
+
+    int idx = 0;
+    for( int i=1; i<4; i++ )
+    {
+        if( err[i] < err[idx] )
+        {
+            idx = i;
+        }
+    }
+
+    d |= idx ^ 0x1;
+    int base = ( idx & 0x1 ) != 0 ? 2 : 0;
+
+    if( ( idx & 0x2 ) == 0 )
+    {
+        for( int i=0; i<3; i++ )
+        {
+            d |= a[base+0][i] << ( i*8 + 4 );
+            d |= a[base+1][i] << ( i*8 + 8 );
+        }
+    }
+    else
+    {
+        base += 4;
+        for( int i=0; i<3; i++ )
+        {
+            d |= a[base+0][i] << ( i*8 + 8 );
+            int8 c = ( a[base+1][i] - a[base+0][i] ) >> 3;
+            c &= ~0xF8;
+            d |= ((uint32)c) << ( i*8 + 8 );
+        }
+    }
+
+    return d;
+}
+
 void BlockData::ProcessBlocks( const uint8* src, uint64* dst, uint num )
 {
-    do
+    if( m_perc )
     {
-        uint64 d = 0;
-
-        uint8 b[4][24];
-
-        memcpy( b[1], src, 24 );
-        memcpy( b[0], src+24, 24 );
-
-        for( int i=0; i<4; i++ )
+        do
         {
-            memcpy( b[3]+i*6, src+i*12, 6 );
-            memcpy( b[2]+i*6, src+i*12+6, 6 );
+            *dst++ = ProcessLab( src );
+            src += 4*4*3;
         }
-
-        v3b a[8];
-        for( int i=0; i<4; i++ )
-        {
-            a[i] = Average( b[i] );
-        }
-        for( int i=0; i<2; i++ )
-        {
-            for( int j=0; j<3; j++ )
-            {
-                int32 c1 = a[i*2][j] >> 3;
-                int32 c2 = c1 - ( a[i*2+1][j] >> 3 );
-                c2 = std::min( std::max( -4, c2 ), 3 );
-                a[4+i*2][j] = c1 << 3;
-                a[5+i*2][j] = ( c1 + c2 ) << 3;
-            }
-        }
-        for( int i=0; i<4; i++ )
-        {
-            for( int j=0; j<3; j++ )
-            {
-                a[i][j] &= 0xF0;
-            }
-        }
-
-        float err[4] = { 0 };
-
-        if( m_perc )
-        {
-            Color::Lab lab[4][8];
-            {
-                Color::Lab tmp[16];
-                for( int i=0; i<16; i++ )
-                {
-                    tmp[i] = ToLab( src + i*3 );
-                }
-                for( int i=0; i<8; i++ )
-                {
-                    lab[1][i] = tmp[i];
-                    lab[0][i] = tmp[i+8];
-                }
-                for( int i=0; i<4; i++ )
-                {
-                    lab[3][i*2] = tmp[i*4];
-                    lab[3][i*2+1] = tmp[i*4+1];
-                    lab[2][i*2] = tmp[i*4+2];
-                    lab[2][i*2+1] = tmp[i*4+3];
-                }
-            }
-
-            for( int i=0; i<4; i++ )
-            {
-                err[i/2] += CalcError( lab[i], a[i] );
-                err[2+i/2] += CalcError( lab[i], a[i+4] );
-            }
-        }
-        else
-        {
-            for( int i=0; i<4; i++ )
-            {
-                err[i/2] += CalcError( b[i], a[i] );
-                err[2+i/2] += CalcError( b[i], a[i+4] );
-            }
-        }
-
-        int idx = 0;
-        for( int i=1; i<4; i++ )
-        {
-            if( err[i] < err[idx] )
-            {
-                idx = i;
-            }
-        }
-
-        d |= idx ^ 0x1;
-        int base = ( idx & 0x1 ) != 0 ? 2 : 0;
-
-        if( ( idx & 0x2 ) == 0 )
-        {
-            for( int i=0; i<3; i++ )
-            {
-                d |= a[base+0][i] << ( i*8 + 4 );
-                d |= a[base+1][i] << ( i*8 + 8 );
-            }
-        }
-        else
-        {
-            base += 4;
-            for( int i=0; i<3; i++ )
-            {
-                d |= a[base+0][i] << ( i*8 + 8 );
-                int8 c = ( a[base+1][i] - a[base+0][i] ) >> 3;
-                c &= ~0xF8;
-                d |= ((uint32)c) << ( i*8 + 8 );
-            }
-        }
-
-        src += 4*4*3;
-        *dst++ = d;
+        while( --num );
     }
-    while( --num );
+    else
+    {
+        do
+        {
+            *dst++ = ProcessRGB( src );
+            src += 4*4*3;
+        }
+        while( --num );
+    }
 }
