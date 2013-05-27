@@ -378,7 +378,7 @@ static uint64 ProcessLab( const uint8* src )
         }
     }
 
-    Color::Lab la[4];
+    Color::Lab la[8];
     for( int i=0; i<4; i++ )
     {
         la[i] = Average( b[i] );
@@ -390,6 +390,10 @@ static uint64 ProcessLab( const uint8* src )
         a[i] = Color::XYZ( la[i] ).RGB();
     }
     ProcessAverages( a );
+    for( int i=0; i<8; i++ )
+    {
+        la[i] = Color::Lab( a[i] );
+    }
 
     float err[4] = { 0 };
     for( int i=0; i<4; i++ )
