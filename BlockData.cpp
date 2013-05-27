@@ -320,7 +320,7 @@ static void ProcessAverages( v3b* a )
 
 static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
 {
-    d |= idx ^ 0x1;
+    d |= idx;
     size_t base = idx << 1;
 
     if( ( idx & 0x2 ) == 0 )

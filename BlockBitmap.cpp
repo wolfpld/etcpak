@@ -18,9 +18,9 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
         {
             for( int bx=0; bx<m_size.x/4; bx++ )
             {
-                for( int y=0; y<4; y++ )
+                for( int x=0; x<4; x++ )
                 {
-                    for( int x=0; x<4; x++ )
+                    for( int y=0; y<4; y++ )
                     {
                         const uint32 c = src[x+bx*4+(y+by*4)*m_size.x];
                         *dst++ = ( c & 0x00FF0000 ) >> 16;
@@ -37,9 +37,9 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
         {
             for( int bx=0; bx<m_size.x/4; bx++ )
             {
-                for( int y=0; y<4; y++ )
+                for( int x=0; x<4; x++ )
                 {
-                    for( int x=0; x<4; x++ )
+                    for( int y=0; y<4; y++ )
                     {
                         *dst++ = src[x+bx*4+(y+by*4)*m_size.x] >> 24;
                     }
