@@ -327,18 +327,18 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
     {
         for( int i=0; i<3; i++ )
         {
-            d |= a[base+0][i] << ( i*8 + 4 );
-            d |= a[base+1][i] << ( i*8 + 8 );
+            d |= uint64(a[base+0][i]) << ( i*8 + 4 );
+            d |= uint64(a[base+1][i]) << ( i*8 + 8 );
         }
     }
     else
     {
         for( int i=0; i<3; i++ )
         {
-            d |= a[base+0][i] << ( i*8 + 8 );
+            d |= uint64(a[base+0][i]) << ( i*8 + 8 );
             int8 c = ( a[base+1][i] - a[base+0][i] ) >> 3;
             c &= ~0xF8;
-            d |= ((uint32)c) << ( i*8 + 8 );
+            d |= ((uint64)c) << ( i*8 + 8 );
         }
     }
 }
