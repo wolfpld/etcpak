@@ -7,11 +7,14 @@
 namespace Color
 {
 
+    class Lab;
+
     class XYZ
     {
     public:
         XYZ( float x, float y, float z );
         XYZ( const v3b& rgb );
+        XYZ( const Lab& lab );
 
         float x, y, z;
     };

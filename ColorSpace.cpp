@@ -7,6 +7,10 @@
 namespace Color
 {
 
+    static const XYZ white( v3b( 255, 255, 255 ) );
+    static const v3f rwhite( 1.f / white.x, 1.f / white.y, 1.f / white.z );
+
+
     XYZ::XYZ( float _x, float _y, float _z )
         : x( _x )
         , y( _y )
@@ -27,6 +31,28 @@ namespace Color
         x = 0.4124f * rl + 0.3576f * gl + 0.1805f * bl;
         y = 0.2126f * rl + 0.7152f * gl + 0.0722f * bl;
         z = 0.0193f * rl + 0.1192f * gl + 0.9505f * bl;
+    }
+
+    static float revlab( float t )
+    {
+        const float p1 = 6.f/29.f;
+        const float p2 = 4.f/29.f;
+
+        if( t > p1 )
+        {
+            return t*t*t;
+        }
+        else
+        {
+            return 3 * sq( p1 ) * ( t - p2 );
+        }
+    }
+
+    XYZ::XYZ( const Lab& lab )
+    {
+        y = white.y * revlab( 1.f/116.f * ( lab.L + 16 ) );
+        x = white.x * revlab( 1.f/116.f * ( lab.L + 16 ) + 1.f/500.f * lab.a );
+        z = white.z * revlab( 1.f/116.f * ( lab.L + 16 ) - 1.f/200.f * lab.b );
     }
 
 
@@ -59,9 +85,6 @@ namespace Color
             return p2 * t + p3;
         }
     }
-
-    static const XYZ white( v3b( 255, 255, 255 ) );
-    static const v3f rwhite( 1.f / white.x, 1.f / white.y, 1.f / white.z );
 
     Lab::Lab( const XYZ& xyz )
     {
