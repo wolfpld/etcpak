@@ -74,7 +74,7 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
     uint64* dst = m_data;
 
     std::vector<std::future<void>> vec;
-    uint32 step = cnt / 16;
+    uint32 step = std::max( 1u, cnt / 16 );
     for( uint32 i=0; i<cnt; i+=step )
     {
         vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocks( src, dst, std::min( step, cnt - i ) ); } ) );
