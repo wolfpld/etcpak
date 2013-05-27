@@ -71,8 +71,8 @@ namespace Color
 
     Lab::Lab()
         : L( 0 )
-        , a( a )
-        , b( b )
+        , a( 0 )
+        , b( 0 )
     {
     }
 
