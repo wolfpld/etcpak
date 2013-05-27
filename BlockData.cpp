@@ -455,7 +455,7 @@ static uint64 ProcessRGB( const uint8* src )
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
-                v3b c( clampu8( table[t][j] + r ), clampu8( table[t][j] + g ), clampu8( table[t][j] + b ) );
+                v3b c( clampu8( r - table[t][j] ), clampu8( g - table[t][j] ), clampu8( b - table[t][j] ) );
                 lerr[j] += sq( int32( c.x ) - a[id[i]].x ) + sq( int32( c.y ) - a[id[i]].y ) + sq( int32( c.z ) - a[id[i]].z );
             }
             size_t lidx = GetLeastError( lerr, 4 );
@@ -467,8 +467,8 @@ static uint64 ProcessRGB( const uint8* src )
     tidx[0] = GetLeastError( terr[0], 8 );
     tidx[1] = GetLeastError( terr[1], 8 );
 
-    d |= tidx[0] << 5;
-    d |= tidx[1] << 2;
+    d |= tidx[0] << 2;
+    d |= tidx[1] << 5;
     for( int i=0; i<16; i++ )
     {
         uint64 t = tsel[tidx[id[i]%2]][i];
