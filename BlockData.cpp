@@ -6,6 +6,16 @@
 #include "ColorSpace.hpp"
 #include "Debug.hpp"
 
+static const int32 table[][4] = {
+    {  2,  8,   -2,   -8 },
+    {  5, 17,   -5,  -17 },
+    {  9, 29,   -9,  -29 },
+    { 13, 42,  -13,  -42 },
+    { 18, 60,  -18,  -60 },
+    { 24, 80,  -24,  -80 },
+    { 33, 106, -33, -106 },
+    { 47, 183, -47, -183 } };
+
 static v3b Average( const uint8* data )
 {
     uint32 r = 0, g = 0, b = 0;
@@ -86,16 +96,6 @@ BlockData::~BlockData()
 BitmapPtr BlockData::Decode()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
-
-    static const int32 table[][4] = {
-        {  2,  8,   -2,   -8 },
-        {  5, 17,   -5,  -17 },
-        {  9, 29,   -9,  -29 },
-        { 13, 42,  -13,  -42 },
-        { 18, 60,  -18,  -60 },
-        { 24, 80,  -24,  -80 },
-        { 33, 106, -33, -106 },
-        { 47, 183, -47, -183 } };
 
     uint32* l[4];
     l[0] = ret->Data();
