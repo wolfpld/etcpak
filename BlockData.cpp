@@ -405,7 +405,48 @@ static uint64 ProcessLab( const uint8* src )
 
     EncodeAverages( d, a, idx );
 
+    float terr[2][8] = { 0 };
+    uint8 tsel[8][16];
+    uint8 id[16];
+    for( int i=0; i<16; i++ )
+    {
+        id[i] = (uint8)GetBufId( i, idx );
+    }
+    const uint8* data = src;
+    for( size_t i=0; i<16; i++ )
+    {
+        uint8 b = *data++;
+        uint8 g = *data++;
+        uint8 r = *data++;
+
+        for( int t=0; t<8; t++ )
+        {
+            float lerr[4] = { 0 };
+            for( int j=0; j<4; j++ )
+            {
+                Color::Lab c( v3b( clampu8( r - table[t][j] ), clampu8( g - table[t][j] ), clampu8( b - table[t][j] ) ) );
+                lerr[j] += sq( c.L - la[id[i]].L ) + sq( c.a - la[id[i]].a ) + sq( c.b - la[id[i]].b );
+            }
+            size_t lidx = GetLeastError( lerr, 4 );
+            tsel[t][i] = (uint8)lidx;
+            terr[id[i]%2][t] += lerr[lidx];
+        }
+    }
+    size_t tidx[2];
+    tidx[0] = GetLeastError( terr[0], 8 );
+    tidx[1] = GetLeastError( terr[1], 8 );
+
+    d |= tidx[0] << 2;
+    d |= tidx[1] << 5;
+    for( int i=0; i<16; i++ )
+    {
+        uint64 t = tsel[tidx[id[i]%2]][i];
+        d |= ( t & 0x1 ) << ( i + 32 );
+        d |= ( t & 0x2 ) << ( i + 47 );
+    }
+
     return d;
+
 }
 
 static uint64 ProcessRGB( const uint8* src )
