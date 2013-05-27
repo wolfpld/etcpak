@@ -304,7 +304,7 @@ void BlockData::ProcessBlocks( const uint8* src, uint64* dst, uint num )
             }
         }
 
-        float err[4] = { 0, 0, 0, 0 };
+        float err[4] = { 0 };
 
         if( m_perc )
         {
@@ -366,10 +366,11 @@ void BlockData::ProcessBlocks( const uint8* src, uint64* dst, uint num )
         }
         else
         {
+            base += 4;
             for( int i=0; i<3; i++ )
             {
-                d |= a[base+4][i] << ( i*8 + 8 );
-                int8 c = ( a[base+5][i] - a[base+4][i] ) >> 3;
+                d |= a[base+0][i] << ( i*8 + 8 );
+                int8 c = ( a[base+1][i] - a[base+0][i] ) >> 3;
                 c &= ~0xF8;
                 d |= ((uint32)c) << ( i*8 + 8 );
             }
