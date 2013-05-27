@@ -437,7 +437,7 @@ static uint64 ProcessRGB( const uint8* src )
     EncodeAverages( d, a, idx );
 
     float terr[16] = { 0 };
-    uint8 tsel[8*16];
+    uint8 tsel[8][16];
     uint8 id[16];
     for( int i=0; i<16; i++ )
     {
@@ -459,7 +459,7 @@ static uint64 ProcessRGB( const uint8* src )
                 lerr[j] += sq( int32( c.x ) - a[id[i]].x ) + sq( int32( c.y ) - a[id[i]].y ) + sq( int32( c.z ) - a[id[i]].z );
             }
             size_t lidx = GetLeastError( lerr, 4 );
-            tsel[t*16+i] = (uint8)lidx;
+            tsel[t][i] = (uint8)lidx;
             terr[t+(id[i]%2)*8] += lerr[lidx];
         }
     }
@@ -471,7 +471,7 @@ static uint64 ProcessRGB( const uint8* src )
     d |= tidx[1] << 2;
     for( int i=0; i<16; i++ )
     {
-        uint64 t = tsel[tidx[id[i]%2]*16+i];
+        uint64 t = tsel[tidx[id[i]%2]][i];
         d |= ( t & 0x1 ) << ( i + 32 );
         d |= ( t & 0x2 ) << ( i + 47 );
     }
