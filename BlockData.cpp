@@ -438,6 +438,11 @@ static uint64 ProcessRGB( const uint8* src )
 
     float terr[16] = { 0 };
     uint8 tsel[8*16];
+    uint8 id[16];
+    for( int i=0; i<16; i++ )
+    {
+        id[i] = (uint8)GetBufId( i, idx );
+    }
     for( int t=0; t<8; t++ )
     {
         const uint8* data = src;
@@ -447,18 +452,15 @@ static uint64 ProcessRGB( const uint8* src )
             uint8 g = *data++;
             uint8 r = *data++;
 
-            size_t id = GetBufId( i, idx );
-            int tid = id % 2;
-
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
-                v3b c( clampu8( r + table[t][j] ), clampu8( g + table[t][j] ), clampu8( b + table[t][j] ) );
-                lerr[j] += sq( int32( c.x ) - a[id].x ) + sq( int32( c.y ) - a[id].y ) + sq( int32( c.z ) - a[id].z );
+                v3b c( clampu8( table[t][j] + r ), clampu8( table[t][j] + g ), clampu8( table[t][j] + b ) );
+                lerr[j] += sq( int32( c.x ) - a[id[i]].x ) + sq( int32( c.y ) - a[id[i]].y ) + sq( int32( c.z ) - a[id[i]].z );
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t*16+i] = (uint8)lidx;
-            terr[t+tid*8] += lerr[lidx];
+            terr[t+(id[i]%2)*8] += lerr[lidx];
         }
     }
     size_t tidx[2];
@@ -469,8 +471,7 @@ static uint64 ProcessRGB( const uint8* src )
     d |= tidx[1] << 2;
     for( int i=0; i<16; i++ )
     {
-        size_t id = GetBufId( i, idx );
-        uint64 t = tsel[tidx[id%2]*16+i];
+        uint64 t = tsel[tidx[id[i]%2]*16+i];
         d |= ( t & 0x1 ) << ( i + 32 );
         d |= ( t & 0x2 ) << ( i + 47 );
     }
