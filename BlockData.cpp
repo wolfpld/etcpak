@@ -18,7 +18,7 @@ static v3b Average( const uint8* data )
     return v3b( r / 8, g / 8, b / 8 );
 }
 
-static float CalcError( Color::Lab* c, v3b average )
+static float CalcError( Color::Lab* c, const v3b& average )
 {
     float err = 0;
     Color::Lab avg( average );
@@ -29,7 +29,7 @@ static float CalcError( Color::Lab* c, v3b average )
     return err;
 }
 
-static float CalcError( const uint8* data, v3b average )
+static float CalcError( const uint8* data, const v3b& average )
 {
     float err = 0;
     for( int i=0; i<8; i++ )
