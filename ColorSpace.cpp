@@ -55,6 +55,19 @@ namespace Color
         z = white.z * revlab( 1.f/116.f * ( lab.L + 16 ) - 1.f/200.f * lab.b );
     }
 
+    v3b XYZ::RGB() const
+    {
+        const float rl =  3.2406f * x - 1.5372f * y - 0.4986f * z;
+        const float gl = -0.9689f * x + 1.8758f * y + 0.0415f * z;
+        const float bl =  0.0557f * x - 0.2040f * y + 1.0570f * z;
+
+        const float r = linear2sRGB( rl );
+        const float g = linear2sRGB( gl );
+        const float b = linear2sRGB( bl );
+
+        return v3b( uint8( r * 255 ), uint8( g * 255 ), uint8( b * 255 ) );
+    }
+
 
     Lab::Lab()
         : L( 0 )

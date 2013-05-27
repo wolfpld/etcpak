@@ -16,6 +16,8 @@ namespace Color
         XYZ( const v3b& rgb );
         XYZ( const Lab& lab );
 
+        v3b RGB() const;
+
         float x, y, z;
     };
 
