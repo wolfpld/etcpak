@@ -436,7 +436,7 @@ static uint64 ProcessRGB( const uint8* src )
 
     EncodeAverages( d, a, idx );
 
-    float terr[16] = { 0 };
+    float terr[2][8] = { 0 };
     uint8 tsel[8][16];
     uint8 id[16];
     for( int i=0; i<16; i++ )
@@ -460,12 +460,12 @@ static uint64 ProcessRGB( const uint8* src )
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t][i] = (uint8)lidx;
-            terr[t+(id[i]%2)*8] += lerr[lidx];
+            terr[id[i]%2][t] += lerr[lidx];
         }
     }
     size_t tidx[2];
-    tidx[0] = GetLeastError( terr, 8 );
-    tidx[1] = GetLeastError( terr+8, 8 );
+    tidx[0] = GetLeastError( terr[0], 8 );
+    tidx[1] = GetLeastError( terr[1], 8 );
 
     d |= tidx[0] << 5;
     d |= tidx[1] << 2;
