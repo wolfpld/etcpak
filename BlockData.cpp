@@ -321,7 +321,7 @@ static void ProcessAverages( v3b* a )
 static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
 {
     d |= idx ^ 0x1;
-    int base = ( idx & 0x1 ) != 0 ? 2 : 0;
+    size_t base = idx << 1;
 
     if( ( idx & 0x2 ) == 0 )
     {
@@ -333,7 +333,6 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
     }
     else
     {
-        base += 4;
         for( int i=0; i<3; i++ )
         {
             d |= a[base+0][i] << ( i*8 + 8 );
