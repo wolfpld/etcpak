@@ -283,62 +283,21 @@ BitmapPtr BlockData::Decode()
     return ret;
 }
 
-static uint64 ProcessLab( const uint8* src )
+static size_t GetLeastError( const float* err, size_t num )
 {
-    /*
-    if( m_perc )
+    size_t idx = 0;
+    for( size_t i=1; i<num; i++ )
     {
-        Color::Lab lab[4][8];
+        if( err[i] < err[idx] )
         {
-            Color::Lab tmp[16];
-            for( int i=0; i<16; i++ )
-            {
-                tmp[i] = ToLab( src + i*3 );
-            }
-            for( int i=0; i<8; i++ )
-            {
-                lab[1][i] = tmp[i];
-                lab[0][i] = tmp[i+8];
-            }
-            for( int i=0; i<4; i++ )
-            {
-                lab[3][i*2] = tmp[i*4];
-                lab[3][i*2+1] = tmp[i*4+1];
-                lab[2][i*2] = tmp[i*4+2];
-                lab[2][i*2+1] = tmp[i*4+3];
-            }
-        }
-
-        for( int i=0; i<4; i++ )
-        {
-            err[i/2] += CalcError( lab[i], a[i] );
-            err[2+i/2] += CalcError( lab[i], a[i+4] );
+            idx = i;
         }
     }
-    */
-    return 0;
+    return idx;
 }
 
-static uint64 ProcessRGB( const uint8* src )
+static void ProcessAverages( v3b* a )
 {
-    uint64 d = 0;
-
-    uint8 b[4][24];
-
-    memcpy( b[1], src, 24 );
-    memcpy( b[0], src+24, 24 );
-
-    for( int i=0; i<4; i++ )
-    {
-        memcpy( b[3]+i*6, src+i*12, 6 );
-        memcpy( b[2]+i*6, src+i*12+6, 6 );
-    }
-
-    v3b a[8];
-    for( int i=0; i<4; i++ )
-    {
-        a[i] = Average( b[i] );
-    }
     for( int i=0; i<2; i++ )
     {
         for( int j=0; j<3; j++ )
@@ -357,23 +316,10 @@ static uint64 ProcessRGB( const uint8* src )
             a[i][j] &= 0xF0;
         }
     }
+}
 
-    float err[4] = { 0 };
-    for( int i=0; i<4; i++ )
-    {
-        err[i/2] += CalcError( b[i], a[i] );
-        err[2+i/2] += CalcError( b[i], a[i+4] );
-    }
-
-    int idx = 0;
-    for( int i=1; i<4; i++ )
-    {
-        if( err[i] < err[idx] )
-        {
-            idx = i;
-        }
-    }
-
+static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
+{
     d |= idx ^ 0x1;
     int base = ( idx & 0x1 ) != 0 ? 2 : 0;
 
@@ -396,6 +342,86 @@ static uint64 ProcessRGB( const uint8* src )
             d |= ((uint32)c) << ( i*8 + 8 );
         }
     }
+}
+
+static uint64 ProcessLab( const uint8* src )
+{
+    uint64 d = 0;
+
+    Color::Lab b[4][8];
+    {
+        Color::Lab tmp[16];
+        for( int i=0; i<16; i++ )
+        {
+            tmp[i] = ToLab( src + i*3 );
+        }
+        size_t s = sizeof( Color::Lab );
+        memcpy( b[1], tmp, 8*s );
+        memcpy( b[0], tmp + 8, 8*s );
+        for( int i=0; i<4; i++ )
+        {
+            memcpy( b[3]+i*2, tmp+i*4, 2*s );
+            memcpy( b[2]+i*2, tmp+i*4+2, 2*s );
+        }
+    }
+
+    Color::Lab la[4];
+    for( int i=0; i<4; i++ )
+    {
+        la[i] = Average( b[i] );
+    }
+
+    v3b a[8];
+    for( int i=0; i<4; i++ )
+    {
+        a[i] = Color::XYZ( la[i] ).RGB();
+    }
+    ProcessAverages( a );
+
+    float err[4] = { 0 };
+    for( int i=0; i<4; i++ )
+    {
+        err[i/2] += CalcError( b[i], a[i] );
+        err[2+i/2] += CalcError( b[i], a[i+4] );
+    }
+    size_t idx = GetLeastError( err, 4 );
+
+    EncodeAverages( d, a, idx );
+
+    return d;
+}
+
+static uint64 ProcessRGB( const uint8* src )
+{
+    uint64 d = 0;
+
+    uint8 b[4][24];
+
+    memcpy( b[1], src, 24 );
+    memcpy( b[0], src+24, 24 );
+
+    for( int i=0; i<4; i++ )
+    {
+        memcpy( b[3]+i*6, src+i*12, 6 );
+        memcpy( b[2]+i*6, src+i*12+6, 6 );
+    }
+
+    v3b a[8];
+    for( int i=0; i<4; i++ )
+    {
+        a[i] = Average( b[i] );
+    }
+    ProcessAverages( a );
+
+    float err[4] = { 0 };
+    for( int i=0; i<4; i++ )
+    {
+        err[i/2] += CalcError( b[i], a[i] );
+        err[2+i/2] += CalcError( b[i], a[i+4] );
+    }
+    size_t idx = GetLeastError( err, 4 );
+
+    EncodeAverages( d, a, idx );
 
     return d;
 }
