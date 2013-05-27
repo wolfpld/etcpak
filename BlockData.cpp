@@ -343,6 +343,20 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
     }
 }
 
+static inline size_t GetBufId( size_t i, size_t base )
+{
+    assert( i < 16 );
+    assert( base < 4 );
+    if( base % 2 == 0 )
+    {
+        return base * 2 + 1 - i / 8;
+    }
+    else
+    {
+        return base * 2 + 1 - ( ( i / 2 ) % 2 );
+    }
+}
+
 static uint64 ProcessLab( const uint8* src )
 {
     uint64 d = 0;
@@ -421,6 +435,45 @@ static uint64 ProcessRGB( const uint8* src )
     size_t idx = GetLeastError( err, 4 );
 
     EncodeAverages( d, a, idx );
+
+    float terr[16] = { 0 };
+    uint8 tsel[8*16];
+    for( int t=0; t<8; t++ )
+    {
+        const uint8* data = src;
+        for( size_t i=0; i<16; i++ )
+        {
+            uint8 b = *data++;
+            uint8 g = *data++;
+            uint8 r = *data++;
+
+            size_t id = GetBufId( i, idx );
+            int tid = id % 2;
+
+            float lerr[4] = { 0 };
+            for( int j=0; j<4; j++ )
+            {
+                v3b c( clampu8( r + table[t][j] ), clampu8( g + table[t][j] ), clampu8( b + table[t][j] ) );
+                lerr[j] += sq( int32( c.x ) - a[id].x ) + sq( int32( c.y ) - a[id].y ) + sq( int32( c.z ) - a[id].z );
+            }
+            size_t lidx = GetLeastError( lerr, 4 );
+            tsel[t*16+i] = (uint8)lidx;
+            terr[t+tid*8] += lerr[lidx];
+        }
+    }
+    size_t tidx[2];
+    tidx[0] = GetLeastError( terr, 8 );
+    tidx[1] = GetLeastError( terr+8, 8 );
+
+    d |= tidx[0] << 5;
+    d |= tidx[1] << 2;
+    for( int i=0; i<16; i++ )
+    {
+        size_t id = GetBufId( i, idx );
+        uint64 t = tsel[tidx[id%2]*16+i];
+        d |= ( t & 0x1 ) << ( i + 32 );
+        d |= ( t & 0x2 ) << ( i + 47 );
+    }
 
     return d;
 }
