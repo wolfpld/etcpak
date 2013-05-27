@@ -305,8 +305,9 @@ static void ProcessAverages( v3b* a )
             int32 c1 = a[i*2][j] >> 3;
             int32 c2 = c1 - ( a[i*2+1][j] >> 3 );
             c2 = std::min( std::max( -4, c2 ), 3 );
-            a[4+i*2][j] = c1 << 3;
-            a[5+i*2][j] = ( c1 + c2 ) << 3;
+            a[4+i*2][j] = ( c1 << 3 ) | ( c1 >> 2 );
+            int32 sum = c1 + c2;
+            a[5+i*2][j] = ( sum << 3 ) | ( sum >> 2 );
         }
     }
     for( int i=0; i<4; i++ )
@@ -314,6 +315,7 @@ static void ProcessAverages( v3b* a )
         for( int j=0; j<3; j++ )
         {
             a[i][j] &= 0xF0;
+            a[i][j] |= a[i][j] >> 4;
         }
     }
 }
@@ -327,16 +329,16 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64(a[base+0][i]) << ( i*8 + 4 );
-            d |= uint64(a[base+1][i]) << ( i*8 + 8 );
+            d |= uint64( a[base+0][i] & 0xF0 ) << ( i*8 + 4 );
+            d |= uint64( a[base+1][i] & 0xF0 ) << ( i*8 + 8 );
         }
     }
     else
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64(a[base+0][i]) << ( i*8 + 8 );
-            int8 c = ( a[base+1][i] - a[base+0][i] ) >> 3;
+            d |= uint64( a[base+0][i] & 0xF8 ) << ( i*8 + 8 );
+            int8 c = ( ( a[base+1][i] & 0xF8 ) - ( a[base+0][i] & 0xF8 ) ) >> 3;
             c &= ~0xF8;
             d |= ((uint64)c) << ( i*8 + 8 );
         }
@@ -412,7 +414,6 @@ static uint64 ProcessLab( const uint8* src )
     {
         id[i] = (uint8)GetBufId( i, idx );
     }
-    int shift = ( idx & 0x2 ) == 0 ? 4 : 5;
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
@@ -427,11 +428,10 @@ static uint64 ProcessLab( const uint8* src )
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
-                v3b crgb = a[id[i]];
-                for( int i=0; i<3; i++ )
+                v3b crgb;
+                for( int k=0; k<3; k++ )
                 {
-                    crgb[i] |= crgb[i] >> shift;
-                    crgb[i] = clampu8( crgb[i] + table[t][j] );
+                    crgb[k] = clampu8( a[id[i]][k] + table[t][j] );
                 }
                 Color::Lab c( crgb );
                 lerr[j] += sq( c.L - lab.L ) + sq( c.a - lab.a ) + sq( c.b - lab.b );
@@ -497,7 +497,6 @@ static uint64 ProcessRGB( const uint8* src )
     {
         id[i] = (uint8)GetBufId( i, idx );
     }
-    int shift = ( idx & 0x2 ) == 0 ? 4 : 5;
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
@@ -510,11 +509,10 @@ static uint64 ProcessRGB( const uint8* src )
             float lerr[4] = { 0 };
             for( int j=0; j<4; j++ )
             {
-                v3b c = a[id[i]];
-                for( int i=0; i<3; i++ )
+                v3b c;
+                for( int k=0; k<3; k++ )
                 {
-                    c[i] |= c[i] >> shift;
-                    c[i] = clampu8( c[i] + table[t][j] );
+                    c[k] = clampu8( a[id[i]][k] + table[t][j] );
                 }
                 lerr[j] += sq( int32( c.x ) - r ) + sq( int32( c.y ) - g ) + sq( int32( c.z ) - b );
             }
