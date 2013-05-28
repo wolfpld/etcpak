@@ -451,7 +451,6 @@ static uint64 ProcessLab( const uint8* src )
     }
 
     return d;
-
 }
 
 static uint64 ProcessRGB( const uint8* src )
