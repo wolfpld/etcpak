@@ -42,26 +42,11 @@ inline float sRGB2linear( float v )
     return v * ( v * ( v * 0.305306011f + 0.682171111f ) + 0.012522878f );
 }
 
-inline float sqrtfast( float v )
-{
-    union
-    {
-        int i;
-        float f;
-    } u;
-
-    u.f = v;
-    u.i -= 1 << 23;
-    u.i >>= 1;
-    u.i += 1 << 29;
-    return u.f;
-}
-
 inline float linear2sRGB( float v )
 {
-    float s1 = sqrtfast( v );
-    float s2 = sqrtfast( s1 );
-    float s3 = sqrtfast( s2 );
+    float s1 = sqrt( v );
+    float s2 = sqrt( s1 );
+    float s3 = sqrt( s2 );
     return 0.585122381f * s1 + 0.783140355f * s2 - 0.368262736f * s3;
 }
 
