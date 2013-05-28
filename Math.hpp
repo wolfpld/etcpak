@@ -39,15 +39,28 @@ inline int CountLeadingZeros( uint32 val )
 
 inline float sRGB2linear( float v )
 {
-    return v * ( v * ( v * 0.305306011f + 0.682171111f ) + 0.012522878f );
+    const float a = 0.055f;
+    if( v <= 0.04045f )
+    {
+        return v / 12.92f;
+    }
+    else
+    {
+        return pow( ( v + a ) / ( 1 + a ), 2.4f );
+    }
 }
 
 inline float linear2sRGB( float v )
 {
-    float s1 = sqrt( v );
-    float s2 = sqrt( s1 );
-    float s3 = sqrt( s2 );
-    return 0.585122381f * s1 + 0.783140355f * s2 - 0.368262736f * s3;
+    const float a = 0.055f;
+    if( v <= 0.0031308f )
+    {
+        return 12.92f * v;
+    }
+    else
+    {
+        return ( 1 + a ) * pow( v, 1/2.4f ) - a;
+    }
 }
 
 template<class T>
