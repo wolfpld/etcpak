@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <memory>
+#include <string.h>
 
 #include "Bitmap.hpp"
 #include "BlockBitmap.hpp"

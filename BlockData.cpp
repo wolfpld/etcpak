@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <future>
 #include <vector>
+#include <string.h>
 
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"

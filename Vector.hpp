@@ -1,6 +1,7 @@
 #ifndef __DARKRL__VECTOR_HPP__
 #define __DARKRL__VECTOR_HPP__
 
+#include <assert.h>
 #include <algorithm>
 #include <math.h>
 
