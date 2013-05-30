@@ -518,16 +518,21 @@ static uint64 ProcessRGB( const uint8* src )
 
         for( int t=0; t<8; t++ )
         {
-            uint lerr[4] = {};
             const int32* tab = table[t];
+            uint idx = 0;
+            uint err = std::numeric_limits<uint>::max();
             for( int j=0; j<4; j++ )
             {
                 int32 v = tab[j];
-                lerr[j] += sq( v + pix.x ) + sq( v + pix.y ) + sq( v + pix.z );
+                uint local = sq( v + pix.x ) + sq( v + pix.y ) + sq( v + pix.z );
+                if( local < err )
+                {
+                    err = local;
+                    idx = j;
+                }
             }
-            size_t lidx = GetLeastError( lerr, 4 );
-            tsel[t][i] = (uint8)lidx;
-            terr[bid%2][t] += lerr[lidx];
+            tsel[t][i] = idx;
+            terr[bid%2][t] += err;
         }
     }
     size_t tidx[2];
