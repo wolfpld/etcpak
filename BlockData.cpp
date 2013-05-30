@@ -288,7 +288,8 @@ BitmapPtr BlockData::Decode()
     return ret;
 }
 
-static size_t GetLeastError( const float* err, size_t num )
+template<class T>
+static size_t GetLeastError( const T* err, size_t num )
 {
     size_t idx = 0;
     for( size_t i=1; i<num; i++ )
