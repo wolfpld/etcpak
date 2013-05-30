@@ -486,9 +486,9 @@ static uint64 ProcessRGB( const uint8* src )
         if( solid )
         {
             d |= 0x2 |
-                ( uint64( src[0] & 0xF8 ) << 24 ) |
-                ( uint64( src[1] & 0xF8 ) << 16 ) |
-                ( uint64( src[2] & 0xF8 ) << 8 );
+                ( uint( src[0] & 0xF8 ) << 24 ) |
+                ( uint( src[1] & 0xF8 ) << 16 ) |
+                ( uint( src[2] & 0xF8 ) << 8 );
 
             return d;
         }
