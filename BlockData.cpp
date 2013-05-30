@@ -471,6 +471,29 @@ static uint64 ProcessRGB( const uint8* src )
 {
     uint64 d = 0;
 
+    {
+        bool solid = true;
+        v3b* base = (v3b*)src;
+        for( int i=1; i<16; i++ )
+        {
+            v3b* check = (v3b*)(src+3*i);
+            if( memcmp( base, check, 3 ) != 0 )
+            {
+                solid = false;
+                break;
+            }
+        }
+        if( solid )
+        {
+            d |= 0x2;
+            d |= uint64( base->x & 0xF8 ) << 8;
+            d |= uint64( base->y & 0xF8 ) << 16;
+            d |= uint64( base->z & 0xF8 ) << 24;
+
+            return d;
+        }
+    }
+
     uint8 b[4][24];
 
     memcpy( b[1], src, 24 );
