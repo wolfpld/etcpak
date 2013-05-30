@@ -402,7 +402,7 @@ static uint64 ProcessLab( const uint8* src )
     }
     ProcessAverages( a );
 
-    float err[4] = { 0 };
+    float err[4] = {};
     for( int i=0; i<4; i++ )
     {
         err[i/2] += CalcError( b[i], a[i] );
@@ -412,7 +412,7 @@ static uint64 ProcessLab( const uint8* src )
 
     EncodeAverages( d, a, idx );
 
-    float terr[2][8] = { 0 };
+    float terr[2][8] = {};
     uint8 tsel[8][16];
     uint8 id[16];
     for( int i=0; i<16; i++ )
@@ -494,7 +494,7 @@ static uint64 ProcessRGB( const uint8* src )
 
     EncodeAverages( d, a, idx );
 
-    float terr[2][8] = { 0 };
+    float terr[2][8] = {};
     uint8 tsel[8][16];
     uint8 id[16];
     for( int i=0; i<16; i++ )
