@@ -473,22 +473,22 @@ static uint64 ProcessRGB( const uint8* src )
 
     {
         bool solid = true;
-        v3b* base = (v3b*)src;
+        const uint8* ptr = src + 3;
         for( int i=1; i<16; i++ )
         {
-            v3b* check = (v3b*)(src+3*i);
-            if( memcmp( base, check, 3 ) != 0 )
+            if( src[0] != ptr[0] || src[1] != ptr[1] || src[2] != ptr[2] )
             {
                 solid = false;
                 break;
             }
+            ptr += 3;
         }
         if( solid )
         {
-            d |= 0x2;
-            d |= uint64( base->z & 0xF8 ) << 8;
-            d |= uint64( base->y & 0xF8 ) << 16;
-            d |= uint64( base->x & 0xF8 ) << 24;
+            d |= 0x2 |
+                ( uint64( src[0] & 0xF8 ) << 24 ) |
+                ( uint64( src[1] & 0xF8 ) << 16 ) |
+                ( uint64( src[2] & 0xF8 ) << 8 );
 
             return d;
         }
