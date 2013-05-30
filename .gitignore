@@ -4,3 +4,5 @@ build/x64
 build/*sdf
 build/*.suo
 build/*.vcxproj.user
+*.o
+*.d
