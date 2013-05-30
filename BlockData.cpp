@@ -94,6 +94,9 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
     const uint8* src = bitmap->Data();
     uint64* dst = m_data;
 
+#ifdef SINGLE_THREADED
+    ProcessBlocks( src, dst, cnt );
+#else
     std::vector<std::future<void>> vec;
     uint32 step = std::max( 1u, cnt / 16 );
     for( uint32 i=0; i<cnt; i+=step )
@@ -107,6 +110,7 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
     {
         f.wait();
     }
+#endif
 }
 
 BlockData::~BlockData()
