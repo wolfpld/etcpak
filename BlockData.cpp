@@ -514,7 +514,7 @@ static uint64 ProcessRGB( const uint8* src )
         uint8 r = *data++;
 
         uint8 bid = id[i];
-        const v3b& avg = a[bid];
+        const v3i pix( a[bid].x - r, a[bid].y - g, a[bid].z - b );
 
         for( int t=0; t<8; t++ )
         {
@@ -522,12 +522,8 @@ static uint64 ProcessRGB( const uint8* src )
             const int32* tab = table[t];
             for( int j=0; j<4; j++ )
             {
-                v3b c;
-                for( int k=0; k<3; k++ )
-                {
-                    c[k] = clampu8( avg[k] + tab[j] );
-                }
-                lerr[j] += sq( int32( c.x ) - r ) + sq( int32( c.y ) - g ) + sq( int32( c.z ) - b );
+                int32 v = tab[j];
+                lerr[j] += sq( v + pix.x ) + sq( v + pix.y ) + sq( v + pix.z );
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t][i] = (uint8)lidx;
