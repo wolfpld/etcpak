@@ -499,7 +499,7 @@ static uint64 ProcessRGB( const uint8* src )
 
     EncodeAverages( d, a, idx );
 
-    float terr[2][8] = {};
+    uint terr[2][8] = {};
     uint8 tsel[8][16];
     uint8 id[16];
     for( int i=0; i<16; i++ )
@@ -518,7 +518,7 @@ static uint64 ProcessRGB( const uint8* src )
 
         for( int t=0; t<8; t++ )
         {
-            float lerr[4] = { 0 };
+            uint lerr[4] = {};
             const int32* tab = table[t];
             for( int j=0; j<4; j++ )
             {
