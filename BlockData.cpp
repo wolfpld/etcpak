@@ -426,24 +426,28 @@ static uint64 ProcessLab( const uint8* src )
         uint8 g = *data++;
         uint8 r = *data++;
 
+        uint8 bid = id[i];
+        const v3b& avg = a[bid];
+
         Color::Lab lab( v3b( r, g, b ) );
 
         for( int t=0; t<8; t++ )
         {
             float lerr[4] = { 0 };
+            const int32* tab = table[t];
             for( int j=0; j<4; j++ )
             {
                 v3b crgb;
                 for( int k=0; k<3; k++ )
                 {
-                    crgb[k] = clampu8( a[id[i]][k] + table[t][j] );
+                    crgb[k] = clampu8( avg[k] + tab[j] );
                 }
                 Color::Lab c( crgb );
                 lerr[j] += sq( c.L - lab.L ) + sq( c.a - lab.a ) + sq( c.b - lab.b );
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t][i] = (uint8)lidx;
-            terr[id[i]%2][t] += lerr[lidx];
+            terr[bid%2][t] += lerr[lidx];
         }
     }
     size_t tidx[2];
@@ -508,21 +512,25 @@ static uint64 ProcessRGB( const uint8* src )
         uint8 g = *data++;
         uint8 r = *data++;
 
+        uint8 bid = id[i];
+        const v3b& avg = a[bid];
+
         for( int t=0; t<8; t++ )
         {
             float lerr[4] = { 0 };
+            const int32* tab = table[t];
             for( int j=0; j<4; j++ )
             {
                 v3b c;
                 for( int k=0; k<3; k++ )
                 {
-                    c[k] = clampu8( a[id[i]][k] + table[t][j] );
+                    c[k] = clampu8( avg[k] + tab[j] );
                 }
                 lerr[j] += sq( int32( c.x ) - r ) + sq( int32( c.y ) - g ) + sq( int32( c.z ) - b );
             }
             size_t lidx = GetLeastError( lerr, 4 );
             tsel[t][i] = (uint8)lidx;
-            terr[id[i]%2][t] += lerr[lidx];
+            terr[bid%2][t] += lerr[lidx];
         }
     }
     size_t tidx[2];
