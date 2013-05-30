@@ -14,21 +14,38 @@ struct DebugCallback_t : public DebugLog::Callback
     }
 } DebugCallback;
 
+void Usage()
+{
+    fprintf( stderr, "Usage: etcpak input.png [-q quality]\n" );
+}
+
 int main( int argc, char** argv )
 {
     DebugLog::AddCallback( &DebugCallback );
 
-    if( argc != 2 )
+    int quality = 0;
+
+    if( argc != 2 && argc != 4 )
     {
-        fprintf( stderr, "Usage: etcpak input.png\n" );
+        Usage();
         return 1;
+    }
+    if( argc == 4 )
+    {
+        if( strcmp( argv[2], "-q" ) != 0 )
+        {
+            Usage();
+            return 1;
+        }
+
+        quality = atoi( argv[3] );
     }
 
     auto bmp = std::make_shared<Bitmap>( argv[1] );
     auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
     bmp.reset();
 
-    auto bd = std::make_shared<BlockData>( bb, false );
+    auto bd = std::make_shared<BlockData>( bb, quality == 0 ? false : true );
     bb.reset();
 
     auto out = bd->Decode();
