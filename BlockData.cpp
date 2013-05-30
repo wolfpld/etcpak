@@ -302,12 +302,16 @@ static void ProcessAverages( v3b* a )
     {
         for( int j=0; j<3; j++ )
         {
-            int32 c1 = a[i*2][j] >> 3;
-            int32 c2 = c1 - ( a[i*2+1][j] >> 3 );
-            c2 = std::min( std::max( -4, c2 ), 3 );
-            a[4+i*2][j] = ( c1 << 3 ) | ( c1 >> 2 );
-            int32 sum = c1 + c2;
-            a[5+i*2][j] = ( sum << 3 ) | ( sum >> 2 );
+            int32 c1 = a[i*2+1][j] >> 3;
+            int32 c2 = a[i*2][j] >> 3;
+
+            int32 diff = c2 - c1;
+            diff = std::min( std::max( diff, -4 ), 3 );
+
+            int32 co = c1 + diff;
+
+            a[5+i*2][j] = ( c1 << 3 ) | ( c1 >> 2 );
+            a[4+i*2][j] = ( co << 3 ) | ( co >> 2 );
         }
     }
     for( int i=0; i<4; i++ )
@@ -337,8 +341,8 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+0][i] & 0xF8 ) << ( i*8 + 8 );
-            int8 c = ( ( a[base+1][i] & 0xF8 ) - ( a[base+0][i] & 0xF8 ) ) >> 3;
+            d |= uint64( a[base+1][i] & 0xF8 ) << ( i*8 + 8 );
+            int8 c = ( ( a[base+0][i] & 0xF8 ) - ( a[base+1][i] & 0xF8 ) ) >> 3;
             c &= ~0xF8;
             d |= ((uint64)c) << ( i*8 + 8 );
         }
