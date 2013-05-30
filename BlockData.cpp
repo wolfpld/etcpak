@@ -60,9 +60,9 @@ static float CalcError( Color::Lab* c, const v3b& average )
     return CalcError( c, Color::Lab( average ) );
 }
 
-static float CalcError( const uint8* data, const v3b& average )
+static uint CalcError( const uint8* data, const v3b& average )
 {
-    float err = 0;
+    uint err = 0;
     for( int i=0; i<8; i++ )
     {
         uint32 b = *data++;
@@ -489,7 +489,7 @@ static uint64 ProcessRGB( const uint8* src )
     }
     ProcessAverages( a );
 
-    float err[4] = { 0 };
+    uint err[4] = {};
     for( int i=0; i<4; i++ )
     {
         err[i/2] += CalcError( b[i], a[i] );
