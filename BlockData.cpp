@@ -401,7 +401,17 @@ void BlockData::WritePVR( const char* fn )
 
     if( !m_done ) Finish();
 
-    fwrite( m_data, 1, m_size.x*m_size.y/2, f );
+    uint cnt = m_size.x*m_size.y/8;
+    uint32* ptr = (uint32*)m_data;
+    do
+    {
+        for( int i=3; i>=0; i-- )
+        {
+            fwrite( ((uint8*)ptr)+i, 1, 1, f );
+        }
+        ptr++;
+    }
+    while( --cnt );
 
     fclose( f );
 }
@@ -479,16 +489,16 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+0][i] & 0xF0 ) << ( i*8 + 4 );
-            d |= uint64( a[base+1][i] & 0xF0 ) << ( i*8 + 8 );
+            d |= uint64( a[base+0][2-i] & 0xF0 ) << ( i*8 + 4 );
+            d |= uint64( a[base+1][2-i] & 0xF0 ) << ( i*8 + 8 );
         }
     }
     else
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+1][i] & 0xF8 ) << ( i*8 + 8 );
-            int8 c = ( ( a[base+0][i] & 0xF8 ) - ( a[base+1][i] & 0xF8 ) ) >> 3;
+            d |= uint64( a[base+1][2-i] & 0xF8 ) << ( i*8 + 8 );
+            int8 c = ( ( a[base+0][2-i] & 0xF8 ) - ( a[base+1][2-i] & 0xF8 ) ) >> 3;
             c &= ~0xF8;
             d |= ((uint64)c) << ( i*8 + 8 );
         }
