@@ -157,6 +157,7 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
 
 BlockData::~BlockData()
 {
+    if( !m_done ) Finish();
     delete[] m_data;
 }
 
