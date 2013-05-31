@@ -59,6 +59,12 @@ int main( int argc, char** argv )
     }
     bb.reset();
 
+    bd->WritePVR( "out.pvr" );
+    if( bda )
+    {
+        bda->WritePVR( "outa.pvr" );
+    }
+    /*
     auto out = bd->Decode();
     out->Write( "out.png" );
     if( bda )
@@ -66,6 +72,7 @@ int main( int argc, char** argv )
         auto outa = bda->Decode();
         outa->Write( "outa.png" );
     }
+    */
 
     return 0;
 }
