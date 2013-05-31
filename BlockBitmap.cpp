@@ -41,7 +41,7 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
                 {
                     for( int y=0; y<4; y++ )
                     {
-                        *dst++ = src[x+bx*4+(y+by*4)*m_size.x] >> 24;
+                        *dst++ = 255 - ( src[x+bx*4+(y+by*4)*m_size.x] >> 24 );
                     }
                 }
             }
