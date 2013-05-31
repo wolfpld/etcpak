@@ -133,6 +133,7 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
             break;
         }
     }
+    m_done = true;
 #else
     uint32 step = std::max( 1u, cnt / 16 );
     if( bitmap->Type() == Channels::Alpha )
