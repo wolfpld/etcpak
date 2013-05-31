@@ -540,6 +540,8 @@ static uint64 ProcessRGB( const uint8* src )
 
         uint8 bid = id[i];
         const v3i pix( a[bid].x - r, a[bid].y - g, a[bid].z - b );
+        int32 c1 = sq( pix.x ) + sq( pix.y ) + sq( pix.z );
+        int32 c2 = 2 * ( pix.x + pix.y + pix.z );
 
         for( int t=0; t<8; t++ )
         {
@@ -549,7 +551,7 @@ static uint64 ProcessRGB( const uint8* src )
             for( int j=0; j<4; j++ )
             {
                 int32 v = tab[j];
-                uint local = sq( v + pix.x ) + sq( v + pix.y ) + sq( v + pix.z );
+                uint local = c1 + v * c2 + 3 * v * v;
                 if( local < err )
                 {
                     err = local;
