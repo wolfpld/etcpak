@@ -17,6 +17,7 @@ public:
     ~BlockData();
 
     BitmapPtr Decode();
+    void WritePVR( const char* fn );
 
 private:
     void Finish();

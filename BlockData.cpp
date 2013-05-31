@@ -366,6 +366,46 @@ BitmapPtr BlockData::Decode()
     return ret;
 }
 
+void BlockData::WritePVR( const char* fn )
+{
+    FILE* f = fopen( fn, "wb" );
+    assert( f );
+
+    uint32 data;
+    data = 0x03525650;  // version
+    fwrite( &data, 1, 4, f );
+    data = 0;           // flags
+    fwrite( &data, 1, 4, f );
+    data = 6;           // pixelformat[0]
+    fwrite( &data, 1, 4, f );
+    data = 0;           // pixelformat[1]
+    fwrite( &data, 1, 4, f );
+    data = 0;           // colourspace
+    fwrite( &data, 1, 4, f );
+    data = 0;           // channel type
+    fwrite( &data, 1, 4, f );
+    data = m_size.y;    // height
+    fwrite( &data, 1, 4, f );
+    data = m_size.x;    // width
+    fwrite( &data, 1, 4, f );
+    data = 1;           // depth
+    fwrite( &data, 1, 4, f );
+    data = 1;           // num surfs
+    fwrite( &data, 1, 4, f );
+    data = 1;           // num faces
+    fwrite( &data, 1, 4, f );
+    data = 1;           // mipmap count
+    fwrite( &data, 1, 4, f );
+    data = 0;           // metadata size
+    fwrite( &data, 1, 4, f );
+
+    if( !m_done ) Finish();
+
+    fwrite( m_data, 1, m_size.x*m_size.y/2, f );
+
+    fclose( f );
+}
+
 template<class T>
 static size_t GetLeastError( const T* err, size_t num )
 {
