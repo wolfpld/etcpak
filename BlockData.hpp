@@ -1,7 +1,9 @@
 #ifndef __BLOCKDATA_HPP__
 #define __BLOCKDATA_HPP__
 
+#include <future>
 #include <memory>
+#include <vector>
 
 #include "BlockBitmap.hpp"
 #include "Bitmap.hpp"
@@ -17,6 +19,8 @@ public:
     BitmapPtr Decode();
 
 private:
+    void Finish();
+
     void ProcessBlocksRGB( const uint8* src, uint64* dst, uint num );
     void ProcessBlocksLab( const uint8* src, uint64* dst, uint num );
     void ProcessBlocksAlpha( const uint8* src, uint64* dst, uint num );
@@ -24,6 +28,8 @@ private:
     uint64* m_data;
     v2i m_size;
     BlockBitmapPtr m_bmp;
+    bool m_done;
+    std::vector<std::future<void>> m_work;
 };
 
 typedef std::shared_ptr<BlockData> BlockDataPtr;

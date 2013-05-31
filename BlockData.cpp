@@ -1,6 +1,4 @@
 #include <assert.h>
-#include <future>
-#include <vector>
 #include <string.h>
 
 #include "BlockData.hpp"
@@ -84,6 +82,7 @@ static inline Color::Lab ToLab( const uint8* data )
 BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     : m_size( bitmap->Size() )
     , m_bmp( bitmap )
+    , m_done( false )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
@@ -115,13 +114,12 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
         }
     }
 #else
-    std::vector<std::future<void>> vec;
     uint32 step = std::max( 1u, cnt / 16 );
     if( bitmap->Type() == Channels::Alpha )
     {
         for( uint32 i=0; i<cnt; i+=step )
         {
-            vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksAlpha( src, dst, std::min( step, cnt - i ) ); } ) );
+            m_work.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksAlpha( src, dst, std::min( step, cnt - i ) ); } ) );
 
             src += 4*4 * step;
             dst += step;
@@ -134,7 +132,7 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
         case 0:
             for( uint32 i=0; i<cnt; i+=step )
             {
-                vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksRGB( src, dst, std::min( step, cnt - i ) ); } ) );
+                m_work.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksRGB( src, dst, std::min( step, cnt - i ) ); } ) );
 
                 src += 4*4*3 * step;
                 dst += step;
@@ -143,7 +141,7 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
         case 1:
             for( uint32 i=0; i<cnt; i+=step )
             {
-                vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksLab( src, dst, std::min( step, cnt - i ) ); } ) );
+                m_work.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksLab( src, dst, std::min( step, cnt - i ) ); } ) );
 
                 src += 4*4*3 * step;
                 dst += step;
@@ -154,10 +152,6 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
             break;
         }
     }
-    for( auto& f : vec )
-    {
-        f.wait();
-    }
 #endif
 }
 
@@ -166,8 +160,23 @@ BlockData::~BlockData()
     delete[] m_data;
 }
 
+void BlockData::Finish()
+{
+    assert( !m_done );
+    assert( !m_work.empty() );
+    for( auto& f : m_work )
+    {
+        f.wait();
+    }
+    m_done = true;
+    m_work.clear();
+    m_bmp.reset();
+}
+
 BitmapPtr BlockData::Decode()
 {
+    if( !m_done ) Finish();
+
     auto ret = std::make_shared<Bitmap>( m_size );
 
     uint32* l[4];
