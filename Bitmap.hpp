@@ -18,10 +18,12 @@ public:
     uint32* Data() { return m_data; }
     const uint32* Data() const { return m_data; }
     const v2i& Size() const { return m_size; }
+    bool Alpha() const { return m_alpha; }
 
 private:
     uint32* m_data;
     v2i m_size;
+    bool m_alpha;
 };
 
 typedef std::shared_ptr<Bitmap> BitmapPtr;

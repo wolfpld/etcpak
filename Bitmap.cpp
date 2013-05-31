@@ -9,6 +9,7 @@
 #include "Debug.hpp"
 
 Bitmap::Bitmap( const char* fn )
+    : m_alpha( true )
 {
     FILE* f = fopen( fn, "rb" );
     assert( f );
@@ -54,6 +55,7 @@ Bitmap::Bitmap( const char* fn )
         if( !png_get_valid( png_ptr, info_ptr, PNG_INFO_tRNS ) )
         {
             png_set_filler( png_ptr, 0xff, PNG_FILLER_AFTER );
+            m_alpha = false;
         }
         break;
     case PNG_COLOR_TYPE_GRAY_ALPHA:
@@ -61,6 +63,7 @@ Bitmap::Bitmap( const char* fn )
         break;
     case PNG_COLOR_TYPE_RGB:
         png_set_filler( png_ptr, 0xff, PNG_FILLER_AFTER );
+        m_alpha = false;
         break;
     default:
         break;
