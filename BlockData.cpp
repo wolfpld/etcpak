@@ -83,6 +83,7 @@ static inline Color::Lab ToLab( const uint8* data )
 
 BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     : m_size( bitmap->Size() )
+    , m_bmp( bitmap )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 

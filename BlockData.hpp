@@ -23,6 +23,7 @@ private:
 
     uint64* m_data;
     v2i m_size;
+    BlockBitmapPtr m_bmp;
 };
 
 typedef std::shared_ptr<BlockData> BlockDataPtr;
