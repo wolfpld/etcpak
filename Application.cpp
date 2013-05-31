@@ -44,13 +44,28 @@ int main( int argc, char** argv )
 
     auto bmp = std::make_shared<Bitmap>( argv[1] );
     auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
+    BlockBitmapPtr bba;
+    if( bmp->Alpha() )
+    {
+        bba = std::make_shared<BlockBitmap>( bmp, Channels::Alpha );
+    }
     bmp.reset();
 
     auto bd = std::make_shared<BlockData>( bb, quality );
+    BlockDataPtr bda;
+    if( bba )
+    {
+        bda = std::make_shared<BlockData>( bba, quality );
+    }
     bb.reset();
 
     auto out = bd->Decode();
     out->Write( "out.png" );
+    if( bda )
+    {
+        auto outa = bda->Decode();
+        outa->Write( "outa.png" );
+    }
 
     return 0;
 }

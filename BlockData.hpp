@@ -19,6 +19,7 @@ public:
 private:
     void ProcessBlocksRGB( const uint8* src, uint64* dst, uint num );
     void ProcessBlocksLab( const uint8* src, uint64* dst, uint num );
+    void ProcessBlocksAlpha( const uint8* src, uint64* dst, uint num );
 
     uint64* m_data;
     v2i m_size;

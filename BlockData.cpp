@@ -94,44 +94,64 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     uint64* dst = m_data;
 
 #ifdef SINGLE_THREADED
-    switch( quality )
+    if( bitmap->Type() == Channels::Alpha )
     {
-    case 0:
-        ProcessBlocksRGB( src, dst, cnt );
-        break;
-    case 1:
-        ProcessBlocksLab( src, dst, cnt );
-        break;
-    default:
-        assert( false );
-        break;
+        ProcessBlocksAlpha( src, dst, cnt );
+    }
+    else
+    {
+        switch( quality )
+        {
+        case 0:
+            ProcessBlocksRGB( src, dst, cnt );
+            break;
+        case 1:
+            ProcessBlocksLab( src, dst, cnt );
+            break;
+        default:
+            assert( false );
+            break;
+        }
     }
 #else
     std::vector<std::future<void>> vec;
     uint32 step = std::max( 1u, cnt / 16 );
-    switch( quality )
+    if( bitmap->Type() == Channels::Alpha )
     {
-    case 0:
         for( uint32 i=0; i<cnt; i+=step )
         {
-            vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksRGB( src, dst, std::min( step, cnt - i ) ); } ) );
+            vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksAlpha( src, dst, std::min( step, cnt - i ) ); } ) );
 
-            src += 4*4*3 * step;
+            src += 4*4 * step;
             dst += step;
         }
-        break;
-    case 1:
-        for( uint32 i=0; i<cnt; i+=step )
+    }
+    else
+    {
+        switch( quality )
         {
-            vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksLab( src, dst, std::min( step, cnt - i ) ); } ) );
+        case 0:
+            for( uint32 i=0; i<cnt; i+=step )
+            {
+                vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksRGB( src, dst, std::min( step, cnt - i ) ); } ) );
 
-            src += 4*4*3 * step;
-            dst += step;
+                src += 4*4*3 * step;
+                dst += step;
+            }
+            break;
+        case 1:
+            for( uint32 i=0; i<cnt; i+=step )
+            {
+                vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksLab( src, dst, std::min( step, cnt - i ) ); } ) );
+
+                src += 4*4*3 * step;
+                dst += step;
+            }
+            break;
+        default:
+            assert( false );
+            break;
         }
-        break;
-    default:
-        assert( false );
-        break;
     }
     for( auto& f : vec )
     {
@@ -605,6 +625,11 @@ static uint64 ProcessRGB( const uint8* src )
     return d;
 }
 
+static uint64 ProcessAlpha( const uint8* src )
+{
+    return 0;
+}
+
 void BlockData::ProcessBlocksRGB( const uint8* src, uint64* dst, uint num )
 {
     do
@@ -621,6 +646,16 @@ void BlockData::ProcessBlocksLab( const uint8* src, uint64* dst, uint num )
     {
         *dst++ = ProcessLab( src );
         src += 4*4*3;
+    }
+    while( --num );
+}
+
+void BlockData::ProcessBlocksAlpha( const uint8* src, uint64* dst, uint num )
+{
+    do
+    {
+        *dst++ = ProcessAlpha( src );
+        src += 4*4;
     }
     while( --num );
 }
