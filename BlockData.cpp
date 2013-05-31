@@ -81,9 +81,8 @@ static inline Color::Lab ToLab( const uint8* data )
     return Color::Lab( v3b( r, g, b ) );
 }
 
-BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
+BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     : m_size( bitmap->Size() )
-    , m_perc( perc )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
@@ -95,16 +94,44 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, bool perc )
     uint64* dst = m_data;
 
 #ifdef SINGLE_THREADED
-    ProcessBlocks( src, dst, cnt );
+    switch( quality )
+    {
+    case 0:
+        ProcessBlocksRGB( src, dst, cnt );
+        break;
+    case 1:
+        ProcessBlocksLab( src, dst, cnt );
+        break;
+    default:
+        assert( false );
+        break;
+    }
 #else
     std::vector<std::future<void>> vec;
     uint32 step = std::max( 1u, cnt / 16 );
-    for( uint32 i=0; i<cnt; i+=step )
+    switch( quality )
     {
-        vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocks( src, dst, std::min( step, cnt - i ) ); } ) );
+    case 0:
+        for( uint32 i=0; i<cnt; i+=step )
+        {
+            vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksRGB( src, dst, std::min( step, cnt - i ) ); } ) );
 
-        src += 4*4*3 * step;
-        dst += step;
+            src += 4*4*3 * step;
+            dst += step;
+        }
+        break;
+    case 1:
+        for( uint32 i=0; i<cnt; i+=step )
+        {
+            vec.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksLab( src, dst, std::min( step, cnt - i ) ); } ) );
+
+            src += 4*4*3 * step;
+            dst += step;
+        }
+        break;
+    default:
+        assert( false );
+        break;
     }
     for( auto& f : vec )
     {
@@ -578,24 +605,22 @@ static uint64 ProcessRGB( const uint8* src )
     return d;
 }
 
-void BlockData::ProcessBlocks( const uint8* src, uint64* dst, uint num )
+void BlockData::ProcessBlocksRGB( const uint8* src, uint64* dst, uint num )
 {
-    if( m_perc )
+    do
     {
-        do
-        {
-            *dst++ = ProcessLab( src );
-            src += 4*4*3;
-        }
-        while( --num );
+        *dst++ = ProcessRGB( src );
+        src += 4*4*3;
     }
-    else
+    while( --num );
+}
+
+void BlockData::ProcessBlocksLab( const uint8* src, uint64* dst, uint num )
+{
+    do
     {
-        do
-        {
-            *dst++ = ProcessRGB( src );
-            src += 4*4*3;
-        }
-        while( --num );
+        *dst++ = ProcessLab( src );
+        src += 4*4*3;
     }
+    while( --num );
 }
