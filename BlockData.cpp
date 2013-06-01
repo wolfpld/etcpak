@@ -15,6 +15,16 @@ static const int32 table[][4] = {
     { 33, 106, -33, -106 },
     { 47, 183, -47, -183 } };
 
+static const int32 table256[][4] = {
+    {  2*256,  8*256,   -2*256,   -8*256 },
+    {  5*256, 17*256,   -5*256,  -17*256 },
+    {  9*256, 29*256,   -9*256,  -29*256 },
+    { 13*256, 42*256,  -13*256,  -42*256 },
+    { 18*256, 60*256,  -18*256,  -60*256 },
+    { 24*256, 80*256,  -24*256,  -80*256 },
+    { 33*256, 106*256, -33*256, -106*256 },
+    { 47*256, 183*256, -47*256, -183*256 } };
+
 static v3b Average( const uint8* data )
 {
     uint32 r = 0, g = 0, b = 0;
@@ -716,20 +726,20 @@ static uint64 ProcessRGB( const uint8* src )
         uint8 g = *data++;
         uint8 r = *data++;
 
-        const v3i pix( a[bid].x - r, a[bid].y - g, a[bid].z - b );
-        int32 c1 = sq( pix.x ) + sq( pix.y ) + sq( pix.z );
-        int32 c2 = 2 * ( pix.x + pix.y + pix.z );
+        int dr = a[bid].x - r;
+        int dg = a[bid].y - g;
+        int db = a[bid].z - b;
+
+        int pix = dr * 77 + dg * 151 + db * 28;
 
         for( int t=0; t<8; t++ )
         {
-            const int32* tab = table[t];
+            const int32* tab = table256[t];
             uint idx = 0;
-            int32 v = tab[0];
-            int err = v * ( c2 + 3 * v );
+            uint err = sq( tab[0] + pix );
             for( int j=1; j<4; j++ )
             {
-                int32 v = tab[j];
-                int local = v * ( c2 + 3 * v );
+                uint local = sq( tab[j] + pix );
                 if( local < err )
                 {
                     err = local;
@@ -737,7 +747,7 @@ static uint64 ProcessRGB( const uint8* src )
                 }
             }
             *sel++ = idx;
-            *ter++ += err + c1;
+            *ter++ += err;
         }
     }
     size_t tidx[2];
