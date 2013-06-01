@@ -723,8 +723,9 @@ static uint64 ProcessRGB( const uint8* src )
         {
             const int32* tab = table[t];
             uint idx = 0;
-            uint err = std::numeric_limits<uint>::max();
-            for( int j=0; j<4; j++ )
+            int32 v = tab[0];
+            uint err = c1 + v * c2 + 3 * v * v;
+            for( int j=1; j<4; j++ )
             {
                 int32 v = tab[j];
                 uint local = c1 + v * c2 + 3 * v * v;
@@ -825,11 +826,11 @@ static uint64 ProcessAlpha( const uint8* src )
         {
             const int32* tab = table[t];
             uint idx = 0;
-            uint err = std::numeric_limits<uint>::max();
-            for( int j=0; j<4; j++ )
+            int32 v = tab[0];
+            uint err = sq( v + pix );
+            for( int j=1; j<4; j++ )
             {
-                int32 v = tab[j];
-                uint local = sq( v + pix );
+                uint local = sq( tab[j] + pix );
                 if( local < err )
                 {
                     err = local;
