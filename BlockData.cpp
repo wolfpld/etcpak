@@ -709,12 +709,13 @@ static uint64 ProcessRGB( const uint8* src )
     for( size_t i=0; i<16; i++ )
     {
         uint8* sel = tsel[i];
+        uint8 bid = id[i];
+        uint* ter = terr[bid%2];
 
         uint8 b = *data++;
         uint8 g = *data++;
         uint8 r = *data++;
 
-        uint8 bid = id[i];
         const v3i pix( a[bid].x - r, a[bid].y - g, a[bid].z - b );
         int32 c1 = sq( pix.x ) + sq( pix.y ) + sq( pix.z );
         int32 c2 = 2 * ( pix.x + pix.y + pix.z );
@@ -735,8 +736,8 @@ static uint64 ProcessRGB( const uint8* src )
                     idx = j;
                 }
             }
-            sel[t] = idx;
-            terr[bid%2][t] += err;
+            *sel++ = idx;
+            *ter++ += err;
         }
     }
     size_t tidx[2];
@@ -817,9 +818,10 @@ static uint64 ProcessAlpha( const uint8* src )
     for( size_t i=0; i<16; i++ )
     {
         uint8* sel = tsel[i];
+        uint8 bid = id[i];
+        uint* ter = terr[bid%2];
 
         uint8 c = *data++;
-        uint8 bid = id[i];
         int32 pix = a[bid] - c;
 
         for( int t=0; t<8; t++ )
@@ -837,8 +839,8 @@ static uint64 ProcessAlpha( const uint8* src )
                     idx = j;
                 }
             }
-            sel[t] = idx;
-            terr[bid%2][t] += err;
+            *sel++ = idx;
+            *ter++ += err;
         }
     }
     size_t tidx[2];
