@@ -710,16 +710,16 @@ static uint64 ProcessRGB( const uint8* src )
 
     uint terr[2][8] = {};
     uint tsel[16][8];
-    uint8 id[16];
+    uint id[16];
     for( int i=0; i<16; i++ )
     {
-        id[i] = (uint8)GetBufId( i, idx );
+        id[i] = GetBufId( i, idx );
     }
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
         uint* sel = tsel[i];
-        uint8 bid = id[i];
+        uint bid = id[i];
         uint* ter = terr[bid%2];
 
         uint8 b = *data++;
@@ -819,16 +819,16 @@ static uint64 ProcessAlpha( const uint8* src )
 
     uint terr[2][8] = {};
     uint tsel[16][8];
-    uint8 id[16];
+    uint id[16];
     for( int i=0; i<16; i++ )
     {
-        id[i] = (uint8)GetBufId( i, idx );
+        id[i] = GetBufId( i, idx );
     }
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
         uint* sel = tsel[i];
-        uint8 bid = id[i];
+        uint bid = id[i];
         uint* ter = terr[bid%2];
 
         uint8 c = *data++;
