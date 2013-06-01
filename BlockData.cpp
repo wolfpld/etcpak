@@ -709,7 +709,7 @@ static uint64 ProcessRGB( const uint8* src )
     EncodeAverages( d, a, idx );
 
     uint terr[2][8] = {};
-    uint8 tsel[16][8];
+    uint tsel[16][8];
     uint8 id[16];
     for( int i=0; i<16; i++ )
     {
@@ -718,7 +718,7 @@ static uint64 ProcessRGB( const uint8* src )
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
-        uint8* sel = tsel[i];
+        uint* sel = tsel[i];
         uint8 bid = id[i];
         uint* ter = terr[bid%2];
 
@@ -818,7 +818,7 @@ static uint64 ProcessAlpha( const uint8* src )
     EncodeAverages( d, a, idx );
 
     uint terr[2][8] = {};
-    uint8 tsel[16][8];
+    uint tsel[16][8];
     uint8 id[16];
     for( int i=0; i<16; i++ )
     {
@@ -827,7 +827,7 @@ static uint64 ProcessAlpha( const uint8* src )
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
-        uint8* sel = tsel[i];
+        uint* sel = tsel[i];
         uint8 bid = id[i];
         uint* ter = terr[bid%2];
 
