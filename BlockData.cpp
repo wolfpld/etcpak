@@ -453,8 +453,8 @@ static void ProcessAverages( v3b* a )
     {
         for( int j=0; j<3; j++ )
         {
-            a[i][j] &= 0xF0;
-            a[i][j] |= a[i][j] >> 4;
+            uint8 c = a[i][j];
+            a[i][j] = ( c & 0xF0 ) | ( c >> 4 );
         }
     }
 }
@@ -476,8 +476,8 @@ static void ProcessAverages( uint8* a )
     }
     for( int i=0; i<4; i++ )
     {
-        a[i] &= 0xF0;
-        a[i] |= a[i] >> 4;
+        uint8 c = a[i];
+        a[i] = ( c & 0xF0 ) | ( c >> 4 );
     }
 }
 
