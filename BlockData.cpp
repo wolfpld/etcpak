@@ -725,11 +725,11 @@ static uint64 ProcessRGB( const uint8* src )
             const int32* tab = table[t];
             uint idx = 0;
             int32 v = tab[0];
-            uint err = c1 + v * c2 + 3 * v * v;
+            int err = v * ( c2 + 3 * v );
             for( int j=1; j<4; j++ )
             {
                 int32 v = tab[j];
-                uint local = c1 + v * c2 + 3 * v * v;
+                int local = v * ( c2 + 3 * v );
                 if( local < err )
                 {
                     err = local;
@@ -737,7 +737,7 @@ static uint64 ProcessRGB( const uint8* src )
                 }
             }
             *sel++ = idx;
-            *ter++ += err;
+            *ter++ += err + c1;
         }
     }
     size_t tidx[2];
