@@ -828,8 +828,7 @@ static uint64 ProcessAlpha( const uint8* src )
         {
             const int32* tab = table[t];
             uint idx = 0;
-            int32 v = tab[0];
-            uint err = sq( v + pix );
+            uint err = sq( tab[0] + pix );
             for( int j=1; j<4; j++ )
             {
                 uint local = sq( tab[j] + pix );
