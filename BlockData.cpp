@@ -713,7 +713,7 @@ static uint64 ProcessRGB( const uint8* src )
     uint id[16];
     for( int i=0; i<16; i++ )
     {
-        id[i] = GetBufId( i, idx );
+        id[i] = (uint)GetBufId( i, idx );
     }
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
@@ -822,7 +822,7 @@ static uint64 ProcessAlpha( const uint8* src )
     uint id[16];
     for( int i=0; i<16; i++ )
     {
-        id[i] = GetBufId( i, idx );
+        id[i] = (uint)GetBufId( i, idx );
     }
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
