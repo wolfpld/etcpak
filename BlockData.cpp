@@ -104,10 +104,15 @@ static uint CalcError( const uint8* data, const v3b& average )
 static uint CalcError( const uint8* data, uint8 average )
 {
     uint err = 0;
+    uint sum = 0;
     for( int i=0; i<8; i++ )
     {
-        err += sq( *data++ - average );
+        uint v = *data++;
+        sum += v;
+        err += v*v;
     }
+    err -= sum * 2 * average;
+    err += 8 * sq( (uint)average );
     return err;
 }
 
