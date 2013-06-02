@@ -55,7 +55,7 @@ namespace Color
         z = white.z * revlab( 1.f/116.f * ( lab.L + 16 ) - 1.f/200.f * lab.b );
     }
 
-    v3b XYZ::RGB() const
+    v3i XYZ::RGB() const
     {
         const float rl =  3.2406f * x - 1.5372f * y - 0.4986f * z;
         const float gl = -0.9689f * x + 1.8758f * y + 0.0415f * z;
