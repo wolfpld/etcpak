@@ -22,13 +22,16 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
                 {
                     for( int y=0; y<4; y++ )
                     {
-                        const uint32 c = src[x+bx*4+(y+by*4)*m_size.x];
+                        const uint32 c = *src;
+                        src += m_size.x;
                         *dst++ = ( c & 0x00FF0000 ) >> 16;
                         *dst++ = ( c & 0x0000FF00 ) >> 8;
                         *dst++ =   c & 0x000000FF;
                     }
+                    src -= m_size.x * 4 - 1;
                 }
             }
+            src += m_size.x * 3;
         }
     }
     else
@@ -41,10 +44,13 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
                 {
                     for( int y=0; y<4; y++ )
                     {
-                        *dst++ = 255 - ( src[x+bx*4+(y+by*4)*m_size.x] >> 24 );
+                        *dst++ = 255 - ( *src >> 24 );
+                        src += m_size.x;
                     }
+                    src -= m_size.x * 4 - 1;
                 }
             }
+            src += m_size.x * 3;
         }
     }
 }
