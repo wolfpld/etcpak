@@ -414,18 +414,16 @@ void BlockData::WritePVR( const char* fn )
 
     uint cnt = m_size.x*m_size.y/8;
     uint32* ptr = (uint32*)m_data;
-    uint8* tmp = new uint8[cnt*4];
-    uint8* dst = tmp;
     for( uint j=0; j<cnt; j++ )
     {
-        for( int i=3; i>=0; i-- )
-        {
-            *dst++ = *((uint8*)ptr)+i;
-        }
-        ptr++;
+        uint32 v = *ptr;
+        *ptr++ =
+            ( v >> 24 ) |
+            ( ( v & 0x00FF0000 ) >> 8 ) |
+            ( ( v & 0x0000FF00 ) << 8 ) |
+            ( v << 24 );
     }
-    fwrite( tmp, 1, cnt*4, f );
-    delete[] tmp;
+    fwrite( m_data, 1, cnt*4, f );
 
     fclose( f );
 }
