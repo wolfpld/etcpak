@@ -81,13 +81,23 @@ static float CalcError( Color::Lab* c, const v3b& average )
 static uint CalcError( const uint8* data, const v3b& average )
 {
     uint err = 0;
+    uint sum[3] = {};
     for( int i=0; i<8; i++ )
     {
-        uint32 b = *data++;
-        uint32 g = *data++;
-        uint32 r = *data++;
-        err += sq( r - average.x ) + sq( g - average.y ) + sq( b - average.z );
+        uint d = *data++;
+        sum[0] += d;
+        err += d*d;
+        d = *data++;
+        sum[1] += d;
+        err += d*d;
+        d = *data++;
+        sum[2] += d;
+        err += d*d;
     }
+    err -= sum[0] * 2 * average.z;
+    err -= sum[1] * 2 * average.y;
+    err -= sum[2] * 2 * average.x;
+    err += 8 * ( sq( (uint)average.x ) + sq( (uint)average.y ) + sq( (uint)average.z ) );
     return err;
 }
 
