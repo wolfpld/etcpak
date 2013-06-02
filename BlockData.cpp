@@ -25,7 +25,7 @@ static const int32 table256[][4] = {
     { 33*256, 106*256, -33*256, -106*256 },
     { 47*256, 183*256, -47*256, -183*256 } };
 
-static v3b Average( const uint8* data )
+static v3i Average( const uint8* data )
 {
     uint32 r = 0, g = 0, b = 0;
     for( int i=0; i<8; i++ )
@@ -34,10 +34,10 @@ static v3b Average( const uint8* data )
         g += *data++;
         r += *data++;
     }
-    return v3b( r / 8, g / 8, b / 8 );
+    return v3i( r / 8, g / 8, b / 8 );
 }
 
-static uint8 Average1( const uint8* data )
+static uint Average1( const uint8* data )
 {
     uint32 a = 0;
     for( int i=0; i<8; i++ )
@@ -73,12 +73,12 @@ static float CalcError( Color::Lab* c, const Color::Lab& avg )
     return err;
 }
 
-static float CalcError( Color::Lab* c, const v3b& average )
+static float CalcError( Color::Lab* c, const v3i& average )
 {
     return CalcError( c, Color::Lab( average ) );
 }
 
-static uint CalcError( const uint8* data, const v3b& average )
+static uint CalcError( const uint8* data, const v3i& average )
 {
     uint err = 0;
     uint sum[3] = {};
@@ -97,11 +97,11 @@ static uint CalcError( const uint8* data, const v3b& average )
     err -= sum[0] * 2 * average.z;
     err -= sum[1] * 2 * average.y;
     err -= sum[2] * 2 * average.x;
-    err += 8 * ( sq( (uint)average.x ) + sq( (uint)average.y ) + sq( (uint)average.z ) );
+    err += 8 * ( sq( average.x ) + sq( average.y ) + sq( average.z ) );
     return err;
 }
 
-static uint CalcError( const uint8* data, uint8 average )
+static uint CalcError( const uint8* data, uint average )
 {
     uint err = 0;
     uint sum = 0;
@@ -112,7 +112,7 @@ static uint CalcError( const uint8* data, uint8 average )
         err += v*v;
     }
     err -= sum * 2 * average;
-    err += 8 * sq( (uint)average );
+    err += 8 * sq( average );
     return err;
 }
 
@@ -457,7 +457,7 @@ static size_t GetLeastError( const T* err, size_t num )
     return idx;
 }
 
-static void ProcessAverages( v3b* a )
+static void ProcessAverages( v3i* a )
 {
     for( int i=0; i<2; i++ )
     {
@@ -479,35 +479,35 @@ static void ProcessAverages( v3b* a )
     {
         for( int j=0; j<3; j++ )
         {
-            uint8 c = a[i][j];
+            uint32 c = a[i][j];
             a[i][j] = ( c & 0xF0 ) | ( c >> 4 );
         }
     }
 }
 
-static void ProcessAverages( uint8* a )
+static void ProcessAverages( uint* a )
 {
     for( int i=0; i<2; i++ )
     {
-        int32 c1 = a[i*2+1] >> 3;
-        int32 c2 = a[i*2] >> 3;
+        int c1 = a[i*2+1] >> 3;
+        int c2 = a[i*2] >> 3;
 
-        int32 diff = c2 - c1;
+        int diff = c2 - c1;
         diff = std::min( std::max( diff, -4 ), 3 );
 
-        int32 co = c1 + diff;
+        int co = c1 + diff;
 
         a[5+i*2] = ( c1 << 3 ) | ( c1 >> 2 );
         a[4+i*2] = ( co << 3 ) | ( co >> 2 );
     }
     for( int i=0; i<4; i++ )
     {
-        uint8 c = a[i];
+        uint c = a[i];
         a[i] = ( c & 0xF0 ) | ( c >> 4 );
     }
 }
 
-static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
+static void EncodeAverages( uint64& d, const v3i* a, size_t idx )
 {
     d |= idx;
     size_t base = idx << 1;
@@ -525,14 +525,14 @@ static void EncodeAverages( uint64& d, const v3b* a, size_t idx )
         for( int i=0; i<3; i++ )
         {
             d |= uint64( a[base+1][2-i] & 0xF8 ) << ( i*8 + 8 );
-            int8 c = ( ( a[base+0][2-i] & 0xF8 ) - ( a[base+1][2-i] & 0xF8 ) ) >> 3;
-            c &= ~0xF8;
+            int32 c = ( ( a[base+0][2-i] & 0xF8 ) - ( a[base+1][2-i] & 0xF8 ) ) >> 3;
+            c &= ~0xFFFFFFF8;
             d |= ((uint64)c) << ( i*8 + 8 );
         }
     }
 }
 
-static void EncodeAverages( uint64& d, const uint8* a, size_t idx )
+static void EncodeAverages( uint64& d, const uint* a, size_t idx )
 {
     d |= idx;
     size_t base = idx << 1;
@@ -550,8 +550,8 @@ static void EncodeAverages( uint64& d, const uint8* a, size_t idx )
         for( int i=0; i<3; i++ )
         {
             d |= uint64( a[base+1] & 0xF8 ) << ( i*8 + 8 );
-            int8 c = ( ( a[base+0] & 0xF8 ) - ( a[base+1] & 0xF8 ) ) >> 3;
-            c &= ~0xF8;
+            int32 c = ( ( a[base+0] & 0xF8 ) - ( a[base+1] & 0xF8 ) ) >> 3;
+            c &= ~0xFFFFFFF8;
             d |= ((uint64)c) << ( i*8 + 8 );
         }
     }
@@ -598,7 +598,7 @@ static uint64 ProcessLab( const uint8* src )
         la[i] = Average( b[i] );
     }
 
-    v3b a[8];
+    v3i a[8];
     for( int i=0; i<4; i++ )
     {
         a[i] = Color::XYZ( la[i] ).RGB();
@@ -707,7 +707,7 @@ static uint64 ProcessRGB( const uint8* src )
         memcpy( b[2]+i*6, src+i*12+6, 6 );
     }
 
-    v3b a[8];
+    v3i a[8];
     for( int i=0; i<4; i++ )
     {
         a[i] = Average( b[i] );
@@ -816,7 +816,7 @@ static uint64 ProcessAlpha( const uint8* src )
         *(b[2]+i*2) = *(src+i*4+3);
     }
 
-    uint8 a[8];
+    uint a[8];
     for( int i=0; i<4; i++ )
     {
         a[i] = Average1( b[i] );
