@@ -55,6 +55,9 @@ int main( int argc, char** argv )
 
     if( viewMode )
     {
+        auto bd = std::make_shared<BlockData>( argv[1] );
+        auto out = bd->Decode();
+        out->Write( "out.png" );
     }
     else
     {

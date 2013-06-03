@@ -13,6 +13,7 @@
 class BlockData
 {
 public:
+    BlockData( const char* fn );
     BlockData( const BlockBitmapPtr& bitmap, uint quality );
     ~BlockData();
 

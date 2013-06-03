@@ -124,6 +124,40 @@ static inline Color::Lab ToLab( const uint8* data )
     return Color::Lab( v3b( r, g, b ) );
 }
 
+BlockData::BlockData( const char* fn )
+    : m_data( nullptr )
+    , m_done( true )
+{
+    FILE* f = fopen( fn, "rb" );
+
+    uint32 data;
+    fread( &data, 1, 4, f );
+    assert( data == 0x03525650 );
+    fseek( f, 20, SEEK_CUR );
+    fread( &data, 1, 4, f );
+    m_size.y = data;
+    fread( &data, 1, 4, f );
+    m_size.x = data;
+    fseek( f, 20, SEEK_CUR );
+    uint32 cnt = m_size.x * m_size.y / 16;
+    m_data = new uint64[cnt];
+    fread( m_data, 1, cnt * 8, f );
+
+    cnt *= 2;
+    uint32* ptr = (uint32*)m_data;
+    for( uint j=0; j<cnt; j++ )
+    {
+        uint32 v = *ptr;
+        *ptr++ =
+            ( v >> 24 ) |
+            ( ( v & 0x00FF0000 ) >> 8 ) |
+            ( ( v & 0x0000FF00 ) << 8 ) |
+            ( v << 24 );
+    }
+
+    fclose( f );
+}
+
 BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     : m_size( bitmap->Size() )
     , m_bmp( bitmap )
