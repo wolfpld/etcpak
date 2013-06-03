@@ -26,6 +26,7 @@ int main( int argc, char** argv )
 
     int quality = 0;
     bool viewMode = false;
+    int save = 1;
 
     if( argc < 2 )
     {
@@ -44,6 +45,12 @@ int main( int argc, char** argv )
         else if( CSTR( "-v" ) )
         {
             viewMode = true;
+        }
+        else if( CSTR( "-s" ) )
+        {
+            i++;
+            save = atoi( argv[i] );
+            assert( ( save & 0x3 ) != 0 );
         }
         else
         {
@@ -78,21 +85,24 @@ int main( int argc, char** argv )
         }
         bb.reset();
 
-#if 0
-        bd->WritePVR( "out.pvr" );
-        if( bda )
+        if( save & 0x2 )
         {
-            bda->WritePVR( "outa.pvr" );
+            auto out = bd->Decode();
+            out->Write( "out.png" );
+            if( bda )
+            {
+                auto outa = bda->Decode();
+                outa->Write( "outa.png" );
+            }
         }
-#else
-        auto out = bd->Decode();
-        out->Write( "out.png" );
-        if( bda )
+        if( save & 0x1 )
         {
-            auto outa = bda->Decode();
-            outa->Write( "outa.png" );
+            bd->WritePVR( "out.pvr" );
+            if( bda )
+            {
+                bda->WritePVR( "outa.pvr" );
+            }
         }
-#endif
     }
 
     return 0;
