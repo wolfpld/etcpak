@@ -25,54 +25,72 @@ int main( int argc, char** argv )
     DebugLog::AddCallback( &DebugCallback );
 
     int quality = 0;
+    bool viewMode = false;
 
-    if( argc != 2 && argc != 4 )
+    if( argc < 2 )
     {
         Usage();
         return 1;
     }
-    if( argc == 4 )
+
+#define CSTR(x) strcmp( argv[i], x ) == 0
+    for( int i=2; i<argc; i++ )
     {
-        if( strcmp( argv[2], "-q" ) != 0 )
+        if( CSTR( "-q" ) )
+        {
+            i++;
+            quality = atoi( argv[i] );
+        }
+        else if( CSTR( "-v" ) )
+        {
+            viewMode = true;
+        }
+        else
         {
             Usage();
             return 1;
         }
+    }
+#undef CSTR
 
-        quality = atoi( argv[3] );
+    if( viewMode )
+    {
     }
+    else
+    {
+        auto bmp = std::make_shared<Bitmap>( argv[1] );
+        auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
+        BlockBitmapPtr bba;
+        if( bmp->Alpha() )
+        {
+            bba = std::make_shared<BlockBitmap>( bmp, Channels::Alpha );
+        }
+        bmp.reset();
 
-    auto bmp = std::make_shared<Bitmap>( argv[1] );
-    auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
-    BlockBitmapPtr bba;
-    if( bmp->Alpha() )
-    {
-        bba = std::make_shared<BlockBitmap>( bmp, Channels::Alpha );
-    }
-    bmp.reset();
+        auto bd = std::make_shared<BlockData>( bb, quality );
+        BlockDataPtr bda;
+        if( bba )
+        {
+            bda = std::make_shared<BlockData>( bba, quality );
+        }
+        bb.reset();
 
-    auto bd = std::make_shared<BlockData>( bb, quality );
-    BlockDataPtr bda;
-    if( bba )
-    {
-        bda = std::make_shared<BlockData>( bba, quality );
+#if 0
+        bd->WritePVR( "out.pvr" );
+        if( bda )
+        {
+            bda->WritePVR( "outa.pvr" );
+        }
+#else
+        auto out = bd->Decode();
+        out->Write( "out.png" );
+        if( bda )
+        {
+            auto outa = bda->Decode();
+            outa->Write( "outa.png" );
+        }
+#endif
     }
-    bb.reset();
-
-    bd->WritePVR( "out.pvr" );
-    if( bda )
-    {
-        bda->WritePVR( "outa.pvr" );
-    }
-    /*
-    auto out = bd->Decode();
-    out->Write( "out.png" );
-    if( bda )
-    {
-        auto outa = bda->Decode();
-        outa->Write( "outa.png" );
-    }
-    */
 
     return 0;
 }
