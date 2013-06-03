@@ -132,13 +132,31 @@ BlockData::BlockData( const char* fn )
 
     uint32 data;
     fread( &data, 1, 4, f );
-    assert( data == 0x03525650 );
-    fseek( f, 20, SEEK_CUR );
-    fread( &data, 1, 4, f );
-    m_size.y = data;
-    fread( &data, 1, 4, f );
-    m_size.x = data;
-    fseek( f, 20, SEEK_CUR );
+    if( data == 0x03525650 )
+    {
+        fseek( f, 20, SEEK_CUR );
+        fread( &data, 1, 4, f );
+        m_size.y = data;
+        fread( &data, 1, 4, f );
+        m_size.x = data;
+        fseek( f, 20, SEEK_CUR );
+    }
+    else if( data == 0x58544BAB )
+    {
+        fseek( f, 32, SEEK_CUR );
+        fread( &data, 1, 4, f );
+        m_size.x = data;
+        fread( &data, 1, 4, f );
+        m_size.y = data;
+        fseek( f, 16, SEEK_CUR );
+        fread( &data, 1, 4, f );
+        fseek( f, data + 4, SEEK_CUR );
+    }
+    else
+    {
+        assert( false );
+    }
+
     uint32 cnt = m_size.x * m_size.y / 16;
     m_data = new uint64[cnt];
     fread( m_data, 1, cnt * 8, f );
