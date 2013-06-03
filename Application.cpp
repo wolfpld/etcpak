@@ -27,6 +27,7 @@ int main( int argc, char** argv )
     int quality = 0;
     bool viewMode = false;
     int save = 1;
+    bool alpha = true;
 
     if( argc < 2 )
     {
@@ -52,6 +53,10 @@ int main( int argc, char** argv )
             save = atoi( argv[i] );
             assert( ( save & 0x3 ) != 0 );
         }
+        else if( CSTR( "-a" ) )
+        {
+            alpha = false;
+        }
         else
         {
             Usage();
@@ -71,7 +76,7 @@ int main( int argc, char** argv )
         auto bmp = std::make_shared<Bitmap>( argv[1] );
         auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
         BlockBitmapPtr bba;
-        if( bmp->Alpha() )
+        if( bmp->Alpha() && alpha )
         {
             bba = std::make_shared<BlockBitmap>( bmp, Channels::Alpha );
         }
