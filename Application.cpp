@@ -47,7 +47,7 @@ int main( int argc, char** argv )
         {
             viewMode = true;
         }
-        else if( CSTR( "-s" ) )
+        else if( CSTR( "-o" ) )
         {
             i++;
             save = atoi( argv[i] );
