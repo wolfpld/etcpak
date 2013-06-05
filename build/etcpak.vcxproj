@@ -87,6 +87,7 @@
     <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\ColorSpace.cpp" />
     <ClCompile Include="..\Debug.cpp" />
+    <ClCompile Include="..\Error.cpp" />
     <ClCompile Include="..\libpng\png.c" />
     <ClCompile Include="..\libpng\pngerror.c" />
     <ClCompile Include="..\libpng\pngget.c" />
@@ -121,6 +122,7 @@
     <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\Debug.hpp" />
+    <ClInclude Include="..\Error.hpp" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
     <ClInclude Include="..\libpng\pngdebug.h" />

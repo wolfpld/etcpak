@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <memory>
 #include <string.h>
 
@@ -6,6 +7,7 @@
 #include "BlockBitmap.hpp"
 #include "BlockData.hpp"
 #include "Debug.hpp"
+#include "Error.hpp"
 
 struct DebugCallback_t : public DebugLog::Callback
 {
@@ -28,6 +30,7 @@ int main( int argc, char** argv )
     bool viewMode = false;
     int save = 1;
     bool alpha = true;
+    bool stats = false;
 
     if( argc < 2 )
     {
@@ -57,6 +60,10 @@ int main( int argc, char** argv )
         {
             alpha = false;
         }
+        else if( CSTR( "-s" ) )
+        {
+            stats = true;
+        }
         else
         {
             Usage();
@@ -80,7 +87,10 @@ int main( int argc, char** argv )
         {
             bba = std::make_shared<BlockBitmap>( bmp, Channels::Alpha );
         }
-        bmp.reset();
+        if( !stats )
+        {
+            bmp.reset();
+        }
 
         auto bd = std::make_shared<BlockData>( bb, quality );
         BlockDataPtr bda;
@@ -89,6 +99,24 @@ int main( int argc, char** argv )
             bda = std::make_shared<BlockData>( bba, quality );
         }
         bb.reset();
+
+        if( stats )
+        {
+            auto out = bd->Decode();
+            float mse = CalcMSE3( bmp, out );
+            printf( "RGB data\n" );
+            printf( "  RMSE: %f\n", sqrt( mse ) );
+            printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
+
+            if( bda )
+            {
+                auto out = bda->Decode();
+                float mse = CalcMSE1( bmp, out );
+                printf( "A data\n" );
+                printf( "  RMSE: %f\n", sqrt( mse ) );
+                printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
+            }
+        }
 
         if( save & 0x2 )
         {
