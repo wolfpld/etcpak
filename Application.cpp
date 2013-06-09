@@ -19,7 +19,13 @@ struct DebugCallback_t : public DebugLog::Callback
 
 void Usage()
 {
-    fprintf( stderr, "Usage: etcpak input.png [-q quality]\n" );
+    fprintf( stderr, "Usage: etcpak input.png [options]\n" );
+    fprintf( stderr, "  Options:\n" );
+    //fprintf( stderr, "  -q 0        set quality to given value\n" );
+    fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
+    fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
+    fprintf( stderr, "  -a          disable alpha channel processing\n" );
+    fprintf( stderr, "  -s          display image quality measurements\n" );
 }
 
 int main( int argc, char** argv )
