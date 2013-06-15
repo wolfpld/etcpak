@@ -748,15 +748,13 @@ static uint64 ProcessRGB( const uint8* src )
         }
     }
 
-    uint8 b[4][24];
-
-    memcpy( b[1], src, 24 );
-    memcpy( b[0], src+24, 24 );
+    uint8 b23[2][24];
+    const uint8* b[4] = { src+24, src, b23[0], b23[1] };
 
     for( int i=0; i<4; i++ )
     {
-        memcpy( b[3]+i*6, src+i*12, 6 );
-        memcpy( b[2]+i*6, src+i*12+6, 6 );
+        memcpy( b23[1]+i*6, src+i*12, 6 );
+        memcpy( b23[0]+i*6, src+i*12+6, 6 );
     }
 
     v3i a[8];
@@ -857,15 +855,13 @@ static uint64 ProcessAlpha( const uint8* src )
         }
     }
 
-    uint8 b[4][8];
-
-    memcpy( b[1], src, 8 );
-    memcpy( b[0], src+8, 8 );
+    uint8 b23[2][8];
+    const uint8* b[4] = { src+8, src, b23[0], b23[1] };
 
     for( int i=0; i<4; i++ )
     {
-        *(b[3]+i*2) = *(src+i*4);
-        *(b[2]+i*2) = *(src+i*4+3);
+        *(b23[1]+i*2) = *(src+i*4);
+        *(b23[0]+i*2) = *(src+i*4+3);
     }
 
     uint a[8];
