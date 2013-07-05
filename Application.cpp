@@ -1,3 +1,4 @@
+#include <future>
 #include <stdio.h>
 #include <math.h>
 #include <memory>
@@ -87,24 +88,39 @@ int main( int argc, char** argv )
     else
     {
         auto bmp = std::make_shared<Bitmap>( argv[1] );
-        auto bb = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
-        BlockBitmapPtr bba;
-        if( bmp->Alpha() && alpha )
+        auto num = bmp->Size().y / 4;
+
+        auto bd = std::make_shared<BlockData>( bmp->Size() );
+        BlockDataPtr bda;
+        if( alpha && bmp->Alpha() )
         {
-            bba = std::make_shared<BlockBitmap>( bmp, Channels::Alpha );
-        }
-        if( !stats )
-        {
-            bmp.reset();
+            bda = std::make_shared<BlockData>( bmp->Size() );
         }
 
-        auto bd = std::make_shared<BlockData>( bb, quality );
-        BlockDataPtr bda;
-        if( bba )
+        auto tasks = new std::future<void>[num];
+        auto blocks = new BlockBitmapPtr[num];
+        auto blocksa = new BlockBitmapPtr[num];
+        auto width = bmp->Size().x;
+        for( int i=0; i<num; i++ )
         {
-            bda = std::make_shared<BlockData>( bba, quality );
+            auto block = bmp->NextBlock();
+            tasks[i] = std::async( std::launch::async, [block, width, i, &bd, &blocks, &bda, &blocksa, quality]()
+            {
+                blocks[i] = std::make_shared<BlockBitmap>( block, width, Channels::RGB );
+                bd->Process( blocks[i]->Data(), width / 4, i * width / 4, quality, Channels::RGB );
+                if( bda )
+                {
+                    blocksa[i] = std::make_shared<BlockBitmap>( block, width, Channels::Alpha );
+                    bda->Process( blocksa[i]->Data(), width / 4, i * width / 4, quality, Channels::Alpha );
+                }
+            } );
         }
-        bb.reset();
+
+        for( int i=0; i<num; i++ )
+        {
+            tasks[i].wait();
+        }
+        delete[] tasks;
 
         if( stats )
         {
@@ -113,7 +129,6 @@ int main( int argc, char** argv )
             printf( "RGB data\n" );
             printf( "  RMSE: %f\n", sqrt( mse ) );
             printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
-
             if( bda )
             {
                 auto out = bda->Decode();
@@ -142,6 +157,9 @@ int main( int argc, char** argv )
                 bda->WritePVR( "outa.pvr" );
             }
         }
+
+        delete[] blocks;
+        delete[] blocksa;
     }
 
     return 0;
