@@ -22,8 +22,11 @@ public:
     const v2i& Size() const { return m_size; }
     bool Alpha() const { return m_alpha; }
 
+    const uint32* NextBlock();
+
 private:
     uint32* m_data;
+    uint32* m_block;
     v2i m_size;
     bool m_alpha;
     Semaphore m_sema;

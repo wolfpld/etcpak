@@ -10,6 +10,7 @@
 
 Bitmap::Bitmap( const char* fn )
     : m_alpha( true )
+    , m_block( nullptr )
     , m_sema( 0 )
 {
     FILE* f = fopen( fn, "rb" );
@@ -33,7 +34,7 @@ Bitmap::Bitmap( const char* fn )
         assert( m_size.x % 4 == 0 );
         assert( m_size.y % 4 == 0 );
 
-        m_data = new uint32[m_size.x*m_size.y];
+        m_block = m_data = new uint32[m_size.x*m_size.y];
         m_load = std::async( std::launch::async, [this, f]()
         {
             auto ptr = m_data;
@@ -110,7 +111,7 @@ Bitmap::Bitmap( const char* fn )
         assert( w % 4 == 0 );
         assert( h % 4 == 0 );
 
-        m_data = new uint32[w*h];
+        m_block = m_data = new uint32[w*h];
 
         m_load = std::async( std::launch::async, [this, f, png_ptr, info_ptr]() mutable
         {
@@ -134,6 +135,7 @@ Bitmap::Bitmap( const char* fn )
 
 Bitmap::Bitmap( const v2i& size )
     : m_data( new uint32[size.x*size.y] )
+    , m_block( nullptr )
     , m_size( size )
     , m_sema( 0 )
 {
@@ -169,4 +171,12 @@ void Bitmap::Write( const char* fn )
     png_destroy_write_struct( &png_ptr, &info_ptr );
 
     fclose( f );
+}
+
+const uint32* Bitmap::NextBlock()
+{
+    m_sema.lock();
+    auto ret = m_block;
+    m_block += m_size.x * 4;
+    return ret;
 }
