@@ -162,5 +162,6 @@
     <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\Error.hpp" />
+    <ClInclude Include="..\Semaphore.hpp" />
   </ItemGroup>
 </Project>

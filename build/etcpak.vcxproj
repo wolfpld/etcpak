@@ -131,6 +131,7 @@
     <ClInclude Include="..\libpng\pngpriv.h" />
     <ClInclude Include="..\libpng\pngstruct.h" />
     <ClInclude Include="..\Math.hpp" />
+    <ClInclude Include="..\Semaphore.hpp" />
     <ClInclude Include="..\Types.hpp" />
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\zlib\crc32.h" />
