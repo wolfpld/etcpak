@@ -190,28 +190,6 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     const uint8* src = bitmap->Data();
     uint64* dst = m_data;
 
-#ifdef SINGLE_THREADED
-    if( bitmap->Type() == Channels::Alpha )
-    {
-        ProcessBlocksAlpha( src, dst, cnt );
-    }
-    else
-    {
-        switch( quality )
-        {
-        case 0:
-            ProcessBlocksRGB( src, dst, cnt );
-            break;
-        case 1:
-            ProcessBlocksLab( src, dst, cnt );
-            break;
-        default:
-            assert( false );
-            break;
-        }
-    }
-    m_done = true;
-#else
     uint32 step = std::max( 1u, cnt / 16 );
     if( bitmap->Type() == Channels::Alpha )
     {
@@ -250,7 +228,6 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
             break;
         }
     }
-#endif
 }
 
 BlockData::~BlockData()
