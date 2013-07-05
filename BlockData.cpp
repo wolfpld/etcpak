@@ -187,53 +187,51 @@ BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
     DBGPRINT( cnt << " blocks" );
     m_data = new uint64[cnt];
 
-    const uint8* src = bitmap->Data();
-    uint64* dst = m_data;
+    Process( bitmap->Data(), cnt, 0, quality, bitmap->Type() );
+}
 
-    uint32 step = std::max( 1u, cnt / 16 );
-    if( bitmap->Type() == Channels::Alpha )
-    {
-        for( uint32 i=0; i<cnt; i+=step )
-        {
-            m_work.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksAlpha( src, dst, std::min( step, cnt - i ) ); } ) );
+BlockData::BlockData( const v2i& size )
+    : m_size( size )
+    , m_done( false )
+{
+    assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
-            src += 4*4 * step;
-            dst += step;
-        }
-    }
-    else
-    {
-        switch( quality )
-        {
-        case 0:
-            for( uint32 i=0; i<cnt; i+=step )
-            {
-                m_work.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksRGB( src, dst, std::min( step, cnt - i ) ); } ) );
-
-                src += 4*4*3 * step;
-                dst += step;
-            }
-            break;
-        case 1:
-            for( uint32 i=0; i<cnt; i+=step )
-            {
-                m_work.push_back( std::async( std::launch::async, [src, dst, step, cnt, i, this]{ ProcessBlocksLab( src, dst, std::min( step, cnt - i ) ); } ) );
-
-                src += 4*4*3 * step;
-                dst += step;
-            }
-            break;
-        default:
-            assert( false );
-            break;
-        }
-    }
+    uint32 cnt = m_size.x * m_size.y / 16;
+    DBGPRINT( cnt << " blocks" );
+    m_data = new uint64[cnt];
 }
 
 BlockData::~BlockData()
 {
     if( !m_done ) Finish();
     delete[] m_data;
+}
+
+void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type )
+{
+    uint64* dst = m_data + offset;
+
+    std::lock_guard<std::mutex> lock( m_lock );
+
+    if( type == Channels::Alpha )
+    {
+        m_work.push_back( std::async( std::launch::async, [src, dst, blocks, this]{ ProcessBlocksAlpha( src, dst, blocks ); } ) );
+    }
+    else
+    {
+        switch( quality )
+        {
+        case 0:
+            m_work.push_back( std::async( std::launch::async, [src, dst, blocks, this]{ ProcessBlocksRGB( src, dst, blocks ); } ) );
+            break;
+        case 1:
+            m_work.push_back( std::async( std::launch::async, [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
+            break;
+        default:
+            assert( false );
+            break;
+        }
+    }
 }
 
 void BlockData::Finish()

@@ -3,6 +3,7 @@
 
 #include <future>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include "BlockBitmap.hpp"
@@ -15,10 +16,13 @@ class BlockData
 public:
     BlockData( const char* fn );
     BlockData( const BlockBitmapPtr& bitmap, uint quality );
+    BlockData( const v2i& size );
     ~BlockData();
 
     BitmapPtr Decode();
     void WritePVR( const char* fn );
+
+    void Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type );
 
 private:
     void Finish();
@@ -32,6 +36,7 @@ private:
     BlockBitmapPtr m_bmp;
     bool m_done;
     std::vector<std::future<void>> m_work;
+    std::mutex m_lock;
 };
 
 typedef std::shared_ptr<BlockData> BlockDataPtr;
