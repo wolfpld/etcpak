@@ -10,6 +10,7 @@
 
 Bitmap::Bitmap( const char* fn )
     : m_alpha( true )
+    , m_sema( 0 )
 {
     FILE* f = fopen( fn, "rb" );
     assert( f );
@@ -29,8 +30,21 @@ Bitmap::Bitmap( const char* fn )
         m_size.y = d;
         DBGPRINT( "Raw bitmap " << fn << "  " << m_size.x << "x" << m_size.y );
 
+        assert( m_size.x % 4 == 0 );
+        assert( m_size.y % 4 == 0 );
+
         m_data = new uint32[m_size.x*m_size.y];
-        fread( m_data, 1, m_size.x*m_size.y*4, f );
+        m_load = std::async( std::launch::async, [this, f]()
+        {
+            auto ptr = m_data;
+            for( int i=0; i<m_size.y/4; i++ )
+            {
+                fread( ptr, 1, m_size.x*4*4, f );
+                m_sema.unlock();
+                ptr += m_size.x*4;
+            }
+            fclose( f );
+        } );
     }
     else
     {
@@ -93,25 +107,35 @@ Bitmap::Bitmap( const char* fn )
 
         DBGPRINT( "Bitmap " << fn << "  " << w << "x" << h );
 
+        assert( w % 4 == 0 );
+        assert( h % 4 == 0 );
+
         m_data = new uint32[w*h];
-        uint32* ptr = m_data;
-        while( h-- )
+
+        m_load = std::async( std::launch::async, [this, f, png_ptr, info_ptr]() mutable
         {
-            png_read_rows( png_ptr, (png_bytepp)&ptr, NULL, 1 );
-            ptr += w;
-        }
+            auto ptr = m_data;
+            for( int i=0; i<m_size.y / 4; i++ )
+            {
+                for( int j=0; j<4; j++ )
+                {
+                    png_read_rows( png_ptr, (png_bytepp)&ptr, NULL, 1 );
+                    ptr += m_size.x;
+                }
+                m_sema.unlock();
+            }
 
-        png_read_end( png_ptr, info_ptr );
-
-        png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
+            png_read_end( png_ptr, info_ptr );
+            png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
+            fclose( f );
+        } );
     }
-
-    fclose( f );
 }
 
 Bitmap::Bitmap( const v2i& size )
     : m_data( new uint32[size.x*size.y] )
     , m_size( size )
+    , m_sema( 0 )
 {
 }
 
