@@ -2,17 +2,29 @@
 
 #include "BlockBitmap.hpp"
 
+BlockBitmap::BlockBitmap( const uint32* data, uint32 width, Channels type )
+    : m_data( new uint8[width * 4 * ( type == Channels::RGB ? 3 : 1 )] )
+    , m_size( width, 4 )
+    , m_type( type )
+{
+    Process( data );
+}
+
 BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
     : m_data( new uint8[bmp->Size().x * bmp->Size().y * ( type == Channels::RGB ? 3 : 1 )] )
     , m_size( bmp->Size() )
     , m_type( type )
 {
-    const uint32* src = bmp->Data();
+    Process( bmp->Data() );
+}
+
+void BlockBitmap::Process( const uint32* src )
+{
     uint8* dst = m_data;
 
     assert( m_size.x % 4 == 0 && m_size.y % 4 == 0 );
 
-    if( type == Channels::RGB )
+    if( m_type == Channels::RGB )
     {
         for( int by=0; by<m_size.y/4; by++ )
         {
