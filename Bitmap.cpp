@@ -175,6 +175,7 @@ void Bitmap::Write( const char* fn )
 
 const uint32* Bitmap::NextBlock()
 {
+    std::lock_guard<std::mutex> lock( m_lock );
     m_sema.lock();
     auto ret = m_block;
     m_block += m_size.x * 4;

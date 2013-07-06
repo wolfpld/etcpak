@@ -3,6 +3,7 @@
 
 #include <future>
 #include <memory>
+#include <mutex>
 
 #include "Semaphore.hpp"
 #include "Types.hpp"
@@ -30,6 +31,7 @@ private:
     v2i m_size;
     bool m_alpha;
     Semaphore m_sema;
+    std::mutex m_lock;
     std::future<void> m_load;
 };
 
