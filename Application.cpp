@@ -87,8 +87,9 @@ int main( int argc, char** argv )
     }
     else
     {
+        uint lines = 32;
         auto bmp = std::make_shared<Bitmap>( argv[1] );
-        auto num = bmp->Size().y / 4;
+        auto num = bmp->Size().y / 4 / lines;
 
         auto bd = std::make_shared<BlockData>( bmp->Size() );
         BlockDataPtr bda;
@@ -101,20 +102,22 @@ int main( int argc, char** argv )
         auto blocks = new BlockBitmapPtr[num];
         auto blocksa = new BlockBitmapPtr[num];
         auto width = bmp->Size().x;
+        size_t offset = 0;
         for( uint i=0; i<num; i++ )
         {
-            uint l = 1;
+            auto l = lines;
             auto block = bmp->NextBlock( l );
-            tasks[i] = std::async( std::launch::async, [block, width, i, &bd, &blocks, &bda, &blocksa, quality]()
+            tasks[i] = std::async( std::launch::async, [block, width, i, &bd, &blocks, &bda, &blocksa, quality, l, offset]()
             {
-                blocks[i] = std::make_shared<BlockBitmap>( block, width, Channels::RGB );
-                bd->Process( blocks[i]->Data(), width / 4, i * width / 4, quality, Channels::RGB );
+                blocks[i] = std::make_shared<BlockBitmap>( block, v2i( width, l * 4 ), Channels::RGB );
+                bd->Process( blocks[i]->Data(), width / 4 * l, offset, quality, Channels::RGB );
                 if( bda )
                 {
-                    blocksa[i] = std::make_shared<BlockBitmap>( block, width, Channels::Alpha );
-                    bda->Process( blocksa[i]->Data(), width / 4, i * width / 4, quality, Channels::Alpha );
+                    blocksa[i] = std::make_shared<BlockBitmap>( block, v2i( width, l * 4 ), Channels::Alpha );
+                    bda->Process( blocksa[i]->Data(), width / 4 * l, offset, quality, Channels::Alpha );
                 }
             } );
+            offset += width / 4 * l;
         }
 
         for( uint i=0; i<num; i++ )
