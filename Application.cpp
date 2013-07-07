@@ -101,7 +101,7 @@ int main( int argc, char** argv )
         auto blocks = new BlockBitmapPtr[num];
         auto blocksa = new BlockBitmapPtr[num];
         auto width = bmp->Size().x;
-        for( int i=0; i<num; i++ )
+        for( uint i=0; i<num; i++ )
         {
             uint l = 1;
             auto block = bmp->NextBlock( l );
@@ -117,7 +117,7 @@ int main( int argc, char** argv )
             } );
         }
 
-        for( int i=0; i<num; i++ )
+        for( uint i=0; i<num; i++ )
         {
             tasks[i].wait();
         }
