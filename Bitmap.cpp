@@ -35,6 +35,7 @@ Bitmap::Bitmap( const char* fn )
         assert( m_size.y % 4 == 0 );
 
         m_block = m_data = new uint32[m_size.x*m_size.y];
+        m_linesLeft = m_size.y / 4;
         m_load = std::async( std::launch::async, [this, f]()
         {
             auto ptr = m_data;
@@ -112,6 +113,7 @@ Bitmap::Bitmap( const char* fn )
         assert( h % 4 == 0 );
 
         m_block = m_data = new uint32[w*h];
+        m_linesLeft = h / 4;
 
         m_load = std::async( std::launch::async, [this, f, png_ptr, info_ptr]() mutable
         {
@@ -136,6 +138,7 @@ Bitmap::Bitmap( const char* fn )
 Bitmap::Bitmap( const v2i& size )
     : m_data( new uint32[size.x*size.y] )
     , m_block( nullptr )
+    , m_linesLeft( size.y / 4 )
     , m_size( size )
     , m_sema( 0 )
 {
@@ -173,11 +176,16 @@ void Bitmap::Write( const char* fn )
     fclose( f );
 }
 
-const uint32* Bitmap::NextBlock()
+const uint32* Bitmap::NextBlock( uint& lines )
 {
     std::lock_guard<std::mutex> lock( m_lock );
-    m_sema.lock();
+    lines = std::min( lines, m_linesLeft );
     auto ret = m_block;
-    m_block += m_size.x * 4;
+    for( uint i=0; i<lines; i++ )
+    {
+        m_sema.lock();
+    }
+    m_block += m_size.x * 4 * lines;
+    m_linesLeft -= lines;
     return ret;
 }

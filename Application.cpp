@@ -103,7 +103,8 @@ int main( int argc, char** argv )
         auto width = bmp->Size().x;
         for( int i=0; i<num; i++ )
         {
-            auto block = bmp->NextBlock();
+            uint l = 1;
+            auto block = bmp->NextBlock( l );
             tasks[i] = std::async( std::launch::async, [block, width, i, &bd, &blocks, &bda, &blocksa, quality]()
             {
                 blocks[i] = std::make_shared<BlockBitmap>( block, width, Channels::RGB );
