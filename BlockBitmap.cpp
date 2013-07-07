@@ -2,11 +2,13 @@
 
 #include "BlockBitmap.hpp"
 
-BlockBitmap::BlockBitmap( const uint32* data, uint32 width, Channels type )
-    : m_data( new uint8[width * 4 * ( type == Channels::RGB ? 3 : 1 )] )
-    , m_size( width, 4 )
+BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
+    : m_data( new uint8[size.x * size.y * ( type == Channels::RGB ? 3 : 1 )] )
+    , m_size( size )
     , m_type( type )
 {
+    assert( m_size.x % 4 == 0 && m_size.y % 4 == 0 );
+
     Process( data );
 }
 

@@ -16,7 +16,7 @@ enum class Channels
 class BlockBitmap
 {
 public:
-    BlockBitmap( const uint32* data, uint32 width, Channels type );
+    BlockBitmap( const uint32* data, const v2i& size, Channels type );
     BlockBitmap( const BitmapPtr& bmp, Channels type );
     ~BlockBitmap();
 
