@@ -88,7 +88,7 @@ int main( int argc, char** argv )
     else
     {
         uint lines = 32;
-        auto bmp = std::make_shared<Bitmap>( argv[1] );
+        auto bmp = std::make_shared<Bitmap>( argv[1], lines );
         auto num = bmp->Size().y / 4 / lines;
 
         auto bd = std::make_shared<BlockData>( bmp->Size() );

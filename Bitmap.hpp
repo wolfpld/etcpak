@@ -12,7 +12,7 @@
 class Bitmap
 {
 public:
-    Bitmap( const char* fn );
+    Bitmap( const char* fn, uint lines );
     Bitmap( const v2i& size );
     ~Bitmap();
 
@@ -28,6 +28,7 @@ public:
 private:
     uint32* m_data;
     uint32* m_block;
+    uint m_lines;
     uint m_linesLeft;
     v2i m_size;
     bool m_alpha;

@@ -8,9 +8,10 @@
 #include "Bitmap.hpp"
 #include "Debug.hpp"
 
-Bitmap::Bitmap( const char* fn )
+Bitmap::Bitmap( const char* fn, uint lines )
     : m_alpha( true )
     , m_block( nullptr )
+    , m_lines( lines )
     , m_sema( 0 )
 {
     FILE* f = fopen( fn, "rb" );
@@ -118,6 +119,7 @@ Bitmap::Bitmap( const char* fn )
         m_load = std::async( std::launch::async, [this, f, png_ptr, info_ptr]() mutable
         {
             auto ptr = m_data;
+            uint lines = 0;
             for( int i=0; i<m_size.y / 4; i++ )
             {
                 for( int j=0; j<4; j++ )
@@ -125,7 +127,12 @@ Bitmap::Bitmap( const char* fn )
                     png_read_rows( png_ptr, (png_bytepp)&ptr, NULL, 1 );
                     ptr += m_size.x;
                 }
-                m_sema.unlock();
+                lines++;
+                if( lines >= m_lines )
+                {
+                    lines = 0;
+                    m_sema.unlock();
+                }
             }
 
             png_read_end( png_ptr, info_ptr );
@@ -138,6 +145,7 @@ Bitmap::Bitmap( const char* fn )
 Bitmap::Bitmap( const v2i& size )
     : m_data( new uint32[size.x*size.y] )
     , m_block( nullptr )
+    , m_lines( 1 )
     , m_linesLeft( size.y / 4 )
     , m_size( size )
     , m_sema( 0 )
@@ -179,12 +187,9 @@ void Bitmap::Write( const char* fn )
 const uint32* Bitmap::NextBlock( uint& lines )
 {
     std::lock_guard<std::mutex> lock( m_lock );
-    lines = std::min( lines, m_linesLeft );
+    lines = std::min( m_lines, m_linesLeft );
     auto ret = m_block;
-    for( uint i=0; i<lines; i++ )
-    {
-        m_sema.lock();
-    }
+    m_sema.lock();
     m_block += m_size.x * 4 * lines;
     m_linesLeft -= lines;
     return ret;
