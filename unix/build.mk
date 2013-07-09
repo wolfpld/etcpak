@@ -1,7 +1,7 @@
 CXXFLAGS = $(CFLAGS) -std=c++11
 DEFINES +=
 INCLUDES =
-LIBS =
+LIBS = -lpthread
 IMAGE = etcpak
 
 SRC = $(shell egrep 'ClCompile.*cpp" />' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
