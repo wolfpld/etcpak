@@ -4,6 +4,7 @@
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
 #include "Debug.hpp"
+#include "mmap.hpp"
 
 static const int32 table[][4] = {
     {  2,  8,   -2,   -8 },
@@ -421,52 +422,45 @@ BitmapPtr BlockData::Decode()
 
 void BlockData::WritePVR( const char* fn )
 {
-    FILE* f = fopen( fn, "wb" );
+    FILE* f = fopen( fn, "wb+" );
     assert( f );
+    const size_t len = 52 + m_size.x*m_size.y/2;
+    fseek( f, len - 1, SEEK_SET );
+    const char zero = 0;
+    fwrite( &zero, 1, 1, f );
 
-    uint32 data;
-    data = 0x03525650;  // version
-    fwrite( &data, 1, 4, f );
-    data = 0;           // flags
-    fwrite( &data, 1, 4, f );
-    data = 6;           // pixelformat[0]
-    fwrite( &data, 1, 4, f );
-    data = 0;           // pixelformat[1]
-    fwrite( &data, 1, 4, f );
-    data = 0;           // colourspace
-    fwrite( &data, 1, 4, f );
-    data = 0;           // channel type
-    fwrite( &data, 1, 4, f );
-    data = m_size.y;    // height
-    fwrite( &data, 1, 4, f );
-    data = m_size.x;    // width
-    fwrite( &data, 1, 4, f );
-    data = 1;           // depth
-    fwrite( &data, 1, 4, f );
-    data = 1;           // num surfs
-    fwrite( &data, 1, 4, f );
-    data = 1;           // num faces
-    fwrite( &data, 1, 4, f );
-    data = 1;           // mipmap count
-    fwrite( &data, 1, 4, f );
-    data = 0;           // metadata size
-    fwrite( &data, 1, 4, f );
+    auto map = (uint32*)mmap( nullptr, len, PROT_WRITE, 0, fileno( f ), 0 );
+    auto dst = map;
+
+    *dst++ = 0x03525650;  // version
+    *dst++ = 0;           // flags
+    *dst++ = 6;           // pixelformat[0]
+    *dst++ = 0;           // pixelformat[1]
+    *dst++ = 0;           // colourspace
+    *dst++ = 0;           // channel type
+    *dst++ = m_size.y;    // height
+    *dst++ = m_size.x;    // width
+    *dst++ = 1;           // depth
+    *dst++ = 1;           // num surfs
+    *dst++ = 1;           // num faces
+    *dst++ = 1;           // mipmap count
+    *dst++ = 0;           // metadata size
 
     if( !m_done ) Finish();
 
-    uint cnt = m_size.x*m_size.y/8;
-    uint32* ptr = (uint32*)m_data;
+    const uint cnt = m_size.x*m_size.y/8;
+    const uint32* ptr = (uint32*)m_data;
     for( uint j=0; j<cnt; j++ )
     {
-        uint32 v = *ptr;
-        *ptr++ =
+        const uint32 v = *ptr++;
+        *dst++ =
             ( v >> 24 ) |
             ( ( v & 0x00FF0000 ) >> 8 ) |
             ( ( v & 0x0000FF00 ) << 8 ) |
             ( v << 24 );
     }
-    fwrite( m_data, 1, cnt*4, f );
 
+    munmap( map, len );
     fclose( f );
 }
 
