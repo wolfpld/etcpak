@@ -2,7 +2,7 @@
 #define __MMAP_HPP__
 
 #ifndef _WIN32
-#  include <mmap.h>
+#  include <sys/mman.h>
 #else
 #  include <string.h>
 #  include <sys/types.h>
