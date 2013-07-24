@@ -97,6 +97,7 @@
     <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\ColorSpace.cpp" />
     <ClCompile Include="..\Error.cpp" />
+    <ClCompile Include="..\mmap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -163,5 +164,6 @@
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\Error.hpp" />
     <ClInclude Include="..\Semaphore.hpp" />
+    <ClInclude Include="..\mmap.hpp" />
   </ItemGroup>
 </Project>
