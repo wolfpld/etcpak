@@ -37,7 +37,7 @@ Bitmap::Bitmap( const char* fn, uint lines )
 
         m_block = m_data = new uint32[m_size.x*m_size.y];
         m_linesLeft = m_size.y / 4;
-        m_load = std::async( std::launch::async, [this, f]()
+        m_load = std::async( [this, f]()
         {
             auto ptr = m_data;
             for( int i=0; i<m_size.y/4; i++ )
@@ -116,7 +116,7 @@ Bitmap::Bitmap( const char* fn, uint lines )
         m_block = m_data = new uint32[w*h];
         m_linesLeft = h / 4;
 
-        m_load = std::async( std::launch::async, [this, f, png_ptr, info_ptr]() mutable
+        m_load = std::async( [this, f, png_ptr, info_ptr]() mutable
         {
             auto ptr = m_data;
             uint lines = 0;

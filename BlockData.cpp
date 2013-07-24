@@ -215,17 +215,17 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
 
     if( type == Channels::Alpha )
     {
-        m_work.push_back( std::async( std::launch::async, [src, dst, blocks, this]{ ProcessBlocksAlpha( src, dst, blocks ); } ) );
+        m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksAlpha( src, dst, blocks ); } ) );
     }
     else
     {
         switch( quality )
         {
         case 0:
-            m_work.push_back( std::async( std::launch::async, [src, dst, blocks, this]{ ProcessBlocksRGB( src, dst, blocks ); } ) );
+            m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksRGB( src, dst, blocks ); } ) );
             break;
         case 1:
-            m_work.push_back( std::async( std::launch::async, [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
+            m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
             break;
         default:
             assert( false );

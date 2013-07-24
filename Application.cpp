@@ -107,7 +107,7 @@ int main( int argc, char** argv )
         {
             auto l = lines;
             auto block = bmp->NextBlock( l );
-            tasks[i] = std::async( std::launch::async, [block, width, i, &bd, &blocks, &bda, &blocksa, quality, l, offset]()
+            tasks[i] = std::async( [block, width, i, &bd, &blocks, &bda, &blocksa, quality, l, offset]()
             {
                 blocks[i] = std::make_shared<BlockBitmap>( block, v2i( width, l * 4 ), Channels::RGB );
                 bd->Process( blocks[i]->Data(), width / 4 * l, offset, quality, Channels::RGB );
