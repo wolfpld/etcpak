@@ -144,6 +144,12 @@ Vector3<T> operator*( const Vector3<T>& lhs, const float& rhs )
 }
 
 template<class T>
+Vector3<T> operator/( const Vector3<T>& lhs, const T& rhs )
+{
+    return Vector3<T>( lhs.x / rhs, lhs.y / rhs, lhs.z / rhs );
+}
+
+template<class T>
 bool operator<( const Vector3<T>& lhs, const Vector3<T>& rhs )
 {
     return lhs.Luminance() < rhs.Luminance();
