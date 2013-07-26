@@ -428,6 +428,7 @@ void BlockData::WritePVR( const char* fn )
     fseek( f, len - 1, SEEK_SET );
     const char zero = 0;
     fwrite( &zero, 1, 1, f );
+    fseek( f, 0, SEEK_SET );
 
     auto map = (uint32*)mmap( nullptr, len, PROT_WRITE, 0, fileno( f ), 0 );
     auto dst = map;
