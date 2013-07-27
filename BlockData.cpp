@@ -702,7 +702,7 @@ static uint64 ProcessRGB( const uint8* src )
         const uint8* ptr = src + 3;
         for( int i=1; i<16; i++ )
         {
-            if( src[0] != ptr[0] || src[1] != ptr[1] || src[2] != ptr[2] )
+            if( memcmp( src, ptr, 3 ) != 0 )
             {
                 solid = false;
                 break;
