@@ -489,7 +489,8 @@ static void ProcessAverages( v3i* a )
             int32 c2 = a[i*2][j] >> 3;
 
             int32 diff = c2 - c1;
-            diff = std::min( std::max( diff, -4 ), 3 );
+            if( diff > 3 ) diff = 3;
+            else if( diff < -4 ) diff = -4;
 
             int32 co = c1 + diff;
 
@@ -515,7 +516,8 @@ static void ProcessAverages( uint* a )
         int c2 = a[i*2] >> 3;
 
         int diff = c2 - c1;
-        diff = std::min( std::max( diff, -4 ), 3 );
+        if( diff > 3 ) diff = 3;
+        else if( diff < -4 ) diff = -4;
 
         int co = c1 + diff;
 
