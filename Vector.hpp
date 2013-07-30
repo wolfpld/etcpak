@@ -117,6 +117,7 @@ struct Vector3
     }
 
     T x, y, z;
+    T padding;
 };
 
 template<class T>
