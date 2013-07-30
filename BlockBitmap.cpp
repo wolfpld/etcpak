@@ -3,7 +3,7 @@
 #include "BlockBitmap.hpp"
 
 BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
-    : m_data( new uint8[size.x * size.y * ( type == Channels::RGB ? 3 : 1 )] )
+    : m_data( new uint8[size.x * size.y * ( type == Channels::RGB ? 4 : 1 )] )
     , m_size( size )
     , m_type( type )
 {
@@ -13,7 +13,7 @@ BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
 }
 
 BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
-    : m_data( new uint8[bmp->Size().x * bmp->Size().y * ( type == Channels::RGB ? 3 : 1 )] )
+    : m_data( new uint8[bmp->Size().x * bmp->Size().y * ( type == Channels::RGB ? 4 : 1 )] )
     , m_size( bmp->Size() )
     , m_type( type )
 {
@@ -41,6 +41,7 @@ void BlockBitmap::Process( const uint32* src )
                         *dst++ = ( c & 0x00FF0000 ) >> 16;
                         *dst++ = ( c & 0x0000FF00 ) >> 8;
                         *dst++ =   c & 0x000000FF;
+                        *dst++ = 0;
                     }
                     src -= m_size.x * 4 - 1;
                 }
