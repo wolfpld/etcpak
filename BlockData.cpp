@@ -34,6 +34,7 @@ static v3i Average( const uint8* data )
         b += *data++;
         g += *data++;
         r += *data++;
+        data++;
     }
     return v3i( r / 8, g / 8, b / 8 );
 }
@@ -94,6 +95,7 @@ static uint CalcError( const uint8* data, const v3i& average )
         d = *data++;
         sum[2] += d;
         err += d*d;
+        data++;
     }
     err -= sum[0] * 2 * average.z;
     err -= sum[1] * 2 * average.y;
@@ -699,15 +701,15 @@ static uint64 ProcessRGB( const uint8* src )
 
     {
         bool solid = true;
-        const uint8* ptr = src + 3;
+        const uint8* ptr = src + 4;
         for( int i=1; i<16; i++ )
         {
-            if( memcmp( src, ptr, 3 ) != 0 )
+            if( memcmp( src, ptr, 4 ) != 0 )
             {
                 solid = false;
                 break;
             }
-            ptr += 3;
+            ptr += 4;
         }
         if( solid )
         {
@@ -720,13 +722,13 @@ static uint64 ProcessRGB( const uint8* src )
         }
     }
 
-    uint8 b23[2][24];
-    const uint8* b[4] = { src+24, src, b23[0], b23[1] };
+    uint8 b23[2][32];
+    const uint8* b[4] = { src+32, src, b23[0], b23[1] };
 
     for( int i=0; i<4; i++ )
     {
-        memcpy( b23[1]+i*6, src+i*12, 6 );
-        memcpy( b23[0]+i*6, src+i*12+6, 6 );
+        memcpy( b23[1]+i*8, src+i*16, 8 );
+        memcpy( b23[0]+i*8, src+i*16+8, 8 );
     }
 
     v3i a[8];
@@ -763,6 +765,7 @@ static uint64 ProcessRGB( const uint8* src )
         uint8 b = *data++;
         uint8 g = *data++;
         uint8 r = *data++;
+        data++;
 
         int dr = a[bid].x - r;
         int dg = a[bid].y - g;
@@ -909,7 +912,7 @@ void BlockData::ProcessBlocksRGB( const uint8* src, uint64* dst, uint num )
     do
     {
         *dst++ = ProcessRGB( src );
-        src += 4*4*3;
+        src += 4*4*4;
     }
     while( --num );
 }
