@@ -99,6 +99,8 @@
     <ClCompile Include="..\Error.cpp" />
     <ClCompile Include="..\mmap.cpp" />
     <ClCompile Include="..\Tables.cpp" />
+    <ClCompile Include="..\ProcessAlpha.cpp" />
+    <ClCompile Include="..\ProcessRGB.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -167,5 +169,8 @@
     <ClInclude Include="..\Semaphore.hpp" />
     <ClInclude Include="..\mmap.hpp" />
     <ClInclude Include="..\Tables.hpp" />
+    <ClInclude Include="..\ProcessAlpha.hpp" />
+    <ClInclude Include="..\ProcessRGB.hpp" />
+    <ClInclude Include="..\ProcessCommon.hpp" />
   </ItemGroup>
 </Project>
