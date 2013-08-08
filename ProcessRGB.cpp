@@ -174,12 +174,12 @@ uint64 ProcessRGB( const uint8* src )
 
         for( int t=0; t<8; t++ )
         {
-            const int32* tab = g_table256[t];
+            const int64* tab = g_table256[t];
             uint idx = 0;
             uint64 err = sq( tab[0] + pix );
             for( int j=1; j<4; j++ )
             {
-                uint64 local = sq( uint64( tab[j] ) + pix );
+                uint64 local = sq( tab[j] + pix );
                 if( local < err )
                 {
                     err = local;
