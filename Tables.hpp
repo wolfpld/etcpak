@@ -8,4 +8,6 @@ extern const int32 g_table256[8][4];
 
 extern const uint32 g_id[4][16];
 
+extern const uint32 g_avg2[16];
+
 #endif

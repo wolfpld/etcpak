@@ -62,11 +62,9 @@ static void ProcessAverages( v3i* a )
     }
     for( int i=0; i<4; i++ )
     {
-        for( int j=0; j<3; j++ )
-        {
-            uint32 c = a[i][j];
-            a[i][j] = ( c & 0xF0 ) | ( c >> 4 );
-        }
+        a[i].x = g_avg2[a[i].x >> 4];
+        a[i].y = g_avg2[a[i].y >> 4];
+        a[i].z = g_avg2[a[i].z >> 4];
     }
 }
 

@@ -47,8 +47,7 @@ static void ProcessAverages( uint* a )
     }
     for( int i=0; i<4; i++ )
     {
-        uint c = a[i];
-        a[i] = ( c & 0xF0 ) | ( c >> 4 );
+        a[i] = g_avg2[a[i] >> 4];
     }
 }
 
