@@ -18,18 +18,4 @@ static size_t GetLeastError( const T* err, size_t num )
     return idx;
 }
 
-static inline size_t GetBufId( size_t i, size_t base )
-{
-    assert( i < 16 );
-    assert( base < 4 );
-    if( base % 2 == 0 )
-    {
-        return base * 2 + 1 - i / 8;
-    }
-    else
-    {
-        return base * 2 + 1 - ( ( i / 2 ) % 2 );
-    }
-}
-
 #endif

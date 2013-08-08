@@ -128,11 +128,7 @@ uint64 ProcessAlpha( const uint8* src )
 
     uint terr[2][8] = {};
     uint tsel[16][8];
-    uint id[16];
-    for( int i=0; i<16; i++ )
-    {
-        id[i] = (uint)GetBufId( i, idx );
-    }
+    auto id = g_id[idx];
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
