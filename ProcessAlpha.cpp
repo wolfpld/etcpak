@@ -14,17 +14,20 @@ static uint Average1( const uint8* data )
     return a / 8;
 }
 
-static uint CalcError( const uint8* data, uint average )
+static void CalcErrorBlock( const uint8* data, uint err[2] )
 {
-    uint err = 0;
-    uint sum = 0;
     for( int i=0; i<8; i++ )
     {
         uint v = *data++;
-        sum += v;
-        err += v*v;
+        err[0] += v;
+        err[1] += v*v;
     }
-    err -= sum * 2 * average;
+}
+
+static uint CalcError( const uint block[2], uint average )
+{
+    uint err = block[1];
+    err -= block[0] * 2 * average;
     err += 8 * sq( average );
     return err;
 }
@@ -118,8 +121,10 @@ uint64 ProcessAlpha( const uint8* src )
     uint err[4] = {};
     for( int i=0; i<4; i++ )
     {
-        err[i/2] += CalcError( b[i], a[i] );
-        err[2+i/2] += CalcError( b[i], a[i+4] );
+        uint errblock[2] = {};
+        CalcErrorBlock( b[i], errblock );
+        err[i/2] += CalcError( errblock, a[i] );
+        err[2+i/2] += CalcError( errblock, a[i+4] );
     }
     size_t idx = GetLeastError( err, 4 );
 

@@ -17,26 +17,29 @@ static v3i Average( const uint8* data )
     return v3i( r / 8, g / 8, b / 8 );
 }
 
-static uint CalcError( const uint8* data, const v3i& average )
+static void CalcErrorBlock( const uint8* data, uint err[4] )
 {
-    uint err = 0;
-    uint sum[3] = {};
     for( int i=0; i<8; i++ )
     {
         uint d = *data++;
-        sum[0] += d;
-        err += d*d;
+        err[0] += d;
+        err[3] += d*d;
         d = *data++;
-        sum[1] += d;
-        err += d*d;
+        err[1] += d;
+        err[3] += d*d;
         d = *data++;
-        sum[2] += d;
-        err += d*d;
+        err[2] += d;
+        err[3] += d*d;
         data++;
     }
-    err -= sum[0] * 2 * average.z;
-    err -= sum[1] * 2 * average.y;
-    err -= sum[2] * 2 * average.x;
+}
+
+static uint CalcError( const uint block[4], const v3i& average )
+{
+    uint err = block[3];
+    err -= block[0] * 2 * average.z;
+    err -= block[1] * 2 * average.y;
+    err -= block[2] * 2 * average.x;
     err += 8 * ( sq( average.x ) + sq( average.y ) + sq( average.z ) );
     return err;
 }
@@ -139,8 +142,10 @@ uint64 ProcessRGB( const uint8* src )
     uint err[4] = {};
     for( int i=0; i<4; i++ )
     {
-        err[i/2] += CalcError( b[i], a[i] );
-        err[2+i/2] += CalcError( b[i], a[i+4] );
+        uint errblock[4] = {};
+        CalcErrorBlock( b[i], errblock );
+        err[i/2] += CalcError( errblock, a[i] );
+        err[2+i/2] += CalcError( errblock, a[i+4] );
     }
     size_t idx = GetLeastError( err, 4 );
 
