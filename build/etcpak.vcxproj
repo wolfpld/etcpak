@@ -104,6 +104,7 @@
     <ClCompile Include="..\libpng\pngwtran.c" />
     <ClCompile Include="..\libpng\pngwutil.c" />
     <ClCompile Include="..\mmap.cpp" />
+    <ClCompile Include="..\Tables.cpp" />
     <ClCompile Include="..\zlib\adler32.c" />
     <ClCompile Include="..\zlib\compress.c" />
     <ClCompile Include="..\zlib\crc32.c" />
@@ -134,6 +135,7 @@
     <ClInclude Include="..\Math.hpp" />
     <ClInclude Include="..\mmap.hpp" />
     <ClInclude Include="..\Semaphore.hpp" />
+    <ClInclude Include="..\Tables.hpp" />
     <ClInclude Include="..\Types.hpp" />
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\zlib\crc32.h" />
