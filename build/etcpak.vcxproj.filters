@@ -101,6 +101,9 @@
     <ClCompile Include="..\Tables.cpp" />
     <ClCompile Include="..\ProcessAlpha.cpp" />
     <ClCompile Include="..\ProcessRGB.cpp" />
+    <ClCompile Include="..\zlib\inffas8664.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -172,5 +175,10 @@
     <ClInclude Include="..\ProcessAlpha.hpp" />
     <ClInclude Include="..\ProcessRGB.hpp" />
     <ClInclude Include="..\ProcessCommon.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="..\zlib\inffasx64.obj">
+      <Filter>zlib</Filter>
+    </Object>
   </ItemGroup>
 </Project>
