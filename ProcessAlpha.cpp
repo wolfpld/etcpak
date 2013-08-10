@@ -56,25 +56,25 @@ static void ProcessAverages( uint* a )
 
 static void EncodeAverages( uint64& d, const uint* a, size_t idx )
 {
-    d |= idx;
+    d |= ( idx << 24 );
     size_t base = idx << 1;
 
     if( ( idx & 0x2 ) == 0 )
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+0] & 0xF0 ) << ( i*8 + 4 );
-            d |= uint64( a[base+1] & 0xF0 ) << ( i*8 + 8 );
+            d |= uint64( a[base+0] >> 4 ) << ( i*8 );
+            d |= uint64( a[base+1] >> 4 ) << ( i*8 + 4 );
         }
     }
     else
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+1] & 0xF8 ) << ( i*8 + 8 );
+            d |= uint64( a[base+1] & 0xF8 ) << ( i*8 );
             int32 c = ( ( a[base+0] & 0xF8 ) - ( a[base+1] & 0xF8 ) ) >> 3;
             c &= ~0xFFFFFFF8;
-            d |= ((uint64)c) << ( i*8 + 8 );
+            d |= ((uint64)c) << ( i*8 );
         }
     }
 }
@@ -97,7 +97,7 @@ uint64 ProcessAlpha( const uint8* src )
         if( solid )
         {
             uint c = *src & 0xF8;
-            d |= 0x2 | ( c << 24 ) | ( c << 16 ) | ( c << 8 );
+            d |= 0x02000000 | ( c << 16 ) | ( c << 8 ) | c;
             return d;
         }
     }
@@ -165,14 +165,20 @@ uint64 ProcessAlpha( const uint8* src )
     tidx[0] = GetLeastError( terr[0], 8 );
     tidx[1] = GetLeastError( terr[1], 8 );
 
-    d |= tidx[0] << 2;
-    d |= tidx[1] << 5;
+    d |= tidx[0] << 26;
+    d |= tidx[1] << 29;
     for( int i=0; i<16; i++ )
     {
         uint64 t = tsel[i][tidx[id[i]%2]];
         d |= ( t & 0x1 ) << ( i + 32 );
         d |= ( t & 0x2 ) << ( i + 47 );
     }
+
+    d = ( ( d & 0x00000000FFFFFFFF ) ) |
+        ( ( d & 0xFF00000000000000 ) >> 24 ) |
+        ( ( d & 0x000000FF00000000 ) << 24 ) |
+        ( ( d & 0x00FF000000000000 ) >> 8 ) |
+        ( ( d & 0x0000FF0000000000 ) << 8 );
 
     return d;
 }

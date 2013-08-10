@@ -46,18 +46,6 @@ BlockData::BlockData( const char* fn )
     m_data = new uint64[cnt];
     fread( m_data, 1, cnt * 8, f );
 
-    cnt *= 2;
-    uint32* ptr = (uint32*)m_data;
-    for( uint j=0; j<cnt; j++ )
-    {
-        uint32 v = *ptr;
-        *ptr++ =
-            ( v >> 24 ) |
-            ( ( v & 0x00FF0000 ) >> 8 ) |
-            ( ( v & 0x0000FF00 ) << 8 ) |
-            ( v << 24 );
-    }
-
     fclose( f );
 }
 
@@ -135,6 +123,18 @@ void BlockData::Finish()
 BitmapPtr BlockData::Decode()
 {
     if( !m_done ) Finish();
+
+    uint32 cnt = m_size.x * m_size.y / 8;
+    uint32* ptr = (uint32*)m_data;
+    for( uint j=0; j<cnt; j++ )
+    {
+        uint32 v = *ptr;
+        *ptr++ =
+            ( v >> 24 ) |
+            ( ( v & 0x00FF0000 ) >> 8 ) |
+            ( ( v & 0x0000FF00 ) << 8 ) |
+            ( v << 24 );
+    }
 
     auto ret = std::make_shared<Bitmap>( m_size );
 
@@ -333,17 +333,7 @@ void BlockData::WritePVR( const char* fn )
 
     if( !m_done ) Finish();
 
-    const uint cnt = m_size.x*m_size.y/8;
-    const uint32* ptr = (uint32*)m_data;
-    for( uint j=0; j<cnt; j++ )
-    {
-        const uint32 v = *ptr++;
-        *dst++ =
-            ( v >> 24 ) |
-            ( ( v & 0x00FF0000 ) >> 8 ) |
-            ( ( v & 0x0000FF00 ) << 8 ) |
-            ( v << 24 );
-    }
+    memcpy( dst, m_data, m_size.x*m_size.y/2 );
 
     munmap( map, len );
     fclose( f );
