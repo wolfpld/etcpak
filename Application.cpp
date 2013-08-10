@@ -155,6 +155,9 @@ int main( int argc, char** argv )
             }
         }
 
+        bd.reset();
+        bda.reset();
+
         delete[] blocks;
         delete[] blocksa;
     }
