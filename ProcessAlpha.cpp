@@ -59,24 +59,18 @@ static void EncodeAverages( uint64& d, const uint* a, size_t idx )
     d |= ( idx << 24 );
     size_t base = idx << 1;
 
+    uint v;
     if( ( idx & 0x2 ) == 0 )
     {
-        for( int i=0; i<3; i++ )
-        {
-            d |= uint64( a[base+0] >> 4 ) << ( i*8 );
-            d |= uint64( a[base+1] >> 4 ) << ( i*8 + 4 );
-        }
+        v = ( a[base+0] >> 4 ) | ( a[base+1] & 0xF0 );
     }
     else
     {
-        for( int i=0; i<3; i++ )
-        {
-            d |= uint64( a[base+1] & 0xF8 ) << ( i*8 );
-            int32 c = ( ( a[base+0] & 0xF8 ) - ( a[base+1] & 0xF8 ) ) >> 3;
-            c &= ~0xFFFFFFF8;
-            d |= ((uint64)c) << ( i*8 );
-        }
+        v = a[base+1] & 0xF8;
+        int32 c = ( ( a[base+0] & 0xF8 ) - ( a[base+1] & 0xF8 ) ) >> 3;
+        v |= c & ~0xFFFFFFF8;
     }
+    d |= v | ( v << 8 ) | ( v << 16 );
 }
 
 uint64 ProcessAlpha( const uint8* src )
