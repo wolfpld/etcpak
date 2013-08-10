@@ -25,6 +25,7 @@ void Usage()
     //fprintf( stderr, "  -q 0        set quality to given value\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
+    fprintf( stderr, "                note: pvr files are written regardless of this option\n" );
     fprintf( stderr, "  -a          disable alpha channel processing\n" );
     fprintf( stderr, "  -s          display image quality measurements\n" );
 }
@@ -91,11 +92,11 @@ int main( int argc, char** argv )
         auto bmp = std::make_shared<Bitmap>( argv[1], lines );
         auto num = bmp->Size().y / 4 / lines;
 
-        auto bd = std::make_shared<BlockData>( bmp->Size() );
+        auto bd = std::make_shared<BlockData>( "out.pvr", bmp->Size() );
         BlockDataPtr bda;
         if( alpha && bmp->Alpha() )
         {
-            bda = std::make_shared<BlockData>( bmp->Size() );
+            bda = std::make_shared<BlockData>( "outa.pvr", bmp->Size() );
         }
 
         auto tasks = new std::future<void>[num];
@@ -151,14 +152,6 @@ int main( int argc, char** argv )
             {
                 auto outa = bda->Decode();
                 outa->Write( "outa.png" );
-            }
-        }
-        if( save & 0x1 )
-        {
-            bd->WritePVR( "out.pvr" );
-            if( bda )
-            {
-                bda->WritePVR( "outa.pvr" );
             }
         }
 

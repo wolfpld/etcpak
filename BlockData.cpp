@@ -10,79 +10,104 @@
 #include "Tables.hpp"
 
 BlockData::BlockData( const char* fn )
-    : m_data( nullptr )
-    , m_done( true )
+    : m_done( true )
+    , m_file( fopen( fn, "rb" ) )
 {
-    FILE* f = fopen( fn, "rb" );
+    assert( m_file );
+    fseek( m_file, 0, SEEK_END );
+    m_maplen = ftell( m_file );
+    fseek( m_file, 0, SEEK_SET );
+    m_data = (uint8*)mmap( nullptr, m_maplen, PROT_READ, MAP_SHARED, fileno( m_file ), 0 );
 
-    uint32 data;
-    fread( &data, 1, 4, f );
-    if( data == 0x03525650 )
+    auto data32 = (uint32*)m_data;
+    if( *data32 == 0x03525650 )
     {
-        fseek( f, 20, SEEK_CUR );
-        fread( &data, 1, 4, f );
-        m_size.y = data;
-        fread( &data, 1, 4, f );
-        m_size.x = data;
-        fseek( f, 20, SEEK_CUR );
+        m_size.y = *(data32+6);
+        m_size.x = *(data32+7);
+        m_dataOffset = 52;
     }
-    else if( data == 0x58544BAB )
+    else if( *data32 == 0x58544BAB )
     {
-        fseek( f, 32, SEEK_CUR );
-        fread( &data, 1, 4, f );
-        m_size.x = data;
-        fread( &data, 1, 4, f );
-        m_size.y = data;
-        fseek( f, 16, SEEK_CUR );
-        fread( &data, 1, 4, f );
-        fseek( f, data + 4, SEEK_CUR );
+        m_size.x = *(data32+9);
+        m_size.y = *(data32+10);
+        m_dataOffset = 17 + *(data32+15);
     }
     else
     {
         assert( false );
     }
-
-    uint32 cnt = m_size.x * m_size.y / 16;
-    m_data = new uint64[cnt];
-    fread( m_data, 1, cnt * 8, f );
-
-    fclose( f );
 }
 
-BlockData::BlockData( const BlockBitmapPtr& bitmap, uint quality )
+static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f )
+{
+    *f = fopen( fn, "wb+" );
+    assert( *f );
+    fseek( *f, len - 1, SEEK_SET );
+    const char zero = 0;
+    fwrite( &zero, 1, 1, *f );
+    fseek( *f, 0, SEEK_SET );
+
+    auto ret = (uint8*)mmap( nullptr, len, PROT_WRITE, MAP_SHARED, fileno( *f ), 0 );
+    auto dst = (uint32*)ret;
+
+    *dst++ = 0x03525650;  // version
+    *dst++ = 0;           // flags
+    *dst++ = 6;           // pixelformat[0]
+    *dst++ = 0;           // pixelformat[1]
+    *dst++ = 0;           // colourspace
+    *dst++ = 0;           // channel type
+    *dst++ = size.y;      // height
+    *dst++ = size.x;      // width
+    *dst++ = 1;           // depth
+    *dst++ = 1;           // num surfs
+    *dst++ = 1;           // num faces
+    *dst++ = 1;           // mipmap count
+    *dst++ = 0;           // metadata size
+
+    return ret;
+}
+
+BlockData::BlockData( const char* fn, const BlockBitmapPtr& bitmap, uint quality )
     : m_size( bitmap->Size() )
     , m_bmp( bitmap )
     , m_done( false )
+    , m_dataOffset( 52 )
+    , m_maplen( 52 + m_size.x*m_size.y/2 )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
     uint32 cnt = m_size.x * m_size.y / 16;
     DBGPRINT( cnt << " blocks" );
-    m_data = new uint64[cnt];
+
+    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file );
 
     Process( bitmap->Data(), cnt, 0, quality, bitmap->Type() );
 }
 
-BlockData::BlockData( const v2i& size )
+BlockData::BlockData( const char* fn, const v2i& size )
     : m_size( size )
     , m_done( false )
+    , m_dataOffset( 52 )
+    , m_maplen( 52 + m_size.x*m_size.y/2 )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
     uint32 cnt = m_size.x * m_size.y / 16;
     DBGPRINT( cnt << " blocks" );
-    m_data = new uint64[cnt];
+
+    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file );
 }
 
 BlockData::~BlockData()
 {
     if( !m_done ) Finish();
-    delete[] m_data;
+    munmap( m_data, m_maplen );
+    fclose( m_file );
 }
 
 void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type )
 {
-    uint64* dst = m_data + offset;
+    auto dst = ((uint64*)( m_data + m_dataOffset )) + offset;
 
     std::lock_guard<std::mutex> lock( m_lock );
 
@@ -125,16 +150,7 @@ BitmapPtr BlockData::Decode()
     if( !m_done ) Finish();
 
     uint32 cnt = m_size.x * m_size.y / 8;
-    uint32* ptr = (uint32*)m_data;
-    for( uint j=0; j<cnt; j++ )
-    {
-        uint32 v = *ptr;
-        *ptr++ =
-            ( v >> 24 ) |
-            ( ( v & 0x00FF0000 ) >> 8 ) |
-            ( ( v & 0x0000FF00 ) << 8 ) |
-            ( v << 24 );
-    }
+    uint32* ptr = (uint32*)( m_data + m_dataOffset );
 
     auto ret = std::make_shared<Bitmap>( m_size );
 
@@ -144,13 +160,18 @@ BitmapPtr BlockData::Decode()
     l[2] = l[1] + m_size.x;
     l[3] = l[2] + m_size.x;
 
-    const uint64* src = (const uint64*)m_data;
+    const uint64* src = (const uint64*)( m_data + m_dataOffset );
 
     for( int y=0; y<m_size.y/4; y++ )
     {
         for( int x=0; x<m_size.x/4; x++ )
         {
             uint64 d = *src++;
+
+            d = ( ( d & 0xFF000000FF000000 ) >> 24 ) |
+                ( ( d & 0x000000FF000000FF ) << 24 ) |
+                ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
+                ( ( d & 0x0000FF000000FF00 ) << 8 );
 
             uint32 r1, g1, b1;
             uint32 r2, g2, b2;
@@ -302,41 +323,6 @@ BitmapPtr BlockData::Decode()
     }
 
     return ret;
-}
-
-void BlockData::WritePVR( const char* fn )
-{
-    FILE* f = fopen( fn, "wb+" );
-    assert( f );
-    const size_t len = 52 + m_size.x*m_size.y/2;
-    fseek( f, len - 1, SEEK_SET );
-    const char zero = 0;
-    fwrite( &zero, 1, 1, f );
-    fseek( f, 0, SEEK_SET );
-
-    auto map = (uint32*)mmap( nullptr, len, PROT_WRITE, MAP_SHARED, fileno( f ), 0 );
-    auto dst = map;
-
-    *dst++ = 0x03525650;  // version
-    *dst++ = 0;           // flags
-    *dst++ = 6;           // pixelformat[0]
-    *dst++ = 0;           // pixelformat[1]
-    *dst++ = 0;           // colourspace
-    *dst++ = 0;           // channel type
-    *dst++ = m_size.y;    // height
-    *dst++ = m_size.x;    // width
-    *dst++ = 1;           // depth
-    *dst++ = 1;           // num surfs
-    *dst++ = 1;           // num faces
-    *dst++ = 1;           // mipmap count
-    *dst++ = 0;           // metadata size
-
-    if( !m_done ) Finish();
-
-    memcpy( dst, m_data, m_size.x*m_size.y/2 );
-
-    munmap( map, len );
-    fclose( f );
 }
 
 void BlockData::ProcessBlocksRGB( const uint8* src, uint64* dst, uint num )
