@@ -113,17 +113,17 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
 
     if( type == Channels::Alpha )
     {
-        m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksAlpha( src, dst, blocks ); } ) );
+        m_work.push_back( std::async( [src, dst, blocks, this]() mutable { do { *dst++ = ProcessAlpha( src ); src += 4*4; } while( --blocks ); } ) );
     }
     else
     {
         switch( quality )
         {
         case 0:
-            m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksRGB( src, dst, blocks ); } ) );
+            m_work.push_back( std::async( [src, dst, blocks, this]() mutable { do { *dst++ = ProcessRGB( src ); src += 4*4*4; } while( --blocks ); } ) );
             break;
         case 1:
-            m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
+            //m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
             break;
         default:
             assert( false );
@@ -320,34 +320,4 @@ BitmapPtr BlockData::Decode()
     }
 
     return ret;
-}
-
-void BlockData::ProcessBlocksRGB( const uint8* src, uint64* dst, uint num )
-{
-    do
-    {
-        *dst++ = ProcessRGB( src );
-        src += 4*4*4;
-    }
-    while( --num );
-}
-
-void BlockData::ProcessBlocksLab( const uint8* src, uint64* dst, uint num )
-{
-    do
-    {
-//        *dst++ = ProcessLab( src );
-        src += 4*4*3;
-    }
-    while( --num );
-}
-
-void BlockData::ProcessBlocksAlpha( const uint8* src, uint64* dst, uint num )
-{
-    do
-    {
-        *dst++ = ProcessAlpha( src );
-        src += 4*4;
-    }
-    while( --num );
 }
