@@ -149,9 +149,6 @@ BitmapPtr BlockData::Decode()
 {
     if( !m_done ) Finish();
 
-    uint32 cnt = m_size.x * m_size.y / 8;
-    uint32* ptr = (uint32*)( m_data + m_dataOffset );
-
     auto ret = std::make_shared<Bitmap>( m_size );
 
     uint32* l[4];
