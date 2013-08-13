@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "ProcessCommon.hpp"
 #include "ProcessRGB.hpp"
 #include "Tables.hpp"
