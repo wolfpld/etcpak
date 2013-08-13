@@ -9,9 +9,9 @@
 #include "Debug.hpp"
 
 Bitmap::Bitmap( const char* fn, uint lines )
-    : m_alpha( true )
-    , m_block( nullptr )
+    : m_block( nullptr )
     , m_lines( lines )
+    , m_alpha( true )
     , m_sema( 0 )
 {
     FILE* f = fopen( fn, "rb" );
