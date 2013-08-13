@@ -98,32 +98,28 @@ static void EncodeAverages( uint64& d, const v3i* a, size_t idx )
     }
 }
 
+static uint64 CheckSolid( const uint8* src )
+{
+    bool solid = true;
+    const uint8* ptr = src + 4;
+    for( int i=1; i<16; i++ )
+    {
+        if( memcmp( src, ptr, 4 ) != 0 )
+        {
+            return 0;
+        }
+        ptr += 4;
+    }
+    return 0x02000000 |
+        ( uint( src[0] & 0xF8 ) << 16 ) |
+        ( uint( src[1] & 0xF8 ) << 8 ) |
+        ( uint( src[2] & 0xF8 ) );
+}
+
 uint64 ProcessRGB( const uint8* src )
 {
-    uint64 d = 0;
-
-    {
-        bool solid = true;
-        const uint8* ptr = src + 4;
-        for( int i=1; i<16; i++ )
-        {
-            if( memcmp( src, ptr, 4 ) != 0 )
-            {
-                solid = false;
-                break;
-            }
-            ptr += 4;
-        }
-        if( solid )
-        {
-            d |= 0x02000000 |
-                ( uint( src[0] & 0xF8 ) << 16 ) |
-                ( uint( src[1] & 0xF8 ) << 8 ) |
-                ( uint( src[2] & 0xF8 ) );
-
-            return d;
-        }
-    }
+    uint64 d = CheckSolid( src );
+    if( d != 0 ) return d;
 
     uint8 b23[2][32];
     const uint8* b[4] = { src+32, src, b23[0], b23[1] };
