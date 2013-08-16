@@ -90,7 +90,7 @@ int main( int argc, char** argv )
     {
         uint lines = 32;
         auto bmp = std::make_shared<Bitmap>( argv[1], lines );
-        auto num = bmp->Size().y / 4 / lines;
+        auto num = ( ( bmp->Size().y / 4 ) + lines - 1 ) / lines;
 
         auto bd = std::make_shared<BlockData>( "out.pvr", bmp->Size() );
         BlockDataPtr bda;

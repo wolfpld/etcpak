@@ -135,6 +135,11 @@ Bitmap::Bitmap( const char* fn, uint lines )
                 }
             }
 
+            if( lines != 0 )
+            {
+                m_sema.unlock();
+            }
+
             png_read_end( png_ptr, info_ptr );
             png_destroy_read_struct( &png_ptr, &info_ptr, NULL );
             fclose( f );
