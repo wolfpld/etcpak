@@ -20,9 +20,9 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
     Process( bmp->Data() );
 }
 
-void BlockBitmap::Process( const uint32* src )
+void BlockBitmap::Process( const uint32* __restrict src )
 {
-    uint8* dst = m_data;
+    uint8* __restrict dst = m_data;
 
     assert( m_size.x % 4 == 0 && m_size.y % 4 == 0 );
 
