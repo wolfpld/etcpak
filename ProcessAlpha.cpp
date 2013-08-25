@@ -54,8 +54,9 @@ static void ProcessAverages( uint* a )
     }
 }
 
-static void EncodeAverages( uint64& d, const uint* a, size_t idx )
+static void EncodeAverages( uint64& _d, const uint* a, size_t idx )
 {
+    auto d = _d;
     d |= ( idx << 24 );
     size_t base = idx << 1;
 
@@ -71,6 +72,7 @@ static void EncodeAverages( uint64& d, const uint* a, size_t idx )
         v |= c & ~0xFFFFFFF8;
     }
     d |= v | ( v << 8 ) | ( v << 16 );
+    _d = d;
 }
 
 uint64 ProcessAlpha( const uint8* src )

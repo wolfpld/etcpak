@@ -73,8 +73,9 @@ static void ProcessAverages( v3i* a )
     }
 }
 
-static void EncodeAverages( uint64& d, const v3i* a, size_t idx )
+static void EncodeAverages( uint64& _d, const v3i* a, size_t idx )
 {
+    auto d = _d;
     d |= ( idx << 24 );
     size_t base = idx << 1;
 
@@ -96,6 +97,7 @@ static void EncodeAverages( uint64& d, const v3i* a, size_t idx )
             d |= ((uint64)c) << ( i*8 );
         }
     }
+    _d = d;
 }
 
 static uint64 CheckSolid( const uint8* src )
