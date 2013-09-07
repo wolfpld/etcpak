@@ -59,7 +59,7 @@ void BlockBitmap::Process( const uint32* __restrict src )
                 {
                     for( int y=0; y<4; y++ )
                     {
-                        *dst++ = 255 - ( *src >> 24 );
+                        *dst++ = *src >> 24;
                         src += m_size.x;
                     }
                     src -= m_size.x * 4 - 1;
