@@ -1,5 +1,6 @@
 #include <future>
 #include <stdio.h>
+#include <limits>
 #include <math.h>
 #include <memory>
 #include <string.h>
@@ -9,6 +10,7 @@
 #include "BlockData.hpp"
 #include "Debug.hpp"
 #include "Error.hpp"
+#include "Timing.hpp"
 
 struct DebugCallback_t : public DebugLog::Callback
 {
@@ -28,6 +30,7 @@ void Usage()
     fprintf( stderr, "                note: pvr files are written regardless of this option\n" );
     fprintf( stderr, "  -a          disable alpha channel processing\n" );
     fprintf( stderr, "  -s          display image quality measurements\n" );
+    fprintf( stderr, "  -b          benchmark mode\n" );
 }
 
 int main( int argc, char** argv )
@@ -39,6 +42,7 @@ int main( int argc, char** argv )
     int save = 1;
     bool alpha = true;
     bool stats = false;
+    bool benchmark = false;
 
     if( argc < 2 )
     {
@@ -72,6 +76,10 @@ int main( int argc, char** argv )
         {
             stats = true;
         }
+        else if( CSTR( "-b" ) )
+        {
+            benchmark = true;
+        }
         else
         {
             Usage();
@@ -80,7 +88,36 @@ int main( int argc, char** argv )
     }
 #undef CSTR
 
-    if( viewMode )
+    if( benchmark )
+    {
+        InitTiming();
+        auto start = GetTime();
+        auto bmp = std::make_shared<Bitmap>( argv[1], std::numeric_limits<uint>::max() );
+        auto data = bmp->Data();
+        auto end = GetTime();
+        printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
+
+        start = GetTime();
+        enum { NumTasks = 50 };
+        auto tasks = new std::future<void>[NumTasks];
+        for( int i=0; i<NumTasks; i++ )
+        {
+            tasks[i] = std::async( [&bmp]()
+            {
+                auto block = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
+                auto bd = std::make_shared<BlockData>( bmp->Size() );
+                bd->Process( block->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
+            } );
+        }
+        for( uint i=0; i<NumTasks; i++ )
+        {
+            tasks[i].wait();
+        }
+        delete[] tasks;
+        end = GetTime();
+        printf( "Mean compression time for %i runs: %0.3f ms\n", NumTasks, ( end - start ) / ( NumTasks * 1000.f ) );
+    }
+    else if( viewMode )
     {
         auto bd = std::make_shared<BlockData>( argv[1] );
         auto out = bd->Decode();
