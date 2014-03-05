@@ -107,6 +107,7 @@
     <ClCompile Include="..\ProcessAlpha.cpp" />
     <ClCompile Include="..\ProcessRGB.cpp" />
     <ClCompile Include="..\Tables.cpp" />
+    <ClCompile Include="..\Timing.cpp" />
     <ClCompile Include="..\zlib\adler32.c" />
     <ClCompile Include="..\zlib\compress.c" />
     <ClCompile Include="..\zlib\crc32.c" />
@@ -142,6 +143,7 @@
     <ClInclude Include="..\ProcessRGB.hpp" />
     <ClInclude Include="..\Semaphore.hpp" />
     <ClInclude Include="..\Tables.hpp" />
+    <ClInclude Include="..\Timing.hpp" />
     <ClInclude Include="..\Types.hpp" />
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\zlib\crc32.h" />
