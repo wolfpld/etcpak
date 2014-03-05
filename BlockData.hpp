@@ -18,6 +18,7 @@ public:
     BlockData( const char* fn );
     BlockData( const char* fn, const BlockBitmapPtr& bitmap, uint quality );
     BlockData( const char* fn, const v2i& size );
+    BlockData( const v2i& size );
     ~BlockData();
 
     BitmapPtr Decode();

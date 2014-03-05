@@ -98,11 +98,29 @@ BlockData::BlockData( const char* fn, const v2i& size )
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file );
 }
 
+BlockData::BlockData( const v2i& size )
+    : m_size( size )
+    , m_done( false )
+    , m_dataOffset( 52 )
+    , m_file( nullptr )
+    , m_maplen( 52 + m_size.x*m_size.y/2 )
+{
+    assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
+    m_data = new uint8[m_maplen];
+}
+
 BlockData::~BlockData()
 {
     if( !m_done ) Finish();
-    munmap( m_data, m_maplen );
-    fclose( m_file );
+    if( m_file )
+    {
+        munmap( m_data, m_maplen );
+        fclose( m_file );
+    }
+    else
+    {
+        delete[] m_data;
+    }
 }
 
 void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type )
