@@ -135,11 +135,11 @@ int main( int argc, char** argv )
         auto bmp = std::make_shared<Bitmap>( argv[1], lines );
         auto num = ( ( bmp->Size().y / 4 ) + lines - 1 ) / lines;
 
-        auto bd = std::make_shared<BlockData>( "out.pvr", bmp->Size() );
+        auto bd = std::make_shared<BlockData>( "out.pvr", bmp->Size(), mipmap );
         BlockDataPtr bda;
         if( alpha && bmp->Alpha() )
         {
-            bda = std::make_shared<BlockData>( "outa.pvr", bmp->Size() );
+            bda = std::make_shared<BlockData>( "outa.pvr", bmp->Size(), mipmap );
         }
 
         auto tasks = new std::future<void>[num];

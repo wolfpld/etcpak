@@ -38,7 +38,7 @@ BlockData::BlockData( const char* fn )
     }
 }
 
-static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f )
+static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels )
 {
     *f = fopen( fn, "wb+" );
     assert( *f );
@@ -61,13 +61,13 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
     *dst++ = 1;           // depth
     *dst++ = 1;           // num surfs
     *dst++ = 1;           // num faces
-    *dst++ = 1;           // mipmap count
+    *dst++ = levels;      // mipmap count
     *dst++ = 0;           // metadata size
 
     return ret;
 }
 
-BlockData::BlockData( const char* fn, const v2i& size )
+BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
     : m_size( size )
     , m_done( false )
     , m_dataOffset( 52 )
@@ -78,7 +78,15 @@ BlockData::BlockData( const char* fn, const v2i& size )
     uint32 cnt = m_size.x * m_size.y / 16;
     DBGPRINT( cnt << " blocks" );
 
-    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file );
+    int levels = 1;
+
+    if( mipmap )
+    {
+        levels += (int)floor( log2( std::max( size.x, size.y ) ) );
+        DBGPRINT( "Number of mipmaps: " << levels );
+    }
+
+    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels );
 }
 
 BlockData::BlockData( const v2i& size )
