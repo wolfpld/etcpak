@@ -110,7 +110,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels );
 }
 
-BlockData::BlockData( const v2i& size )
+BlockData::BlockData( const v2i& size, bool mipmap )
     : m_size( size )
     , m_done( false )
     , m_dataOffset( 52 )
@@ -118,6 +118,11 @@ BlockData::BlockData( const v2i& size )
     , m_maplen( 52 + m_size.x*m_size.y/2 )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
+    if( mipmap )
+    {
+        const int levels = GetNumberOfMipLevels( size );
+        m_maplen += AdjustSizeForMipmaps( size, levels );
+    }
     m_data = new uint8[m_maplen];
 }
 

@@ -17,7 +17,7 @@ class BlockData
 public:
     BlockData( const char* fn );
     BlockData( const char* fn, const v2i& size, bool mipmap );
-    BlockData( const v2i& size );
+    BlockData( const v2i& size, bool mipmap );
     ~BlockData();
 
     BitmapPtr Decode();
