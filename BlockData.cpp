@@ -67,6 +67,26 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
     return ret;
 }
 
+static int GetNumberOfMipLevels( const v2i& size )
+{
+    return (int)floor( log2( std::max( size.x, size.y ) ) ) + 1;
+}
+
+static int AdjustSizeForMipmaps( const v2i& size, int levels )
+{
+    int len = 0;
+    v2i current = size;
+    for( int i=1; i<levels; i++ )
+    {
+        assert( current.x != 1 && current.y != 1 );
+        current.x = std::max( 1, current.x / 2 );
+        current.y = std::max( 1, current.y / 2 );
+        len += std::max( 4, current.x ) * std::max( 4, current.y ) / 2;
+    }
+    assert( current.x == 1 && current.y == 1 );
+    return len;
+}
+
 BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
     : m_size( size )
     , m_done( false )
@@ -82,18 +102,9 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
 
     if( mipmap )
     {
-        levels += (int)floor( log2( std::max( size.x, size.y ) ) );
+        levels = GetNumberOfMipLevels( size );
         DBGPRINT( "Number of mipmaps: " << levels );
-
-        v2i current = size;
-        for( int i=1; i<levels; i++ )
-        {
-            assert( current.x != 1 && current.y != 1 );
-            current.x = std::max( 1, current.x / 2 );
-            current.y = std::max( 1, current.y / 2 );
-            m_maplen += std::max( 4, current.x ) * std::max( 4, current.y ) / 2;
-        }
-        assert( current.x == 1 && current.y == 1 );
+        m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels );
