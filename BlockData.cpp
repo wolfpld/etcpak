@@ -67,23 +67,6 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
     return ret;
 }
 
-BlockData::BlockData( const char* fn, const BlockBitmapPtr& bitmap, uint quality )
-    : m_size( bitmap->Size() )
-    , m_bmp( bitmap )
-    , m_done( false )
-    , m_dataOffset( 52 )
-    , m_maplen( 52 + m_size.x*m_size.y/2 )
-{
-    assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
-
-    uint32 cnt = m_size.x * m_size.y / 16;
-    DBGPRINT( cnt << " blocks" );
-
-    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file );
-
-    Process( bitmap->Data(), cnt, 0, quality, bitmap->Type() );
-}
-
 BlockData::BlockData( const char* fn, const v2i& size )
     : m_size( size )
     , m_done( false )
