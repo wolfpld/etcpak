@@ -31,6 +31,7 @@ void Usage()
     fprintf( stderr, "  -a          disable alpha channel processing\n" );
     fprintf( stderr, "  -s          display image quality measurements\n" );
     fprintf( stderr, "  -b          benchmark mode\n" );
+    fprintf( stderr, "  -m          generate mipmaps\n" );
 }
 
 int main( int argc, char** argv )
@@ -43,6 +44,7 @@ int main( int argc, char** argv )
     bool alpha = true;
     bool stats = false;
     bool benchmark = false;
+    bool mipmap = false;
 
     if( argc < 2 )
     {
@@ -79,6 +81,10 @@ int main( int argc, char** argv )
         else if( CSTR( "-b" ) )
         {
             benchmark = true;
+        }
+        else if( CSTR( "-m" ) )
+        {
+            mipmap = true;
         }
         else
         {
