@@ -1,19 +1,18 @@
 #include <assert.h>
+#include <utility>
 
 #include "BlockBitmap.hpp"
 
 BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
-    : m_data( new uint8[size.x * size.y * ( type == Channels::RGB ? 4 : 1 )] )
+    : m_data( new uint8[std::max( 4, size.x ) * std::max( 4, size.y ) * ( type == Channels::RGB ? 4 : 1 )] )
     , m_size( size )
     , m_type( type )
 {
-    assert( m_size.x % 4 == 0 && m_size.y % 4 == 0 );
-
     Process( data );
 }
 
 BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
-    : m_data( new uint8[bmp->Size().x * bmp->Size().y * ( type == Channels::RGB ? 4 : 1 )] )
+    : m_data( new uint8[std::max( 4, bmp->Size().x ) * std::max( 4, bmp->Size().y ) * ( type == Channels::RGB ? 4 : 1 )] )
     , m_size( bmp->Size() )
     , m_type( type )
 {
@@ -24,13 +23,16 @@ void BlockBitmap::Process( const uint32* __restrict src )
 {
     uint8* __restrict dst = m_data;
 
-    assert( m_size.x % 4 == 0 && m_size.y % 4 == 0 );
+    int w = std::max( 4, m_size.x );
+    int h = std::max( 4, m_size.y );
+
+    assert( w % 4 == 0 && h % 4 == 0 );
 
     if( m_type == Channels::RGB )
     {
-        for( int by=0; by<m_size.y/4; by++ )
+        for( int by=0; by<h/4; by++ )
         {
-            for( int bx=0; bx<m_size.x/4; bx++ )
+            for( int bx=0; bx<w/4; bx++ )
             {
                 for( int x=0; x<4; x++ )
                 {
@@ -51,9 +53,9 @@ void BlockBitmap::Process( const uint32* __restrict src )
     }
     else
     {
-        for( int by=0; by<m_size.y/4; by++ )
+        for( int by=0; by<h/4; by++ )
         {
-            for( int bx=0; bx<m_size.x/4; bx++ )
+            for( int bx=0; bx<w/4; bx++ )
             {
                 for( int x=0; x<4; x++ )
                 {
