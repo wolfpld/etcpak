@@ -10,6 +10,7 @@
 #include "BlockData.hpp"
 #include "DataProvider.hpp"
 #include "Debug.hpp"
+#include "Dither.hpp"
 #include "Error.hpp"
 #include "Timing.hpp"
 
@@ -33,6 +34,7 @@ void Usage()
     fprintf( stderr, "  -s          display image quality measurements\n" );
     fprintf( stderr, "  -b          benchmark mode\n" );
     fprintf( stderr, "  -m          generate mipmaps\n" );
+    fprintf( stderr, "  -d          enable dithering\n" );
 }
 
 int main( int argc, char** argv )
@@ -46,6 +48,7 @@ int main( int argc, char** argv )
     bool stats = false;
     bool benchmark = false;
     bool mipmap = false;
+    bool dither = false;
 
     if( argc < 2 )
     {
@@ -87,6 +90,10 @@ int main( int argc, char** argv )
         {
             mipmap = true;
         }
+        else if( CSTR( "-d" ) )
+        {
+            dither = true;
+        }
         else
         {
             Usage();
@@ -94,6 +101,11 @@ int main( int argc, char** argv )
         }
     }
 #undef CSTR
+
+    if( dither )
+    {
+        InitDither();
+    }
 
     if( benchmark )
     {
@@ -150,9 +162,13 @@ int main( int argc, char** argv )
         {
             auto part = dp.NextPart();
 
-            tasks[i] = std::async( [part, i, &bd, &blocks, &bda, &blocksa, quality]()
+            tasks[i] = std::async( [part, i, &bd, &blocks, &bda, &blocksa, quality, &dither]()
             {
                 blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
+                if( dither )
+                {
+                    blocks[i]->Dither();
+                }
                 bd->Process( blocks[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
                 if( bda )
                 {
