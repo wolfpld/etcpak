@@ -106,6 +106,7 @@
     </ClCompile>
     <ClCompile Include="..\Timing.cpp" />
     <ClCompile Include="..\DataProvider.cpp" />
+    <ClCompile Include="..\BitmapDownsampled.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -180,6 +181,7 @@
     <ClInclude Include="..\Timing.hpp" />
     <ClInclude Include="..\DataProvider.hpp" />
     <ClInclude Include="..\MipMap.hpp" />
+    <ClInclude Include="..\BitmapDownsampled.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">

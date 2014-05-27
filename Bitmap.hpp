@@ -14,7 +14,7 @@ class Bitmap
 public:
     Bitmap( const char* fn, uint lines );
     Bitmap( const v2i& size );
-    ~Bitmap();
+    virtual ~Bitmap();
 
     void Write( const char* fn );
 
@@ -25,7 +25,9 @@ public:
 
     const uint32* NextBlock( uint& lines, bool& done );
 
-private:
+protected:
+    Bitmap( const Bitmap& src, uint lines );
+
     uint32* m_data;
     uint32* m_block;
     uint m_lines;

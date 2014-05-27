@@ -83,6 +83,7 @@
   <ItemGroup>
     <ClCompile Include="..\Application.cpp" />
     <ClCompile Include="..\Bitmap.cpp" />
+    <ClCompile Include="..\BitmapDownsampled.cpp" />
     <ClCompile Include="..\BlockBitmap.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\ColorSpace.cpp" />
@@ -125,6 +126,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Bitmap.hpp" />
+    <ClInclude Include="..\BitmapDownsampled.hpp" />
     <ClInclude Include="..\BlockBitmap.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />

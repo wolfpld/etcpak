@@ -157,6 +157,13 @@ Bitmap::Bitmap( const v2i& size )
 {
 }
 
+Bitmap::Bitmap( const Bitmap& src, uint lines )
+    : m_lines( lines )
+    , m_alpha( src.Alpha() )
+    , m_sema( 0 )
+{
+}
+
 Bitmap::~Bitmap()
 {
     delete[] m_data;
