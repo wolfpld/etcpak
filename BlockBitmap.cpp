@@ -2,6 +2,7 @@
 #include <utility>
 
 #include "BlockBitmap.hpp"
+#include "Dither.hpp"
 
 BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
     : m_data( new uint8[std::max( 4, size.x ) * std::max( 4, size.y ) * ( type == Channels::RGB ? 4 : 1 )] )
@@ -75,4 +76,23 @@ void BlockBitmap::Process( const uint32* __restrict src )
 BlockBitmap::~BlockBitmap()
 {
     delete[] m_data;
+}
+
+void BlockBitmap::Dither()
+{
+    assert( m_type == Channels::RGB );
+
+    int w = std::max( 4, m_size.x );
+    int h = std::max( 4, m_size.y );
+
+    uint8* ptr = m_data;
+
+    for( int by=0; by<h/4; by++ )
+    {
+        for( int bx=0; bx<w/4; bx++ )
+        {
+            ::Dither( ptr );
+            ptr += 64;
+        }
+    }
 }

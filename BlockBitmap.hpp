@@ -20,6 +20,8 @@ public:
     BlockBitmap( const BitmapPtr& bmp, Channels type );
     ~BlockBitmap();
 
+    void Dither();
+
     const uint8* Data() const { return m_data; }
     const v2i& Size() const { return m_size; }
     const Channels Type() const { return m_type; }
