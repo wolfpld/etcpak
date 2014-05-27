@@ -139,6 +139,7 @@
     <ClInclude Include="..\libpng\pngpriv.h" />
     <ClInclude Include="..\libpng\pngstruct.h" />
     <ClInclude Include="..\Math.hpp" />
+    <ClInclude Include="..\MipMap.hpp" />
     <ClInclude Include="..\mmap.hpp" />
     <ClInclude Include="..\ProcessAlpha.hpp" />
     <ClInclude Include="..\ProcessCommon.hpp" />

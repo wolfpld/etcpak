@@ -4,6 +4,7 @@
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
 #include "Debug.hpp"
+#include "MipMap.hpp"
 #include "mmap.hpp"
 #include "ProcessAlpha.hpp"
 #include "ProcessRGB.hpp"
@@ -67,11 +68,6 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
     return ret;
 }
 
-static int GetNumberOfMipLevels( const v2i& size )
-{
-    return (int)floor( log2( std::max( size.x, size.y ) ) ) + 1;
-}
-
 static int AdjustSizeForMipmaps( const v2i& size, int levels )
 {
     int len = 0;
@@ -102,7 +98,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
 
     if( mipmap )
     {
-        levels = GetNumberOfMipLevels( size );
+        levels = NumberOfMipLevels( size );
         DBGPRINT( "Number of mipmaps: " << levels );
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
@@ -120,7 +116,7 @@ BlockData::BlockData( const v2i& size, bool mipmap )
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
     if( mipmap )
     {
-        const int levels = GetNumberOfMipLevels( size );
+        const int levels = NumberOfMipLevels( size );
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
     m_data = new uint8[m_maplen];

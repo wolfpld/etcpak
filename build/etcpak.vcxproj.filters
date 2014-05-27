@@ -179,6 +179,7 @@
     <ClInclude Include="..\ProcessCommon.hpp" />
     <ClInclude Include="..\Timing.hpp" />
     <ClInclude Include="..\DataProvider.hpp" />
+    <ClInclude Include="..\MipMap.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">
