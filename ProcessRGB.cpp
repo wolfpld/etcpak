@@ -102,7 +102,6 @@ static void EncodeAverages( uint64& _d, const v3i* a, size_t idx )
 
 static uint64 CheckSolid( const uint8* src )
 {
-    bool solid = true;
     const uint8* ptr = src + 4;
     for( int i=1; i<16; i++ )
     {
