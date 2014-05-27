@@ -20,9 +20,10 @@ int DataProvider::NumberOfParts() const
 DataPart DataProvider::NextPart()
 {
     uint lines = Lines;
+    bool done;
 
     DataPart ret = {
-        m_bmp->NextBlock( lines ),
+        m_bmp->NextBlock( lines, done ),
         m_bmp->Size().x,
         lines,
         m_offset

@@ -189,7 +189,7 @@ void Bitmap::Write( const char* fn )
     fclose( f );
 }
 
-const uint32* Bitmap::NextBlock( uint& lines )
+const uint32* Bitmap::NextBlock( uint& lines, bool& done )
 {
     std::lock_guard<std::mutex> lock( m_lock );
     lines = std::min( m_lines, m_linesLeft );
@@ -197,5 +197,6 @@ const uint32* Bitmap::NextBlock( uint& lines )
     m_sema.lock();
     m_block += m_size.x * 4 * lines;
     m_linesLeft -= lines;
+    done = m_linesLeft == 0;
     return ret;
 }

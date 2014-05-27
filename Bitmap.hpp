@@ -23,7 +23,7 @@ public:
     const v2i& Size() const { return m_size; }
     bool Alpha() const { return m_alpha; }
 
-    const uint32* NextBlock( uint& lines );
+    const uint32* NextBlock( uint& lines, bool& done );
 
 private:
     uint32* m_data;
