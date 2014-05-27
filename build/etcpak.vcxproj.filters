@@ -105,6 +105,7 @@
       <Filter>zlib</Filter>
     </ClCompile>
     <ClCompile Include="..\Timing.cpp" />
+    <ClCompile Include="..\DataProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -177,6 +178,7 @@
     <ClInclude Include="..\ProcessRGB.hpp" />
     <ClInclude Include="..\ProcessCommon.hpp" />
     <ClInclude Include="..\Timing.hpp" />
+    <ClInclude Include="..\DataProvider.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">

@@ -1,13 +1,13 @@
 #include "Error.hpp"
 #include "Math.hpp"
 
-float CalcMSE3( const BitmapPtr& bmp, const BitmapPtr& out )
+float CalcMSE3( const Bitmap& bmp, const Bitmap& out )
 {
     float err = 0;
 
-    const uint32* p1 = bmp->Data();
-    const uint32* p2 = out->Data();
-    size_t cnt = bmp->Size().x * bmp->Size().y;
+    const uint32* p1 = bmp.Data();
+    const uint32* p2 = out.Data();
+    size_t cnt = bmp.Size().x * bmp.Size().y;
 
     for( size_t i=0; i<cnt; i++ )
     {
@@ -24,13 +24,13 @@ float CalcMSE3( const BitmapPtr& bmp, const BitmapPtr& out )
     return err;
 }
 
-float CalcMSE1( const BitmapPtr& bmp, const BitmapPtr& out )
+float CalcMSE1( const Bitmap& bmp, const Bitmap& out )
 {
     float err = 0;
 
-    const uint32* p1 = bmp->Data();
-    const uint32* p2 = out->Data();
-    size_t cnt = bmp->Size().x * bmp->Size().y;
+    const uint32* p1 = bmp.Data();
+    const uint32* p2 = out.Data();
+    size_t cnt = bmp.Size().x * bmp.Size().y;
 
     for( size_t i=0; i<cnt; i++ )
     {

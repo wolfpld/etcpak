@@ -3,7 +3,7 @@
 
 #include "Bitmap.hpp"
 
-float CalcMSE3( const BitmapPtr& bmp, const BitmapPtr& out );
-float CalcMSE1( const BitmapPtr& bmp, const BitmapPtr& out );
+float CalcMSE3( const Bitmap& bmp, const Bitmap& out );
+float CalcMSE1( const Bitmap& bmp, const Bitmap& out );
 
 #endif
