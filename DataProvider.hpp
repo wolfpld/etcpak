@@ -34,6 +34,7 @@ private:
     Bitmap* m_current;
     int m_offset;
     bool m_mipmap;
+    bool m_done;
 };
 
 #endif
