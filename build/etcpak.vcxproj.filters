@@ -107,6 +107,7 @@
     <ClCompile Include="..\Timing.cpp" />
     <ClCompile Include="..\DataProvider.cpp" />
     <ClCompile Include="..\BitmapDownsampled.cpp" />
+    <ClCompile Include="..\Dither.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -182,6 +183,7 @@
     <ClInclude Include="..\DataProvider.hpp" />
     <ClInclude Include="..\MipMap.hpp" />
     <ClInclude Include="..\BitmapDownsampled.hpp" />
+    <ClInclude Include="..\Dither.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">

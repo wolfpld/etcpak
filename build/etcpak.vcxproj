@@ -89,6 +89,7 @@
     <ClCompile Include="..\ColorSpace.cpp" />
     <ClCompile Include="..\DataProvider.cpp" />
     <ClCompile Include="..\Debug.cpp" />
+    <ClCompile Include="..\Dither.cpp" />
     <ClCompile Include="..\Error.cpp" />
     <ClCompile Include="..\libpng\png.c" />
     <ClCompile Include="..\libpng\pngerror.c" />
@@ -132,6 +133,7 @@
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\DataProvider.hpp" />
     <ClInclude Include="..\Debug.hpp" />
+    <ClInclude Include="..\Dither.hpp" />
     <ClInclude Include="..\Error.hpp" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
