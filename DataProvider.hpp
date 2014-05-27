@@ -31,6 +31,7 @@ public:
 private:
     std::unique_ptr<Bitmap> m_bmp;
     int m_offset;
+    bool m_mipmap;
 };
 
 #endif

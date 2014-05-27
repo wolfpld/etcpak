@@ -5,6 +5,7 @@ enum { Lines = 32 };
 DataProvider::DataProvider( const char* fn, bool mipmap )
     : m_bmp( new Bitmap( fn, Lines ) )
     , m_offset( 0 )
+    , m_mipmap( mipmap )
 {
 }
 
