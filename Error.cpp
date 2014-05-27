@@ -37,7 +37,7 @@ float CalcMSE1( const Bitmap& bmp, const Bitmap& out )
         uint32 c1 = *p1++;
         uint32 c2 = *p2++;
 
-        err += sq( ( c1 >> 24 ) - ( 255 - ( c2 & 0xFF ) ) );
+        err += sq( ( c1 >> 24 ) - ( c2 & 0xFF ) );
     }
 
     err /= cnt;
