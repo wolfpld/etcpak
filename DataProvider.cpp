@@ -30,7 +30,7 @@ int DataProvider::NumberOfParts() const
         int levels = NumberOfMipLevels( current );
         for( int i=1; i<levels; i++ )
         {
-            assert( current.x != 1 && current.y != 1 );
+            assert( current.x != 1 || current.y != 1 );
             current.x = std::max( 1, current.x / 2 );
             current.y = std::max( 1, current.y / 2 );
             parts += ( ( std::max( 4, current.y ) / 4 ) + Lines - 1 ) / Lines;
