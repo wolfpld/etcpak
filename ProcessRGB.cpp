@@ -189,18 +189,6 @@ uint64 ProcessRGB( const uint8* src )
             *ter++ += err;
         }
     }
-    size_t tidx[2];
-    tidx[0] = GetLeastError( terr[0], 8 );
-    tidx[1] = GetLeastError( terr[1], 8 );
 
-    d |= tidx[0] << 26;
-    d |= tidx[1] << 29;
-    for( int i=0; i<16; i++ )
-    {
-        uint64 t = tsel[i][tidx[id[i]%2]];
-        d |= ( t & 0x1 ) << ( i + 32 );
-        d |= ( t & 0x2 ) << ( i + 47 );
-    }
-
-    return FixByteOrder( d );
+    return FixByteOrder( EncodeSelectors( d, terr, tsel, id ) );
 }
