@@ -173,6 +173,10 @@ int main( int argc, char** argv )
                 if( bda )
                 {
                     blocksa[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::Alpha );
+                    if( dither )
+                    {
+                        blocksa[i]->Dither();
+                    }
                     bda->Process( blocksa[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::Alpha );
                 }
             } );

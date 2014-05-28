@@ -80,19 +80,31 @@ BlockBitmap::~BlockBitmap()
 
 void BlockBitmap::Dither()
 {
-    assert( m_type == Channels::RGB );
-
     int w = std::max( 4, m_size.x );
     int h = std::max( 4, m_size.y );
 
     uint8* ptr = m_data;
 
-    for( int by=0; by<h/4; by++ )
+    if( m_type == Channels::RGB )
     {
-        for( int bx=0; bx<w/4; bx++ )
+        for( int by=0; by<h/4; by++ )
         {
-            ::Dither( ptr );
-            ptr += 64;
+            for( int bx=0; bx<w/4; bx++ )
+            {
+                DitherRGB( ptr );
+                ptr += 64;
+            }
+        }
+    }
+    else
+    {
+        for( int by=0; by<h/4; by++ )
+        {
+            for( int bx=0; bx<w/4; bx++ )
+            {
+                DitherA( ptr );
+                ptr += 16;
+            }
         }
     }
 }

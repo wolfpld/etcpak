@@ -32,7 +32,7 @@ void InitDither()
     }
 }
 
-void Dither( uint8* data )
+void DitherRGB( uint8* data )
 {
     int err[8];
     int* ep1 = err;
@@ -62,5 +62,33 @@ void Dither( uint8* data )
             ptr += 16;
             std::swap( ep1, ep2 );
         }
+    }
+}
+
+void DitherA( uint8* data )
+{
+    int err[8] = {};
+    int* ep1 = err;
+    int* ep2 = err+4;
+
+    uint8* quant = qg + 8;
+
+    for( int y=0; y<4; y++ )
+    {
+        uint8 tmp;
+        tmp = quant[data[0] + ( ( 3 * ep2[1] + 5 * ep2[0] ) >> 4 )];
+        ep1[0] = data[0] - tmp;
+        data[0] = tmp;
+        tmp = quant[data[1] + ( ( 7 * ep1[0] + 3 * ep2[2] + 5 * ep2[1] + ep2[0] ) >> 4 )];
+        ep1[1] = data[1] - tmp;
+        data[1] = tmp;
+        tmp = quant[data[2] + ( ( 7 * ep1[1] + 3 * ep2[3] + 5 * ep2[2] + ep2[1] ) >> 4 )];
+        ep1[2] = data[2] - tmp;
+        data[2] = tmp;
+        tmp = quant[data[3] + ( ( 7 * ep1[2] + 5 * ep2[3] + ep2[2] ) >> 4 )];
+        ep1[3] = data[3] - tmp;
+        data[3] = tmp;
+        data += 4;
+        std::swap( ep1, ep2 );
     }
 }

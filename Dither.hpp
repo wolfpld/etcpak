@@ -4,6 +4,7 @@
 #include "Types.hpp"
 
 void InitDither();
-void Dither( uint8* data );
+void DitherRGB( uint8* data );
+void DitherA( uint8* data );
 
 #endif
