@@ -202,11 +202,5 @@ uint64 ProcessRGB( const uint8* src )
         d |= ( t & 0x2 ) << ( i + 47 );
     }
 
-    d = ( ( d & 0x00000000FFFFFFFF ) ) |
-        ( ( d & 0xFF00000000000000 ) >> 24 ) |
-        ( ( d & 0x000000FF00000000 ) << 24 ) |
-        ( ( d & 0x00FF000000000000 ) >> 8 ) |
-        ( ( d & 0x0000FF0000000000 ) << 8 );
-
-    return d;
+    return FixByteOrder( d );
 }
