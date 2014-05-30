@@ -121,10 +121,10 @@ int main( int argc, char** argv )
         auto tasks = new std::future<void>[NumTasks];
         for( int i=0; i<NumTasks; i++ )
         {
-            tasks[i] = std::async( [&bmp, &mipmap]()
+            tasks[i] = std::async( [&bmp]()
             {
                 auto block = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
-                auto bd = std::make_shared<BlockData>( bmp->Size(), mipmap );
+                auto bd = std::make_shared<BlockData>( bmp->Size(), false );
                 bd->Process( block->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
             } );
         }
