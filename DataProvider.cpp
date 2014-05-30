@@ -5,14 +5,13 @@
 #include "DataProvider.hpp"
 #include "MipMap.hpp"
 
-enum { Lines = 32 };
-
 DataProvider::DataProvider( const char* fn, bool mipmap )
     : m_offset( 0 )
     , m_mipmap( mipmap )
     , m_done( false )
+    , m_lines( 32 )
 {
-    m_bmp.emplace_back( new Bitmap( fn, Lines ) );
+    m_bmp.emplace_back( new Bitmap( fn, m_lines ) );
     m_current = m_bmp[0].get();
 }
 
@@ -22,18 +21,20 @@ DataProvider::~DataProvider()
 
 int DataProvider::NumberOfParts() const
 {
-    int parts = ( ( m_bmp[0]->Size().y / 4 ) + Lines - 1 ) / Lines;
+    int parts = ( ( m_bmp[0]->Size().y / 4 ) + m_lines - 1 ) / m_lines;
 
     if( m_mipmap )
     {
         v2i current = m_bmp[0]->Size();
         int levels = NumberOfMipLevels( current );
+        int lines = m_lines;
         for( int i=1; i<levels; i++ )
         {
             assert( current.x != 1 || current.y != 1 );
             current.x = std::max( 1, current.x / 2 );
             current.y = std::max( 1, current.y / 2 );
-            parts += ( ( std::max( 4, current.y ) / 4 ) + Lines - 1 ) / Lines;
+            lines *= 2;
+            parts += ( ( std::max( 4, current.y ) / 4 ) + lines - 1 ) / lines;
         }
         assert( current.x == 1 && current.y == 1 );
     }
@@ -45,7 +46,7 @@ DataPart DataProvider::NextPart()
 {
     assert( !m_done );
 
-    uint lines = Lines;
+    uint lines = m_lines;
     bool done;
 
     DataPart ret = {
@@ -61,7 +62,8 @@ DataPart DataProvider::NextPart()
     {
         if( m_current->Size().x != 1 || m_current->Size().y != 1 )
         {
-            m_bmp.emplace_back( new BitmapDownsampled( *m_current, Lines ) );
+            m_lines *= 2;
+            m_bmp.emplace_back( new BitmapDownsampled( *m_current, m_lines ) );
             m_current = m_bmp[m_bmp.size()-1].get();
         }
         else

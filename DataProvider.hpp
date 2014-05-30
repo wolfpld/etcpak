@@ -33,6 +33,7 @@ private:
     std::vector<std::unique_ptr<Bitmap>> m_bmp;
     Bitmap* m_current;
     int m_offset;
+    int m_lines;
     bool m_mipmap;
     bool m_done;
 };
