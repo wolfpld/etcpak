@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "Math.hpp"
 #include "ProcessCommon.hpp"
 #include "ProcessRGB.hpp"
 #include "Tables.hpp"
@@ -52,8 +53,8 @@ static void ProcessAverages( v3i* a )
     {
         for( int j=0; j<3; j++ )
         {
-            int32 c1 = a[i*2+1][j] >> 3;
-            int32 c2 = a[i*2][j] >> 3;
+            int32 c1 = mul8bit( a[i*2+1][j], 31 );
+            int32 c2 = mul8bit( a[i*2][j], 31 );
 
             int32 diff = c2 - c1;
             if( diff > 3 ) diff = 3;
@@ -67,9 +68,9 @@ static void ProcessAverages( v3i* a )
     }
     for( int i=0; i<4; i++ )
     {
-        a[i].x = g_avg2[a[i].x >> 4];
-        a[i].y = g_avg2[a[i].y >> 4];
-        a[i].z = g_avg2[a[i].z >> 4];
+        a[i].x = g_avg2[mul8bit( a[i].x, 15 )];
+        a[i].y = g_avg2[mul8bit( a[i].y, 15 )];
+        a[i].z = g_avg2[mul8bit( a[i].z, 15 )];
     }
 }
 

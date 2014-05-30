@@ -1,3 +1,4 @@
+#include "Math.hpp"
 #include "ProcessAlpha.hpp"
 #include "ProcessCommon.hpp"
 #include "Tables.hpp"
@@ -36,8 +37,8 @@ static void ProcessAverages( uint* a )
 {
     for( int i=0; i<2; i++ )
     {
-        int c1 = a[i*2+1] >> 3;
-        int c2 = a[i*2] >> 3;
+        int c1 = mul8bit( a[i*2+1], 31 );
+        int c2 = mul8bit( a[i*2], 31 );
 
         int diff = c2 - c1;
         if( diff > 3 ) diff = 3;
@@ -50,7 +51,7 @@ static void ProcessAverages( uint* a )
     }
     for( int i=0; i<4; i++ )
     {
-        a[i] = g_avg2[a[i] >> 4];
+        a[i] = g_avg2[mul8bit( a[i], 15 )];
     }
 }
 
