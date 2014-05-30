@@ -9,8 +9,6 @@ class BitmapDownsampled : public Bitmap
 public:
     BitmapDownsampled( const Bitmap& bmp, uint lines );
     ~BitmapDownsampled();
-
-private:
 };
 
 #endif
