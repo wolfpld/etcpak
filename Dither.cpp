@@ -2,17 +2,12 @@
 #include <string.h>
 
 #include "Dither.hpp"
+#include "Math.hpp"
 
 static uint8 e5[32];
 static uint8 e6[64];
 static uint8 qrb[256+16];
 static uint8 qg[256+16];
-
-static int mul8bit( int a, int b )
-{
-    int t = a*b + 128;
-    return ( t + ( t >> 8 ) ) >> 8;
-}
 
 void InitDither()
 {

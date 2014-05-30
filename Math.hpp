@@ -80,4 +80,10 @@ inline T sq( T val )
     return val * val;
 }
 
+static inline int mul8bit( int a, int b )
+{
+    int t = a*b + 128;
+    return ( t + ( t >> 8 ) ) >> 8;
+}
+
 #endif
