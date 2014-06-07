@@ -144,25 +144,8 @@ static void PrepareAverages( v3i a[8], const uint8* b[4], uint err[4] )
     }
 }
 
-uint64 ProcessRGB( const uint8* src )
+static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
 {
-    uint64 d = CheckSolid( src );
-    if( d != 0 ) return d;
-
-    uint8 b23[2][32];
-    const uint8* b[4] = { src+32, src, b23[0], b23[1] };
-    PrepareBuffers( b23, src );
-
-    v3i a[8];
-    uint err[4] = {};
-    PrepareAverages( a, b, err );
-    size_t idx = GetLeastError( err, 4 );
-    EncodeAverages( d, a, idx );
-
-    uint64 terr[2][8] = {};
-    uint tsel[16][8];
-    auto id = g_id[idx];
-    const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
         uint* sel = tsel[i];
@@ -198,6 +181,27 @@ uint64 ProcessRGB( const uint8* src )
             *ter++ += err;
         }
     }
+}
+
+uint64 ProcessRGB( const uint8* src )
+{
+    uint64 d = CheckSolid( src );
+    if( d != 0 ) return d;
+
+    uint8 b23[2][32];
+    const uint8* b[4] = { src+32, src, b23[0], b23[1] };
+    PrepareBuffers( b23, src );
+
+    v3i a[8];
+    uint err[4] = {};
+    PrepareAverages( a, b, err );
+    size_t idx = GetLeastError( err, 4 );
+    EncodeAverages( d, a, idx );
+
+    uint64 terr[2][8] = {};
+    uint tsel[16][8];
+    auto id = g_id[idx];
+    FindBestFit( terr, tsel, a, id, src );
 
     return FixByteOrder( EncodeSelectors( d, terr, tsel, id ) );
 }
