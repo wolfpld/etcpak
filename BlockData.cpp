@@ -362,17 +362,26 @@ BitmapPtr BlockData::Decode()
     return ret;
 }
 
+// Block type:
+//  red - 2x4, green - 4x2
+//  dark - 444, bright - 555 + 333
 void BlockData::Dissect()
 {
     auto size = m_size / 4;
     const uint64* data = (const uint64*)( m_data + m_dataOffset );
 
-    // Block type:
-    //  red - 2x4, green - 4x2
-    //  dark - 444, bright - 555 + 333
-    auto bmp = std::make_shared<Bitmap>( size );
     auto src = data;
+
+    auto bmp = std::make_shared<Bitmap>( size );
     auto dst = bmp->Data();
+
+    auto bmp2 = std::make_shared<Bitmap>( m_size );
+    uint32* l[4];
+    l[0] = bmp2->Data();
+    l[1] = l[0] + m_size.x;
+    l[2] = l[1] + m_size.x;
+    l[3] = l[2] + m_size.x;
+
     for( int y=0; y<size.y; y++ )
     {
         for( int x=0; x<size.x; x++ )
@@ -402,7 +411,43 @@ void BlockData::Dissect()
                 assert( false );
                 break;
             }
+
+            BlockColor c;
+            DecodeBlockColor( d, c );
+
+            if( d & 0x1 )
+            {
+                for( int i=0; i<4; i++ )
+                {
+                    *l[0]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                    *l[1]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                    *l[2]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                    *l[3]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                }
+            }
+            else
+            {
+                for( int i=0; i<2; i++ )
+                {
+                    *l[0]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                    *l[1]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                    *l[2]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                    *l[3]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                }
+                for( int i=0; i<2; i++ )
+                {
+                    *l[0]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                    *l[1]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                    *l[2]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                    *l[3]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                }
+            }
         }
+        l[0] += m_size.x * 3;
+        l[1] += m_size.x * 3;
+        l[2] += m_size.x * 3;
+        l[3] += m_size.x * 3;
     }
-    bmp->Write( "out_block.png" );
+    bmp->Write( "out_block_type.png" );
+    bmp2->Write( "out_block_color.png" );
 }
