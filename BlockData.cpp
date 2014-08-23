@@ -382,6 +382,9 @@ void BlockData::Dissect()
     l[2] = l[1] + m_size.x;
     l[3] = l[2] + m_size.x;
 
+    auto bmp3 = std::make_shared<Bitmap>( size );
+    auto dst3 = bmp3->Data();
+
     for( int y=0; y<size.y; y++ )
     {
         for( int x=0; x<size.x; x++ )
@@ -411,6 +414,12 @@ void BlockData::Dissect()
                 assert( false );
                 break;
             }
+
+            uint tcw[2];
+            tcw[0] = ( d & 0xE0 );
+            tcw[1] = ( d & 0x1C ) << 3;
+
+            *dst3++ = 0xFF000000 | ( tcw[0] << 8 ) | ( tcw[1] );
 
             BlockColor c;
             DecodeBlockColor( d, c );
@@ -448,6 +457,8 @@ void BlockData::Dissect()
         l[2] += m_size.x * 3;
         l[3] += m_size.x * 3;
     }
+
     bmp->Write( "out_block_type.png" );
     bmp2->Write( "out_block_color.png" );
+    bmp3->Write( "out_block_selectors.png" );
 }
