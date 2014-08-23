@@ -60,7 +60,7 @@ DataPart DataProvider::NextPart()
 
     if( done )
     {
-        if( m_current->Size().x != 1 || m_current->Size().y != 1 )
+        if( m_mipmap && ( m_current->Size().x != 1 || m_current->Size().y != 1 ) )
         {
             m_lines *= 2;
             m_bmp.emplace_back( new BitmapDownsampled( *m_current, m_lines ) );
