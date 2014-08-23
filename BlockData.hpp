@@ -21,6 +21,7 @@ public:
     ~BlockData();
 
     BitmapPtr Decode();
+    void Dissect();
 
     void Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type );
 

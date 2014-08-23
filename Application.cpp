@@ -35,6 +35,7 @@ void Usage()
     fprintf( stderr, "  -b          benchmark mode\n" );
     fprintf( stderr, "  -m          generate mipmaps\n" );
     fprintf( stderr, "  -d          enable dithering\n" );
+    fprintf( stderr, "  -debug      dissect ETC texture\n" );
 }
 
 int main( int argc, char** argv )
@@ -49,6 +50,7 @@ int main( int argc, char** argv )
     bool benchmark = false;
     bool mipmap = false;
     bool dither = false;
+    bool debug = false;
 
     if( argc < 2 )
     {
@@ -93,6 +95,10 @@ int main( int argc, char** argv )
         else if( CSTR( "-d" ) )
         {
             dither = true;
+        }
+        else if( CSTR( "-debug" ) )
+        {
+            debug = true;
         }
         else
         {
@@ -145,6 +151,11 @@ int main( int argc, char** argv )
         auto bd = std::make_shared<BlockData>( argv[1] );
         auto out = bd->Decode();
         out->Write( "out.png" );
+    }
+    else if( debug )
+    {
+        auto bd = std::make_shared<BlockData>( argv[1] );
+        bd->Dissect();
     }
     else
     {

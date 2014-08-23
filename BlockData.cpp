@@ -352,3 +352,48 @@ BitmapPtr BlockData::Decode()
 
     return ret;
 }
+
+void BlockData::Dissect()
+{
+    auto size = m_size / 4;
+    const uint64* data = (const uint64*)( m_data + m_dataOffset );
+
+    // Block type:
+    //  red - 2x4, green - 4x2
+    //  dark - 444, bright - 555 + 333
+    auto bmp = std::make_shared<Bitmap>( size );
+    auto src = data;
+    auto dst = bmp->Data();
+    for( int y=0; y<size.y; y++ )
+    {
+        for( int x=0; x<size.x; x++ )
+        {
+            uint64 d = *src++;
+
+            d = ( ( d & 0xFF000000FF000000 ) >> 24 ) |
+                ( ( d & 0x000000FF000000FF ) << 24 ) |
+                ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
+                ( ( d & 0x0000FF000000FF00 ) << 8 );
+
+            switch( d & 0x3 )
+            {
+            case 0:
+                *dst++ = 0xFF000088;
+                break;
+            case 1:
+                *dst++ = 0xFF008800;
+                break;
+            case 2:
+                *dst++ = 0xFF0000FF;
+                break;
+            case 3:
+                *dst++ = 0xFF00FF00;
+                break;
+            default:
+                assert( false );
+                break;
+            }
+        }
+    }
+    bmp->Write( "out_block.png" );
+}
