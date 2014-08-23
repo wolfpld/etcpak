@@ -25,7 +25,7 @@ BlockData::BlockData( const char* fn )
     {
         m_size.y = *(data32+6);
         m_size.x = *(data32+7);
-        m_dataOffset = 52;
+        m_dataOffset = 52 + *(data32+12);
     }
     else if( *data32 == 0x58544BAB )
     {
