@@ -10,9 +10,9 @@
 struct DataPart
 {
     const uint32* src;
-    int width;
-    int lines;
-    int offset;
+    uint width;
+    uint lines;
+    uint offset;
 };
 
 class DataProvider
@@ -21,7 +21,7 @@ public:
     DataProvider( const char* fn, bool mipmap );
     ~DataProvider();
 
-    int NumberOfParts() const;
+    uint NumberOfParts() const;
 
     DataPart NextPart();
 
@@ -32,8 +32,8 @@ public:
 private:
     std::vector<std::unique_ptr<Bitmap>> m_bmp;
     Bitmap* m_current;
-    int m_offset;
-    int m_lines;
+    uint m_offset;
+    uint m_lines;
     bool m_mipmap;
     bool m_done;
 };
