@@ -5,7 +5,7 @@
 #include "Dither.hpp"
 
 BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
-    : m_data( new uint8[std::max( 4, size.x ) * std::max( 4, size.y ) * ( type == Channels::RGB ? 4 : 1 )] )
+    : m_data( new uint8[std::max( 4, size.x ) * std::max( 4, size.y ) * ( type == Channels::RGB ? 4 : 4 )] )
     , m_size( size )
     , m_type( type )
 {
@@ -13,7 +13,7 @@ BlockBitmap::BlockBitmap( const uint32* data, const v2i& size, Channels type )
 }
 
 BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
-    : m_data( new uint8[std::max( 4, bmp->Size().x ) * std::max( 4, bmp->Size().y ) * ( type == Channels::RGB ? 4 : 1 )] )
+    : m_data( new uint8[std::max( 4, bmp->Size().x ) * std::max( 4, bmp->Size().y ) * ( type == Channels::RGB ? 4 : 4 )] )
     , m_size( bmp->Size() )
     , m_type( type )
 {
@@ -63,6 +63,9 @@ void BlockBitmap::Process( const uint32* __restrict src )
                     for( int y=0; y<4; y++ )
                     {
                         *dst++ = *src >> 24;
+                        *dst++ = *src >> 24;
+                        *dst++ = *src >> 24;
+                        *dst++ = 0;
                         src += m_size.x;
                     }
                     src -= m_size.x * 4 - 1;
