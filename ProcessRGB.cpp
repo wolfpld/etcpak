@@ -6,6 +6,19 @@
 #include "Tables.hpp"
 #include "Types.hpp"
 #include "Vector.hpp"
+#ifdef __SSE4_1__
+#include <smmintrin.h>
+#endif
+
+#ifdef __SSE4_1__
+const __m128i g_table256_SIMD[4] =
+{
+    _mm_setr_epi32(  2*256,   5*256,   9*256,  13*256),
+    _mm_setr_epi32(  8*256,  17*256,  29*256,  42*256),
+    _mm_setr_epi32( 18*256,  24*256,  33*256,  47*256),
+    _mm_setr_epi32( 60*256,  80*256, 106*256, 183*256)
+};
+#endif
 
 static v3i Average( const uint8* data )
 {
@@ -161,6 +174,56 @@ static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const ui
         int dg = a[bid].y - g;
         int db = a[bid].z - b;
 
+#ifdef __SSE4_1__
+        __m128i pix = _mm_set1_epi32(dr * 77 + dg * 151 + db * 28);
+        __m128i error0 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[0]));
+        __m128i error1 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[1]));
+        __m128i error2 = _mm_abs_epi32(_mm_sub_epi32(pix, g_table256_SIMD[0]));
+        __m128i error3 = _mm_abs_epi32(_mm_sub_epi32(pix, g_table256_SIMD[1]));
+        __m128i index0 = _mm_and_si128(_mm_cmplt_epi32(error1, error0), _mm_set1_epi32(1));
+        __m128i minError0 = _mm_min_epi32(error0, error1);
+
+        __m128i index1 = _mm_add_epi32(_mm_and_si128(_mm_cmplt_epi32(error3, error2), _mm_set1_epi32(1)), _mm_set1_epi32(2));
+        __m128i minError1 = _mm_min_epi32(error2, error3);
+
+        __m128i minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi32(minError1, minError0));
+
+        __m128i minError = _mm_min_epi32(minError0, minError1);
+
+        __m128i minErrorLow = _mm_shuffle_epi32(minError, _MM_SHUFFLE(1, 1, 0, 0));
+        __m128i squareErrorLow = _mm_mul_epi32(minErrorLow, minErrorLow);
+        squareErrorLow = _mm_add_epi64(squareErrorLow, _mm_lddqu_si128(((__m128i*)ter) + 0));
+        _mm_storeu_si128(((__m128i*)ter) + 0, squareErrorLow);
+        __m128i minErrorHigh = _mm_shuffle_epi32(minError, _MM_SHUFFLE(3, 3, 2, 2));
+        __m128i squareErrorHigh = _mm_mul_epi32(minErrorHigh, minErrorHigh);
+        squareErrorHigh = _mm_add_epi64(squareErrorHigh, _mm_lddqu_si128(((__m128i*)ter) + 1));
+        _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
+        _mm_storeu_si128(((__m128i*)sel) + 0, minIndex);
+
+        error0 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[2]));
+        error1 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[3]));
+        error2 = _mm_abs_epi32(_mm_sub_epi32(pix, g_table256_SIMD[2]));
+        error3 = _mm_abs_epi32(_mm_sub_epi32(pix, g_table256_SIMD[3]));
+        index0 = _mm_and_si128(_mm_cmplt_epi32(error1, error0), _mm_set1_epi32(1));
+        minError0 = _mm_min_epi32(error0, error1);
+
+        index1 = _mm_add_epi32(_mm_and_si128(_mm_cmplt_epi32(error3, error2), _mm_set1_epi32(1)), _mm_set1_epi32(2));
+        minError1 = _mm_min_epi32(error2, error3);
+
+        minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi32(minError1, minError0));
+
+        minError = _mm_min_epi32(minError0, minError1);
+
+        minErrorLow = _mm_shuffle_epi32(minError, _MM_SHUFFLE(1, 1, 0, 0));
+        squareErrorLow = _mm_mul_epi32(minErrorLow, minErrorLow);
+        squareErrorLow = _mm_add_epi64(squareErrorLow, _mm_lddqu_si128(((__m128i*)ter) + 2));
+        _mm_storeu_si128(((__m128i*)ter) + 2, squareErrorLow);
+        minErrorHigh = _mm_shuffle_epi32(minError, _MM_SHUFFLE(3, 3, 2, 2));
+        squareErrorHigh = _mm_mul_epi32(minErrorHigh, minErrorHigh);
+        squareErrorHigh = _mm_add_epi64(squareErrorHigh, _mm_lddqu_si128(((__m128i*)ter) + 3));
+        _mm_storeu_si128(((__m128i*)ter) + 3, squareErrorHigh);
+        _mm_storeu_si128(((__m128i*)sel) + 1, minIndex);
+#else
         int pix = dr * 77 + dg * 151 + db * 28;
 
         for( int t=0; t<8; t++ )
@@ -180,6 +243,7 @@ static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const ui
             *sel++ = idx;
             *ter++ += err;
         }
+#endif
     }
 }
 
