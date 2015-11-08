@@ -49,6 +49,11 @@ extern const uint32 g_avg2[16] = {
 };
 
 #ifdef __SSE4_1__
+const __m128i g_table_SIMD[2] =
+{
+    _mm_setr_epi16(   2,   5,   9,  13,  18,  24,  33,  47),
+    _mm_setr_epi16(   8,  17,  29,  42,  60,  80, 106, 183)
+};
 const __m128i g_table256_SIMD[4] =
 {
     _mm_setr_epi32(  2*256,   5*256,   9*256,  13*256),
