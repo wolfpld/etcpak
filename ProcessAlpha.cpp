@@ -140,7 +140,7 @@ uint64 ProcessAlpha( const uint8* src )
         uint8 c = *data++;
 #ifdef __SSE4_1__
         __m128i pix = _mm_set1_epi16(a[bid] - c);
-		// Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
+        // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
         __m128i error0 = _mm_abs_epi16(_mm_add_epi16(pix, g_table_SIMD[0]));
         __m128i error1 = _mm_abs_epi16(_mm_add_epi16(pix, g_table_SIMD[1]));
         __m128i error2 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table_SIMD[0]));
@@ -155,20 +155,20 @@ uint64 ProcessAlpha( const uint8* src )
         __m128i minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi16(minError1, minError0));
         __m128i minError = _mm_min_epi16(minError0, minError1);
 
-		// Squaring the minimum error to produce correct values when adding
+        // Squaring the minimum error to produce correct values when adding
         __m128i squareErrorLo = _mm_mullo_epi16(minError, minError);
         __m128i squareErrorHi = _mm_mulhi_epi16(minError, minError);
 
-		__m128i squareErrorLow = _mm_unpacklo_epi16(squareErrorLo, squareErrorHi);
-		__m128i squareErrorHigh = _mm_unpackhi_epi16(squareErrorLo, squareErrorHi);
+        __m128i squareErrorLow = _mm_unpacklo_epi16(squareErrorLo, squareErrorHi);
+        __m128i squareErrorHigh = _mm_unpackhi_epi16(squareErrorLo, squareErrorHi);
 
         squareErrorLow = _mm_add_epi32(squareErrorLow, _mm_lddqu_si128(((__m128i*)ter) + 0));
         _mm_storeu_si128(((__m128i*)ter) + 0, squareErrorLow);
         squareErrorHigh = _mm_add_epi32(squareErrorHigh, _mm_lddqu_si128(((__m128i*)ter) + 1));
         _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
 
-		__m128i minIndexLow = _mm_unpacklo_epi16(minIndex, _mm_setzero_si128());
-		__m128i minIndexHigh = _mm_unpackhi_epi16(minIndex, _mm_setzero_si128());
+        __m128i minIndexLow = _mm_unpacklo_epi16(minIndex, _mm_setzero_si128());
+        __m128i minIndexHigh = _mm_unpackhi_epi16(minIndex, _mm_setzero_si128());
         _mm_storeu_si128(((__m128i*)sel) + 0, minIndexLow);
         _mm_storeu_si128(((__m128i*)sel) + 1, minIndexHigh);
 #else
