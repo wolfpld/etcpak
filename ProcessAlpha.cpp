@@ -128,12 +128,12 @@ uint64 ProcessAlpha( const uint8* src )
     EncodeAverages( d, a, idx );
 
     uint terr[2][8] = {};
-    uint tsel[16][8];
+    uint16 tsel[16][8];
     auto id = g_id[idx];
     const uint8* data = src;
     for( size_t i=0; i<16; i++ )
     {
-        uint* sel = tsel[i];
+        uint16* sel = tsel[i];
         uint bid = id[i];
         uint* ter = terr[bid%2];
 
@@ -167,10 +167,7 @@ uint64 ProcessAlpha( const uint8* src )
         squareErrorHigh = _mm_add_epi32(squareErrorHigh, _mm_lddqu_si128(((__m128i*)ter) + 1));
         _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
 
-        __m128i minIndexLow = _mm_unpacklo_epi16(minIndex, _mm_setzero_si128());
-        __m128i minIndexHigh = _mm_unpackhi_epi16(minIndex, _mm_setzero_si128());
-        _mm_storeu_si128(((__m128i*)sel) + 0, minIndexLow);
-        _mm_storeu_si128(((__m128i*)sel) + 1, minIndexHigh);
+        _mm_storeu_si128((__m128i*)sel, minIndex);
 #else
         int32 pix = a[bid] - c;
 
