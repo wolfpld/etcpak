@@ -163,7 +163,7 @@ static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const ui
 
 #ifdef __SSE4_1__
         __m128i pix = _mm_set1_epi32(dr * 77 + dg * 151 + db * 28);
-		// Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
+        // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
         __m128i error0 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[0]));
         __m128i error1 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[1]));
         __m128i error2 = _mm_abs_epi32(_mm_sub_epi32(pix, g_table256_SIMD[0]));
@@ -178,7 +178,7 @@ static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const ui
         __m128i minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi32(minError1, minError0));
         __m128i minError = _mm_min_epi32(minError0, minError1);
 
-		// Squaring the minimum error to produce correct values when adding
+        // Squaring the minimum error to produce correct values when adding
         __m128i minErrorLow = _mm_shuffle_epi32(minError, _MM_SHUFFLE(1, 1, 0, 0));
         __m128i squareErrorLow = _mm_mul_epi32(minErrorLow, minErrorLow);
         squareErrorLow = _mm_add_epi64(squareErrorLow, _mm_lddqu_si128(((__m128i*)ter) + 0));
@@ -189,7 +189,7 @@ static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const ui
         _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
         _mm_storeu_si128(((__m128i*)sel) + 0, minIndex);
 
-		// Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
+        // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
         error0 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[2]));
         error1 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[3]));
         error2 = _mm_abs_epi32(_mm_sub_epi32(pix, g_table256_SIMD[2]));
@@ -204,7 +204,7 @@ static void FindBestFit( uint64 terr[2][8], uint tsel[16][8], v3i a[8], const ui
         minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi32(minError1, minError0));
         minError = _mm_min_epi32(minError0, minError1);
 
-		// Squaring the minimum error to produce correct values when adding
+        // Squaring the minimum error to produce correct values when adding
         minErrorLow = _mm_shuffle_epi32(minError, _MM_SHUFFLE(1, 1, 0, 0));
         squareErrorLow = _mm_mul_epi32(minErrorLow, minErrorLow);
         squareErrorLow = _mm_add_epi64(squareErrorLow, _mm_lddqu_si128(((__m128i*)ter) + 2));
