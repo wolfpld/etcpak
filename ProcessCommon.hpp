@@ -29,8 +29,8 @@ static uint64 FixByteOrder( uint64 d )
            ( ( d & 0x0000FF0000000000 ) << 8 );
 }
 
-template<class T>
-static uint64 EncodeSelectors( uint64 d, const T terr[2][8], const uint tsel[16][8], const uint32* id )
+template<class T, class S>
+static uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const uint32* id )
 {
     size_t tidx[2];
     tidx[0] = GetLeastError( terr[0], 8 );
