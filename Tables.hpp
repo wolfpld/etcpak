@@ -15,6 +15,7 @@ extern const uint32 g_avg2[16];
 
 #ifdef __SSE4_1__
 extern const __m128i g_table_SIMD[2];
+extern const __m128i g_table64_SIMD[2];
 extern const __m128i g_table256_SIMD[4];
 #endif
 
