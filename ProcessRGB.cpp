@@ -298,9 +298,9 @@ static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         __m256i minIndex = _mm256_blendv_epi8(index0, index1, _mm256_cmpgt_epi16(minError0, minError1));
         __m256i minError = _mm256_min_epi16(minError0, minError1);
 
-		// Interleaving values so madd instruction can be used
-		__m256i minErrorLo = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(1, 1, 0, 0));
-		__m256i minErrorHi = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(3, 3, 2, 2));
+        // Interleaving values so madd instruction can be used
+        __m256i minErrorLo = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(1, 1, 0, 0));
+        __m256i minErrorHi = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(3, 3, 2, 2));
 
         __m256i minError2 = _mm256_unpacklo_epi16(minErrorLo, minErrorHi);
         // Squaring the minimum error to produce correct values when adding
@@ -361,7 +361,7 @@ static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
 
         _mm_storeu_si128((__m128i*)sel, minIndex);
-	}
+    }
 #endif
 }
 #endif
