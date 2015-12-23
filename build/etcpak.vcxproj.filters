@@ -108,6 +108,7 @@
     <ClCompile Include="..\DataProvider.cpp" />
     <ClCompile Include="..\BitmapDownsampled.cpp" />
     <ClCompile Include="..\Dither.cpp" />
+    <ClCompile Include="..\CpuArch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -184,6 +185,7 @@
     <ClInclude Include="..\MipMap.hpp" />
     <ClInclude Include="..\BitmapDownsampled.hpp" />
     <ClInclude Include="..\Dither.hpp" />
+    <ClInclude Include="..\CpuArch.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">
