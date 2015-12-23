@@ -13,33 +13,63 @@
 #  include <x86intrin.h>
 #endif
 
-static v3i Average( const uint8* data )
+static void Average( const uint8* data, v3i* a )
 {
-    uint32 r = 0, g = 0, b = 0;
-    for( int i=0; i<8; i++ )
+    uint32 r[4];
+    uint32 g[4];
+    uint32 b[4];
+
+    memset(r, 0, sizeof(r));
+    memset(g, 0, sizeof(g));
+    memset(b, 0, sizeof(b));
+
+    for( int j=0; j<4; j++ )
     {
-        b += *data++;
-        g += *data++;
-        r += *data++;
-        data++;
+        for( int i=0; i<4; i++ )
+        {
+            int index = (j & 2) + (i >> 1);
+            b[index] += *data++;
+            g[index] += *data++;
+            r[index] += *data++;
+            data++;
+        }
     }
-    return v3i( r / 8, g / 8, b / 8 );
+    a[0] = v3i( (r[2] + r[3]) / 8, (g[2] + g[3]) / 8, (b[2] + b[3]) / 8 );
+    a[1] = v3i( (r[0] + r[1]) / 8, (g[0] + g[1]) / 8, (b[0] + b[1]) / 8 );
+    a[2] = v3i( (r[1] + r[3]) / 8, (g[1] + g[3]) / 8, (b[1] + b[3]) / 8 );
+    a[3] = v3i( (r[0] + r[2]) / 8, (g[0] + g[2]) / 8, (b[0] + b[2]) / 8 );
 }
 
-static void CalcErrorBlock( const uint8* data, uint err[4] )
+static void CalcErrorBlock( const uint8* data, uint err[4][4] )
 {
-    for( int i=0; i<8; i++ )
+    uint terr[4][4];
+
+    memset(terr, 0, 16 * sizeof(uint));
+
+    for( int j=0; j<4; j++ )
     {
-        uint d = *data++;
-        err[0] += d;
-        err[3] += d*d;
-        d = *data++;
-        err[1] += d;
-        err[3] += d*d;
-        d = *data++;
-        err[2] += d;
-        err[3] += d*d;
-        data++;
+        for( int i=0; i<4; i++ )
+        {
+            int index = (j & 2) + (i >> 1);
+            uint d = *data++;
+            terr[index][0] += d;
+            terr[index][3] += d*d;
+            d = *data++;
+            terr[index][1] += d;
+            terr[index][3] += d*d;
+            d = *data++;
+            terr[index][2] += d;
+            terr[index][3] += d*d;
+            data++;
+        }
+    }
+
+    for( int i=0; i<4; i++ )
+    {
+        err[0][i] = terr[2][i] + terr[3][i];
+        err[1][i] = terr[0][i] + terr[1][i];
+        err[2][i] = terr[1][i] + terr[3][i];
+        err[3][i] = terr[0][i] + terr[2][i];
     }
 }
 
@@ -124,29 +154,18 @@ static uint64 CheckSolid( const uint8* src )
         ( uint( src[2] & 0xF8 ) );
 }
 
-static void PrepareBuffers( uint8 b23[2][32], const uint8* src )
+static void PrepareAverages( v3i a[8], const uint8* src, uint err[4] )
 {
-    for( int i=0; i<4; i++ )
-    {
-        memcpy( b23[1]+i*8, src+i*16, 8 );
-        memcpy( b23[0]+i*8, src+i*16+8, 8 );
-    }
-}
-
-static void PrepareAverages( v3i a[8], const uint8* b[4], uint err[4] )
-{
-    for( int i=0; i<4; i++ )
-    {
-        a[i] = Average( b[i] );
-    }
+    Average( src, a );
     ProcessAverages( a );
 
+    uint errblock[4][4];
+    CalcErrorBlock( src, errblock );
+
     for( int i=0; i<4; i++ )
     {
-        uint errblock[4] = {};
-        CalcErrorBlock( b[i], errblock );
-        err[i/2] += CalcError( errblock, a[i] );
-        err[2+i/2] += CalcError( errblock, a[i+4] );
+        err[i/2] += CalcError( errblock[i], a[i] );
+        err[2+i/2] += CalcError( errblock[i], a[i+4] );
     }
 }
 
@@ -373,13 +392,9 @@ uint64 ProcessRGB( const uint8* src )
     uint64 d = CheckSolid( src );
     if( d != 0 ) return d;
 
-    uint8 b23[2][32];
-    const uint8* b[4] = { src+32, src, b23[0], b23[1] };
-    PrepareBuffers( b23, src );
-
     v3i a[8];
     uint err[4] = {};
-    PrepareAverages( a, b, err );
+    PrepareAverages( a, src, err );
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
@@ -401,13 +416,9 @@ uint64 ProcessRGB_AVX2( const uint8* src )
     uint64 d = CheckSolid( src );
     if( d != 0 ) return d;
 
-    uint8 b23[2][32];
-    const uint8* b[4] = { src+32, src, b23[0], b23[1] };
-    PrepareBuffers( b23, src );
-
     v3i a[8];
     uint err[4] = {};
-    PrepareAverages( a, b, err );
+    PrepareAverages( a, src, err );
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
