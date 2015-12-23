@@ -7,7 +7,7 @@
 #include "Types.hpp"
 #include "Vector.hpp"
 #ifdef __AVX2__
-#ifdef MSVC
+#ifdef _MSC_VER
 #include <intrin.h>
 #include <Windows.h>
 #else
