@@ -3,6 +3,7 @@
 
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
+#include "CpuArch.hpp"
 #include "Debug.hpp"
 #include "MipMap.hpp"
 #include "mmap.hpp"
@@ -151,7 +152,16 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
         switch( quality )
         {
         case 0:
-            m_work.push_back( std::async( [src, dst, blocks, this]() mutable { do { *dst++ = ProcessRGB( src ); src += 4*4*4; } while( --blocks ); } ) );
+#ifdef __SSE4_1__
+            if( can_use_intel_core_4th_gen_features() )
+            {
+                m_work.push_back( std::async( [src, dst, blocks, this]() mutable { do { *dst++ = ProcessRGB_AVX2( src ); src += 4*4*4; } while( --blocks ); } ) );
+            }
+            else
+#endif
+            {
+                m_work.push_back( std::async( [src, dst, blocks, this]() mutable { do { *dst++ = ProcessRGB( src ); src += 4*4*4; } while( --blocks ); } ) );
+            }
             break;
         case 1:
             //m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
