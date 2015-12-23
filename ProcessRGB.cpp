@@ -6,6 +6,12 @@
 #include "Tables.hpp"
 #include "Types.hpp"
 #include "Vector.hpp"
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  include <Windows.h>
+#else
+#  include <x86intrin.h>
+#endif
 
 static v3i Average( const uint8* data )
 {
@@ -162,6 +168,8 @@ static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         int db = a[bid].z - b;
 
 #ifdef __SSE4_1__
+        // Reference implementation
+
         __m128i pix = _mm_set1_epi32(dr * 77 + dg * 151 + db * 28);
         // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
         __m128i error0 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[0]));
@@ -238,6 +246,128 @@ static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
     }
 }
 
+#ifdef __SSE4_1__
+// Non-reference implementation, but faster
+static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
+{
+    for( size_t i=0; i<16; i++ )
+    {
+        uint16* sel = tsel[i];
+        uint bid = id[i];
+        uint32* ter = terr[bid%2];
+
+        uint8 b = *data++;
+        uint8 g = *data++;
+        uint8 r = *data++;
+        data++;
+
+        int dr = a[bid].x - r;
+        int dg = a[bid].y - g;
+        int db = a[bid].z - b;
+
+        // The scaling values are divided by four and rounded, to allow the differences to be in the range of signed int16
+        // This produces slightly different results, but is significant faster
+        int pixel = dr * 19 + dg * 38 + db * 7;
+
+        __m128i pix = _mm_set1_epi16(pixel);
+
+        // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
+        __m128i error0 = _mm_abs_epi16(_mm_add_epi16(pix, g_table64_SIMD[0]));
+        __m128i error1 = _mm_abs_epi16(_mm_add_epi16(pix, g_table64_SIMD[1]));
+        __m128i error2 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table64_SIMD[0]));
+        __m128i error3 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table64_SIMD[1]));
+
+        __m128i index0 = _mm_and_si128(_mm_cmplt_epi16(error1, error0), _mm_set1_epi16(1));
+        __m128i minError0 = _mm_min_epi16(error0, error1);
+
+        __m128i index1 = _mm_sub_epi16(_mm_set1_epi16(2), _mm_cmplt_epi16(error3, error2));
+        __m128i minError1 = _mm_min_epi16(error2, error3);
+
+        __m128i minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi16(minError1, minError0));
+        __m128i minError = _mm_min_epi16(minError0, minError1);
+
+        // Squaring the minimum error to produce correct values when adding
+        __m128i squareErrorLo = _mm_mullo_epi16(minError, minError);
+        __m128i squareErrorHi = _mm_mulhi_epi16(minError, minError);
+
+        __m128i squareErrorLow = _mm_unpacklo_epi16(squareErrorLo, squareErrorHi);
+        __m128i squareErrorHigh = _mm_unpackhi_epi16(squareErrorLo, squareErrorHi);
+
+        squareErrorLow = _mm_add_epi32(squareErrorLow, _mm_loadu_si128(((__m128i*)ter) + 0));
+        _mm_storeu_si128(((__m128i*)ter) + 0, squareErrorLow);
+        squareErrorHigh = _mm_add_epi32(squareErrorHigh, _mm_loadu_si128(((__m128i*)ter) + 1));
+        _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
+
+        _mm_storeu_si128((__m128i*)sel, minIndex);
+    }
+}
+
+static void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
+{
+    for( size_t i=0; i<16; i+=2 )
+    {
+        uint16* sel = tsel[i];
+        uint bid = id[i];
+        uint32* ter = terr[bid%2];
+
+        uint8 b0 = *data++;
+        uint8 g0 = *data++;
+        uint8 r0 = *data++;
+        data++;
+
+        uint8 b1 = *data++;
+        uint8 g1 = *data++;
+        uint8 r1 = *data++;
+        data++;
+
+        int dr0 = a[bid].x - r0;
+        int dg0 = a[bid].y - g0;
+        int db0 = a[bid].z - b0;
+
+        int dr1 = a[bid].x - r1;
+        int dg1 = a[bid].y - g1;
+        int db1 = a[bid].z - b1;
+
+        // The scaling values are divided by four and rounded, to allow the differences to be in the range of signed int16
+        // This produces slightly different results, but is significant faster
+        int pixel0 = dr0 * 19 + dg0 * 38 + db0 * 7;
+        int pixel1 = dr1 * 19 + dg1 * 38 + db1 * 7;
+
+        __m256i pix0 = _mm256_set1_epi16(pixel0);
+        __m128i pix1 = _mm_set1_epi16(pixel1);
+        __m256i pix = _mm256_insertf128_si256(pix0, pix1, 1);
+
+        // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
+        __m256i error0 = _mm256_abs_epi16(_mm256_add_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[0])));
+        __m256i error1 = _mm256_abs_epi16(_mm256_add_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[1])));
+        __m256i error2 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[0])));
+        __m256i error3 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[1])));
+
+        __m256i index0 = _mm256_and_si256(_mm256_cmpgt_epi16(error0, error1), _mm256_set1_epi16(1));
+        __m256i minError0 = _mm256_min_epi16(error0, error1);
+
+        __m256i index1 = _mm256_sub_epi16(_mm256_set1_epi16(2), _mm256_cmpgt_epi16(error2, error3));
+        __m256i minError1 = _mm256_min_epi16(error2, error3);
+
+        __m256i minIndex = _mm256_blendv_epi8(index0, index1, _mm256_cmpgt_epi16(minError0, minError1));
+        __m256i minError = _mm256_min_epi16(minError0, minError1);
+
+        // Interleaving values so madd instruction can be used
+        __m256i minErrorLo = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(1, 1, 0, 0));
+        __m256i minErrorHi = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(3, 3, 2, 2));
+
+        __m256i minError2 = _mm256_unpacklo_epi16(minErrorLo, minErrorHi);
+        // Squaring the minimum error to produce correct values when adding
+        __m256i squareErrorSum = _mm256_madd_epi16(minError2, minError2);
+
+        __m256i squareError = _mm256_add_epi32(squareErrorSum, _mm256_loadu_si256((__m256i*)ter));
+
+        _mm256_storeu_si256((__m256i*)ter, squareError);
+        _mm256_storeu_si256((__m256i*)sel, minIndex);
+    }
+}
+#endif
+
 uint64 ProcessRGB( const uint8* src )
 {
     uint64 d = CheckSolid( src );
@@ -253,10 +383,39 @@ uint64 ProcessRGB( const uint8* src )
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
+#if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
+    uint32 terr[2][8] = {};
+#else
     uint64 terr[2][8] = {};
+#endif
     uint16 tsel[16][8];
     auto id = g_id[idx];
     FindBestFit( terr, tsel, a, id, src );
 
     return FixByteOrder( EncodeSelectors( d, terr, tsel, id ) );
 }
+
+#ifdef __SSE4_1__
+uint64 ProcessRGB_AVX2( const uint8* src )
+{
+    uint64 d = CheckSolid( src );
+    if( d != 0 ) return d;
+
+    uint8 b23[2][32];
+    const uint8* b[4] = { src+32, src, b23[0], b23[1] };
+    PrepareBuffers( b23, src );
+
+    v3i a[8];
+    uint err[4] = {};
+    PrepareAverages( a, b, err );
+    size_t idx = GetLeastError( err, 4 );
+    EncodeAverages( d, a, idx );
+
+    uint32 terr[2][8] = {};
+    uint16 tsel[16][8];
+    auto id = g_id[idx];
+    FindBestFit_AVX2( terr, tsel, a, id, src );
+
+    return FixByteOrder( EncodeSelectors( d, terr, tsel, id ) );
+}
+#endif
