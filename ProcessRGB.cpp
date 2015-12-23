@@ -170,6 +170,8 @@ static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         int db = a[bid].z - b;
 
 #ifdef __SSE4_1__
+        // Reference implementation
+
         __m128i pix = _mm_set1_epi32(dr * 77 + dg * 151 + db * 28);
         // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
         __m128i error0 = _mm_abs_epi32(_mm_add_epi32(pix, g_table256_SIMD[0]));
@@ -247,6 +249,7 @@ static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
 }
 
 #ifdef __SSE4_1__
+// Non-reference implementation, but faster
 static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
 {
 #ifdef __AVX2__
@@ -381,7 +384,7 @@ uint64 ProcessRGB( const uint8* src )
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
-#ifdef __SSE4_1__
+#if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
     uint32 terr[2][8] = {};
 #else
     uint64 terr[2][8] = {};
