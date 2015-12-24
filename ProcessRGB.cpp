@@ -139,6 +139,28 @@ static void EncodeAverages( uint64& _d, const v3i* a, size_t idx )
 
 static uint64 CheckSolid( const uint8* src )
 {
+#ifdef __SSE4_1__
+    __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
+    __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
+    __m128i d2 = _mm_loadu_si128(((__m128i*)src) + 2);
+    __m128i d3 = _mm_loadu_si128(((__m128i*)src) + 3);
+
+	__m128i c = _mm_shuffle_epi32(d0, _MM_SHUFFLE(0, 0, 0, 0));
+
+	__m128i c0 = _mm_cmpeq_epi8(d0, c);
+	__m128i c1 = _mm_cmpeq_epi8(d1, c);
+	__m128i c2 = _mm_cmpeq_epi8(d2, c);
+	__m128i c3 = _mm_cmpeq_epi8(d3, c);
+
+	__m128i m0 = _mm_and_si128(c0, c1);
+	__m128i m1 = _mm_and_si128(c2, c3);
+	__m128i m = _mm_and_si128(m0, m1);
+
+	if (!_mm_testc_si128(m, _mm_set1_epi32(-1)))
+	{
+		return 0;
+	}
+#else
     const uint8* ptr = src + 4;
     for( int i=1; i<16; i++ )
     {
@@ -148,11 +170,37 @@ static uint64 CheckSolid( const uint8* src )
         }
         ptr += 4;
     }
+#endif
     return 0x02000000 |
         ( uint( src[0] & 0xF8 ) << 16 ) |
         ( uint( src[1] & 0xF8 ) << 8 ) |
         ( uint( src[2] & 0xF8 ) );
 }
+
+#ifdef __SSE4_1__
+static uint64 CheckSolid_AVX2( const uint8* src )
+{
+    __m256i d0 = _mm256_loadu_si256(((__m256i*)src) + 0);
+    __m256i d1 = _mm256_loadu_si256(((__m256i*)src) + 1);
+
+	__m256i c = _mm256_broadcastd_epi32(_mm256_castsi256_si128(d0));
+
+	__m256i c0 = _mm256_cmpeq_epi8(d0, c);
+	__m256i c1 = _mm256_cmpeq_epi8(d1, c);
+
+	__m256i m = _mm256_and_si256(c0, c1);
+
+	if (!_mm256_testc_si256(m, _mm256_set1_epi32(-1)))
+	{
+		return 0;
+	}
+
+    return 0x02000000 |
+        ( uint( src[0] & 0xF8 ) << 16 ) |
+        ( uint( src[1] & 0xF8 ) << 8 ) |
+        ( uint( src[2] & 0xF8 ) );
+}
+#endif
 
 static void PrepareAverages( v3i a[8], const uint8* src, uint err[4] )
 {
@@ -286,24 +334,19 @@ static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
 
         // The scaling values are divided by four and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
-        int pixel = dr * 19 + dg * 38 + db * 7;
-
-        __m128i pix = _mm_set1_epi16(pixel);
+        __m128i pixel = _mm_set1_epi16(dr * 38 + dg * 76 + db * 14);
+        __m128i pix = _mm_abs_epi16(pixel);
 
         // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
-        __m128i error0 = _mm_abs_epi16(_mm_add_epi16(pix, g_table64_SIMD[0]));
-        __m128i error1 = _mm_abs_epi16(_mm_add_epi16(pix, g_table64_SIMD[1]));
-        __m128i error2 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table64_SIMD[0]));
-        __m128i error3 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table64_SIMD[1]));
+        // Since the selector table is symmetrical, we need to calculate the difference only for half of the entries.
+        __m128i error0 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table128_SIMD[0]));
+        __m128i error1 = _mm_abs_epi16(_mm_sub_epi16(pix, g_table128_SIMD[1]));
 
-        __m128i index0 = _mm_and_si128(_mm_cmplt_epi16(error1, error0), _mm_set1_epi16(1));
-        __m128i minError0 = _mm_min_epi16(error0, error1);
+        __m128i index = _mm_and_si128(_mm_cmplt_epi16(error1, error0), _mm_set1_epi16(1));
+        __m128i minError = _mm_min_epi16(error0, error1);
 
-        __m128i index1 = _mm_sub_epi16(_mm_set1_epi16(2), _mm_cmplt_epi16(error3, error2));
-        __m128i minError1 = _mm_min_epi16(error2, error3);
-
-        __m128i minIndex = _mm_blendv_epi8(index0, index1, _mm_cmplt_epi16(minError1, minError0));
-        __m128i minError = _mm_min_epi16(minError0, minError1);
+        // Exploiting symmetry of the selector table
+        __m128i minIndex = _mm_or_si128(index, _mm_and_si128(_mm_set1_epi16(2), _mm_cmpgt_epi16(pixel, _mm_setzero_si128())));
 
         // Squaring the minimum error to produce correct values when adding
         __m128i squareErrorLo = _mm_mullo_epi16(minError, minError);
@@ -347,29 +390,26 @@ static void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], c
         int dg1 = a[bid].y - g1;
         int db1 = a[bid].z - b1;
 
-        // The scaling values are divided by four and rounded, to allow the differences to be in the range of signed int16
+        // The scaling values are divided by two and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
-        int pixel0 = dr0 * 19 + dg0 * 38 + db0 * 7;
-        int pixel1 = dr1 * 19 + dg1 * 38 + db1 * 7;
+        int pixel0 = dr0 * 38 + dg0 * 76 + db0 * 14;
+        int pixel1 = dr1 * 38 + dg1 * 76 + db1 * 14;
 
         __m256i pix0 = _mm256_set1_epi16(pixel0);
         __m128i pix1 = _mm_set1_epi16(pixel1);
-        __m256i pix = _mm256_insertf128_si256(pix0, pix1, 1);
+        __m256i pixel = _mm256_insertf128_si256(pix0, pix1, 1);
+        __m256i pix = _mm256_abs_epi16(pixel);
 
         // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
-        __m256i error0 = _mm256_abs_epi16(_mm256_add_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[0])));
-        __m256i error1 = _mm256_abs_epi16(_mm256_add_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[1])));
-        __m256i error2 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[0])));
-        __m256i error3 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table64_SIMD[1])));
+        // Since the selector table is symmetrical, we need to calculate the difference only for half of the entries.
+        __m256i error0 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table128_SIMD[0])));
+        __m256i error1 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table128_SIMD[1])));
 
-        __m256i index0 = _mm256_and_si256(_mm256_cmpgt_epi16(error0, error1), _mm256_set1_epi16(1));
-        __m256i minError0 = _mm256_min_epi16(error0, error1);
+        __m256i index = _mm256_and_si256(_mm256_cmpgt_epi16(error0, error1), _mm256_set1_epi16(1));
+        __m256i minError = _mm256_min_epi16(error0, error1);
 
-        __m256i index1 = _mm256_sub_epi16(_mm256_set1_epi16(2), _mm256_cmpgt_epi16(error2, error3));
-        __m256i minError1 = _mm256_min_epi16(error2, error3);
-
-        __m256i minIndex = _mm256_blendv_epi8(index0, index1, _mm256_cmpgt_epi16(minError0, minError1));
-        __m256i minError = _mm256_min_epi16(minError0, minError1);
+        // Exploiting symmetry of the selector table
+        __m256i minIndex = _mm256_or_si256(index, _mm256_and_si256(_mm256_set1_epi16(2), _mm256_cmpgt_epi16(pixel, _mm256_setzero_si256())));
 
         // Interleaving values so madd instruction can be used
         __m256i minErrorLo = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(1, 1, 0, 0));
@@ -413,7 +453,7 @@ uint64 ProcessRGB( const uint8* src )
 #ifdef __SSE4_1__
 uint64 ProcessRGB_AVX2( const uint8* src )
 {
-    uint64 d = CheckSolid( src );
+    uint64 d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
 
     v3i a[8];
