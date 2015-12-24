@@ -145,21 +145,21 @@ static uint64 CheckSolid( const uint8* src )
     __m128i d2 = _mm_loadu_si128(((__m128i*)src) + 2);
     __m128i d3 = _mm_loadu_si128(((__m128i*)src) + 3);
 
-	__m128i c = _mm_shuffle_epi32(d0, _MM_SHUFFLE(0, 0, 0, 0));
+    __m128i c = _mm_shuffle_epi32(d0, _MM_SHUFFLE(0, 0, 0, 0));
 
-	__m128i c0 = _mm_cmpeq_epi8(d0, c);
-	__m128i c1 = _mm_cmpeq_epi8(d1, c);
-	__m128i c2 = _mm_cmpeq_epi8(d2, c);
-	__m128i c3 = _mm_cmpeq_epi8(d3, c);
+    __m128i c0 = _mm_cmpeq_epi8(d0, c);
+    __m128i c1 = _mm_cmpeq_epi8(d1, c);
+    __m128i c2 = _mm_cmpeq_epi8(d2, c);
+    __m128i c3 = _mm_cmpeq_epi8(d3, c);
 
-	__m128i m0 = _mm_and_si128(c0, c1);
-	__m128i m1 = _mm_and_si128(c2, c3);
-	__m128i m = _mm_and_si128(m0, m1);
+    __m128i m0 = _mm_and_si128(c0, c1);
+    __m128i m1 = _mm_and_si128(c2, c3);
+    __m128i m = _mm_and_si128(m0, m1);
 
-	if (!_mm_testc_si128(m, _mm_set1_epi32(-1)))
-	{
-		return 0;
-	}
+    if (!_mm_testc_si128(m, _mm_set1_epi32(-1)))
+    {
+        return 0;
+    }
 #else
     const uint8* ptr = src + 4;
     for( int i=1; i<16; i++ )
@@ -183,17 +183,17 @@ static uint64 CheckSolid_AVX2( const uint8* src )
     __m256i d0 = _mm256_loadu_si256(((__m256i*)src) + 0);
     __m256i d1 = _mm256_loadu_si256(((__m256i*)src) + 1);
 
-	__m256i c = _mm256_broadcastd_epi32(_mm256_castsi256_si128(d0));
+    __m256i c = _mm256_broadcastd_epi32(_mm256_castsi256_si128(d0));
 
-	__m256i c0 = _mm256_cmpeq_epi8(d0, c);
-	__m256i c1 = _mm256_cmpeq_epi8(d1, c);
+    __m256i c0 = _mm256_cmpeq_epi8(d0, c);
+    __m256i c1 = _mm256_cmpeq_epi8(d1, c);
 
-	__m256i m = _mm256_and_si256(c0, c1);
+    __m256i m = _mm256_and_si256(c0, c1);
 
-	if (!_mm256_testc_si256(m, _mm256_set1_epi32(-1)))
-	{
-		return 0;
-	}
+    if (!_mm256_testc_si256(m, _mm256_set1_epi32(-1)))
+    {
+        return 0;
+    }
 
     return 0x02000000 |
         ( uint( src[0] & 0xF8 ) << 16 ) |
