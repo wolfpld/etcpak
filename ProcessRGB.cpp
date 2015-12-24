@@ -332,7 +332,7 @@ static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         int dg = a[bid].y - g;
         int db = a[bid].z - b;
 
-        // The scaling values are divided by four and rounded, to allow the differences to be in the range of signed int16
+        // The scaling values are divided by two and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
         __m128i pixel = _mm_set1_epi16(dr * 38 + dg * 76 + db * 14);
         __m128i pix = _mm_abs_epi16(pixel);
