@@ -87,6 +87,49 @@ static void Average( const uint8* data, v4i* a )
 #endif
 }
 
+#ifdef __SSE4_1__
+static void Average_AVX2( const uint8* data, v4i* a )
+{
+    __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
+    __m128i d1 = _mm_loadu_si128(((__m128i*)data) + 1);
+    __m128i d2 = _mm_loadu_si128(((__m128i*)data) + 2);
+    __m128i d3 = _mm_loadu_si128(((__m128i*)data) + 3);
+
+    __m256i t0 = _mm256_cvtepu8_epi16(d0);
+    __m256i t1 = _mm256_cvtepu8_epi16(d1);
+    __m256i t2 = _mm256_cvtepu8_epi16(d2);
+    __m256i t3 = _mm256_cvtepu8_epi16(d3);
+
+    __m256i sum0 = _mm256_add_epi16(t0, t1);
+    __m256i sum1 = _mm256_add_epi16(t2, t3);
+
+    __m256i sum0l = _mm256_unpacklo_epi16(sum0, _mm256_setzero_si256());
+    __m256i sum0h = _mm256_unpackhi_epi16(sum0, _mm256_setzero_si256());
+    __m256i sum1l = _mm256_unpacklo_epi16(sum1, _mm256_setzero_si256());
+    __m256i sum1h = _mm256_unpackhi_epi16(sum1, _mm256_setzero_si256());
+
+    __m256i b0 = _mm256_add_epi32(sum0l, sum0h);
+    __m256i b1 = _mm256_add_epi32(sum1l, sum1h);
+
+    __m256i t4 = _mm256_add_epi32(b0, b1);
+    __m256i t5 = _mm256_permute2x128_si256(t4, t4, (1) | (0 << 4));
+    __m256i t6 = _mm256_permute2x128_si256(b0, b1, (2) | (0 << 4));
+    __m256i t7 = _mm256_permute2x128_si256(b0, b1, (3) | (1 << 4));
+    __m256i t8 = _mm256_add_epi32(t6, t7);
+
+    __m256i v0 = _mm256_add_epi32(t5, _mm256_set1_epi32(4));
+    __m256i v1 = _mm256_add_epi32(t8, _mm256_set1_epi32(4));
+
+    __m256i a0 = _mm256_shuffle_epi32(_mm256_srli_epi32(v0, 3), _MM_SHUFFLE(3, 0, 1, 2));
+    __m256i a1 = _mm256_shuffle_epi32(_mm256_srli_epi32(v1, 3), _MM_SHUFFLE(3, 0, 1, 2));
+
+    __m256i a2 = _mm256_packus_epi32(a0, a1);
+    __m256i a3 = _mm256_permute4x64_epi64(a2, _MM_SHUFFLE(2, 0, 3, 1));
+
+    _mm256_storeu_si256((__m256i*)&a[0], a3);
+}
+#endif
+
 static void CalcErrorBlock( const uint8* data, uint err[4][4] )
 {
 #ifdef __SSE4_1__
@@ -228,14 +271,14 @@ static void ProcessAverages( v4i* a )
 
         __m128i c = _mm_srli_epi16(_mm_add_epi16(t, _mm_srli_epi16(t, 8)), 8);
 
-		__m128i c1 = _mm_shuffle_epi32(c, _MM_SHUFFLE(3, 2, 3, 2));
+        __m128i c1 = _mm_shuffle_epi32(c, _MM_SHUFFLE(3, 2, 3, 2));
         __m128i diff = _mm_sub_epi16(c, c1);
         diff = _mm_max_epi16(diff, _mm_set1_epi16(-4));
         diff = _mm_min_epi16(diff, _mm_set1_epi16(3));
 
         __m128i co = _mm_add_epi16(c1, diff);
 
-		c = _mm_blend_epi16(co, c, 0xF0);
+        c = _mm_blend_epi16(co, c, 0xF0);
 
         __m128i a0 = _mm_or_si128(_mm_slli_epi16(c, 3), _mm_srli_epi16(c, 2));
 
@@ -280,6 +323,43 @@ static void ProcessAverages( v4i* a )
     }
 #endif
 }
+
+#ifdef __SSE4_1__
+static void ProcessAverages_AVX2( v4i* a )
+{
+    {
+        __m256i d = _mm256_loadu_si256((__m256i*)a[0].data());
+
+        __m256i t = _mm256_add_epi16(_mm256_mullo_epi16(d, _mm256_set1_epi16(31)), _mm256_set1_epi16(128));
+
+        __m256i c = _mm256_srli_epi16(_mm256_add_epi16(t, _mm256_srli_epi16(t, 8)), 8);
+
+        __m256i c1 = _mm256_shuffle_epi32(c, _MM_SHUFFLE(3, 2, 3, 2));
+        __m256i diff = _mm256_sub_epi16(c, c1);
+        diff = _mm256_max_epi16(diff, _mm256_set1_epi16(-4));
+        diff = _mm256_min_epi16(diff, _mm256_set1_epi16(3));
+
+        __m256i co = _mm256_add_epi16(c1, diff);
+
+        c = _mm256_blend_epi16(co, c, 0xF0);
+
+        __m256i a0 = _mm256_or_si256(_mm256_slli_epi16(c, 3), _mm256_srli_epi16(c, 2));
+
+        _mm256_storeu_si256((__m256i*)a[4].data(), a0);
+    }
+
+    {
+        __m256i d = _mm256_loadu_si256((__m256i*)a[0].data());
+
+        __m256i t0 = _mm256_add_epi16(_mm256_mullo_epi16(d, _mm256_set1_epi16(15)), _mm256_set1_epi16(128));
+        __m256i t1 = _mm256_srli_epi16(_mm256_add_epi16(t0, _mm256_srli_epi16(t0, 8)), 8);
+
+        __m256i t2 = _mm256_or_si256(t1, _mm256_slli_epi16(t1, 4));
+
+        _mm256_storeu_si256((__m256i*)a[0].data(), t2);
+    }
+}
+#endif
 
 static void EncodeAverages( uint64& _d, const v4i* a, size_t idx )
 {
@@ -387,6 +467,23 @@ static void PrepareAverages( v4i a[8], const uint8* src, uint err[4] )
         err[2+i/2] += CalcError( errblock[i], a[i+4] );
     }
 }
+
+#ifdef __SSE4_1__
+static void PrepareAverages_AVX2( v4i a[8], const uint8* src, uint err[4] )
+{
+    Average_AVX2( src, a );
+    ProcessAverages_AVX2( a );
+
+    uint errblock[4][4];
+    CalcErrorBlock( src, errblock );
+
+    for( int i=0; i<4; i++ )
+    {
+        err[i/2] += CalcError( errblock[i], a[i] );
+        err[2+i/2] += CalcError( errblock[i], a[i+4] );
+    }
+}
+#endif
 
 static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
 {
@@ -629,7 +726,7 @@ uint64 ProcessRGB_AVX2( const uint8* src )
 
     v4i a[8];
     uint err[4] = {};
-    PrepareAverages( a, src, err );
+    PrepareAverages_AVX2( a, src, err );
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
