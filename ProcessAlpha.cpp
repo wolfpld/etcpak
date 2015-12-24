@@ -7,7 +7,7 @@
 
 static uint Average1( const uint8* data )
 {
-    uint32 a = 0;
+    uint32 a = 4;
     for( int i=0; i<8; i++ )
     {
         a += *data++;
