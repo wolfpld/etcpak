@@ -1,3 +1,4 @@
+#include <array>
 #include <string.h>
 
 #include "Math.hpp"
@@ -13,8 +14,52 @@
 #  include <x86intrin.h>
 #endif
 
-static void Average( const uint8* data, v3i* a )
+typedef std::array<uint16, 4> v4i;
+
+static void Average( const uint8* data, v4i* a )
 {
+#ifdef __SSE4_1__
+    __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
+    __m128i d1 = _mm_loadu_si128(((__m128i*)data) + 1);
+    __m128i d2 = _mm_loadu_si128(((__m128i*)data) + 2);
+    __m128i d3 = _mm_loadu_si128(((__m128i*)data) + 3);
+
+    __m128i d0l = _mm_unpacklo_epi8(d0, _mm_setzero_si128());
+    __m128i d0h = _mm_unpackhi_epi8(d0, _mm_setzero_si128());
+    __m128i d1l = _mm_unpacklo_epi8(d1, _mm_setzero_si128());
+    __m128i d1h = _mm_unpackhi_epi8(d1, _mm_setzero_si128());
+    __m128i d2l = _mm_unpacklo_epi8(d2, _mm_setzero_si128());
+    __m128i d2h = _mm_unpackhi_epi8(d2, _mm_setzero_si128());
+    __m128i d3l = _mm_unpacklo_epi8(d3, _mm_setzero_si128());
+    __m128i d3h = _mm_unpackhi_epi8(d3, _mm_setzero_si128());
+
+    __m128i sum0 = _mm_add_epi16(d0l, d1l);
+    __m128i sum1 = _mm_add_epi16(d0h, d1h);
+    __m128i sum2 = _mm_add_epi16(d2l, d3l);
+    __m128i sum3 = _mm_add_epi16(d2h, d3h);
+
+    __m128i sum0l = _mm_unpacklo_epi16(sum0, _mm_setzero_si128());
+    __m128i sum0h = _mm_unpackhi_epi16(sum0, _mm_setzero_si128());
+    __m128i sum1l = _mm_unpacklo_epi16(sum1, _mm_setzero_si128());
+    __m128i sum1h = _mm_unpackhi_epi16(sum1, _mm_setzero_si128());
+    __m128i sum2l = _mm_unpacklo_epi16(sum2, _mm_setzero_si128());
+    __m128i sum2h = _mm_unpackhi_epi16(sum2, _mm_setzero_si128());
+    __m128i sum3l = _mm_unpacklo_epi16(sum3, _mm_setzero_si128());
+    __m128i sum3h = _mm_unpackhi_epi16(sum3, _mm_setzero_si128());
+
+    __m128i b0 = _mm_add_epi32(sum0l, sum0h);
+    __m128i b1 = _mm_add_epi32(sum1l, sum1h);
+    __m128i b2 = _mm_add_epi32(sum2l, sum2h);
+    __m128i b3 = _mm_add_epi32(sum3l, sum3h);
+
+    __m128i a0 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(b2, b3), _mm_set1_epi32(4)), 3);
+    __m128i a1 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(b0, b1), _mm_set1_epi32(4)), 3);
+    __m128i a2 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(b1, b3), _mm_set1_epi32(4)), 3);
+    __m128i a3 = _mm_srli_epi32(_mm_add_epi32(_mm_add_epi32(b0, b2), _mm_set1_epi32(4)), 3);
+
+    _mm_storeu_si128((__m128i*)&a[0], _mm_packus_epi32(_mm_shuffle_epi32(a0, _MM_SHUFFLE(3, 0, 1, 2)), _mm_shuffle_epi32(a1, _MM_SHUFFLE(3, 0, 1, 2))));
+    _mm_storeu_si128((__m128i*)&a[2], _mm_packus_epi32(_mm_shuffle_epi32(a2, _MM_SHUFFLE(3, 0, 1, 2)), _mm_shuffle_epi32(a3, _MM_SHUFFLE(3, 0, 1, 2))));
+#else
     uint32 r[4];
     uint32 g[4];
     uint32 b[4];
@@ -34,14 +79,102 @@ static void Average( const uint8* data, v3i* a )
             data++;
         }
     }
-    a[0] = v3i( (r[2] + r[3] + 4) / 8, (g[2] + g[3] + 4) / 8, (b[2] + b[3] + 4) / 8 );
-    a[1] = v3i( (r[0] + r[1] + 4) / 8, (g[0] + g[1] + 4) / 8, (b[0] + b[1] + 4) / 8 );
-    a[2] = v3i( (r[1] + r[3] + 4) / 8, (g[1] + g[3] + 4) / 8, (b[1] + b[3] + 4) / 8 );
-    a[3] = v3i( (r[0] + r[2] + 4) / 8, (g[0] + g[2] + 4) / 8, (b[0] + b[2] + 4) / 8 );
+
+    a[0] = v4i{ (r[2] + r[3] + 4) / 8, (g[2] + g[3] + 4) / 8, (b[2] + b[3] + 4) / 8, 0};
+    a[1] = v4i{ (r[0] + r[1] + 4) / 8, (g[0] + g[1] + 4) / 8, (b[0] + b[1] + 4) / 8, 0};
+    a[2] = v4i{ (r[1] + r[3] + 4) / 8, (g[1] + g[3] + 4) / 8, (b[1] + b[3] + 4) / 8, 0};
+    a[3] = v4i{ (r[0] + r[2] + 4) / 8, (g[0] + g[2] + 4) / 8, (b[0] + b[2] + 4) / 8, 0};
+#endif
 }
 
 static void CalcErrorBlock( const uint8* data, uint err[4][4] )
 {
+#ifdef __SSE4_1__
+    __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
+    __m128i d1 = _mm_loadu_si128(((__m128i*)data) + 1);
+    __m128i d2 = _mm_loadu_si128(((__m128i*)data) + 2);
+    __m128i d3 = _mm_loadu_si128(((__m128i*)data) + 3);
+
+    __m128i dm0 = _mm_and_si128(d0, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
+    __m128i dm1 = _mm_and_si128(d1, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
+    __m128i dm2 = _mm_and_si128(d2, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
+    __m128i dm3 = _mm_and_si128(d3, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
+
+    __m128i d0l = _mm_unpacklo_epi8(dm0, _mm_setzero_si128());
+    __m128i d0h = _mm_unpackhi_epi8(dm0, _mm_setzero_si128());
+    __m128i d1l = _mm_unpacklo_epi8(dm1, _mm_setzero_si128());
+    __m128i d1h = _mm_unpackhi_epi8(dm1, _mm_setzero_si128());
+    __m128i d2l = _mm_unpacklo_epi8(dm2, _mm_setzero_si128());
+    __m128i d2h = _mm_unpackhi_epi8(dm2, _mm_setzero_si128());
+    __m128i d3l = _mm_unpacklo_epi8(dm3, _mm_setzero_si128());
+    __m128i d3h = _mm_unpackhi_epi8(dm3, _mm_setzero_si128());
+
+    __m128i sqrSum0, sqrSum1, sqrSum2, sqrSum3;
+
+    {
+        __m128i sum0l = _mm_madd_epi16(d0l, d0l);
+        __m128i sum0h = _mm_madd_epi16(d0h, d0h);
+        __m128i sum1l = _mm_madd_epi16(d1l, d1l);
+        __m128i sum1h = _mm_madd_epi16(d1h, d1h);
+        __m128i sum2l = _mm_madd_epi16(d2l, d2l);
+        __m128i sum2h = _mm_madd_epi16(d2h, d2h);
+        __m128i sum3l = _mm_madd_epi16(d3l, d3l);
+        __m128i sum3h = _mm_madd_epi16(d3h, d3h);
+
+        __m128i sum0 = _mm_add_epi32(sum0l, sum1l);
+        __m128i sum1 = _mm_add_epi32(sum0h, sum1h);
+        __m128i sum2 = _mm_add_epi32(sum2l, sum3l);
+        __m128i sum3 = _mm_add_epi32(sum2h, sum3h);
+
+        __m128i sum4 = _mm_hadd_epi32(sum0, sum1);
+        __m128i sum5 = _mm_hadd_epi32(sum2, sum3);
+
+        __m128i sum6 = _mm_hadd_epi32(sum4, sum5);
+
+        __m128i t = _mm_shuffle_epi32(sum6, _MM_SHUFFLE(2, 0, 3, 1));
+
+        __m128i sum = _mm_add_epi32(t, sum6);
+
+        sqrSum0 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(3, 3, 3, 3));
+        sqrSum1 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(0, 0, 0, 0));
+        sqrSum2 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(1, 1, 1, 1));
+        sqrSum3 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(2, 2, 2, 2));
+
+        sqrSum0 = _mm_and_si128(sqrSum0, _mm_setr_epi32(0, 0, 0, -1));
+        sqrSum1 = _mm_and_si128(sqrSum1, _mm_setr_epi32(0, 0, 0, -1));
+        sqrSum2 = _mm_and_si128(sqrSum2, _mm_setr_epi32(0, 0, 0, -1));
+        sqrSum3 = _mm_and_si128(sqrSum3, _mm_setr_epi32(0, 0, 0, -1));
+    }
+
+    __m128i sum0 = _mm_add_epi16(d0l, d1l);
+    __m128i sum1 = _mm_add_epi16(d0h, d1h);
+    __m128i sum2 = _mm_add_epi16(d2l, d3l);
+    __m128i sum3 = _mm_add_epi16(d2h, d3h);
+
+    __m128i sum0l = _mm_unpacklo_epi16(sum0, _mm_setzero_si128());
+    __m128i sum0h = _mm_unpackhi_epi16(sum0, _mm_setzero_si128());
+    __m128i sum1l = _mm_unpacklo_epi16(sum1, _mm_setzero_si128());
+    __m128i sum1h = _mm_unpackhi_epi16(sum1, _mm_setzero_si128());
+    __m128i sum2l = _mm_unpacklo_epi16(sum2, _mm_setzero_si128());
+    __m128i sum2h = _mm_unpackhi_epi16(sum2, _mm_setzero_si128());
+    __m128i sum3l = _mm_unpacklo_epi16(sum3, _mm_setzero_si128());
+    __m128i sum3h = _mm_unpackhi_epi16(sum3, _mm_setzero_si128());
+
+    __m128i b0 = _mm_add_epi32(sum0l, sum0h);
+    __m128i b1 = _mm_add_epi32(sum1l, sum1h);
+    __m128i b2 = _mm_add_epi32(sum2l, sum2h);
+    __m128i b3 = _mm_add_epi32(sum3l, sum3h);
+
+    __m128i a0 = _mm_or_si128(_mm_add_epi32(b2, b3), sqrSum0);
+    __m128i a1 = _mm_or_si128(_mm_add_epi32(b0, b1), sqrSum1);
+    __m128i a2 = _mm_or_si128(_mm_add_epi32(b1, b3), sqrSum2);
+    __m128i a3 = _mm_or_si128(_mm_add_epi32(b0, b2), sqrSum3);
+
+    _mm_storeu_si128((__m128i*)&err[0], a0);
+    _mm_storeu_si128((__m128i*)&err[1], a1);
+    _mm_storeu_si128((__m128i*)&err[2], a2);
+    _mm_storeu_si128((__m128i*)&err[3], a3);
+#else
     uint terr[4][4];
 
     memset(terr, 0, 16 * sizeof(uint));
@@ -71,20 +204,56 @@ static void CalcErrorBlock( const uint8* data, uint err[4][4] )
         err[2][i] = terr[1][i] + terr[3][i];
         err[3][i] = terr[0][i] + terr[2][i];
     }
+#endif
 }
 
-static uint CalcError( const uint block[4], const v3i& average )
+static uint CalcError( const uint block[4], const v4i& average )
 {
     uint err = block[3];
-    err -= block[0] * 2 * average.z;
-    err -= block[1] * 2 * average.y;
-    err -= block[2] * 2 * average.x;
-    err += 8 * ( sq( average.x ) + sq( average.y ) + sq( average.z ) );
+    err -= block[0] * 2 * average[2];
+    err -= block[1] * 2 * average[1];
+    err -= block[2] * 2 * average[0];
+    err += 8 * ( sq( average[0] ) + sq( average[1] ) + sq( average[2] ) );
     return err;
 }
 
-static void ProcessAverages( v3i* a )
+static void ProcessAverages( v4i* a )
 {
+#ifdef __SSE4_1__
+    for( int i=0; i<2; i++ )
+    {
+        __m128i d = _mm_loadu_si128((__m128i*)a[i*2].data());
+
+        __m128i t = _mm_add_epi16(_mm_mullo_epi16(d, _mm_set1_epi16(31)), _mm_set1_epi16(128));
+
+        __m128i c = _mm_srli_epi16(_mm_add_epi16(t, _mm_srli_epi16(t, 8)), 8);
+
+		__m128i c1 = _mm_shuffle_epi32(c, _MM_SHUFFLE(3, 2, 3, 2));
+        __m128i diff = _mm_sub_epi16(c, c1);
+        diff = _mm_max_epi16(diff, _mm_set1_epi16(-4));
+        diff = _mm_min_epi16(diff, _mm_set1_epi16(3));
+
+        __m128i co = _mm_add_epi16(c1, diff);
+
+		c = _mm_blend_epi16(co, c, 0xF0);
+
+        __m128i a0 = _mm_or_si128(_mm_slli_epi16(c, 3), _mm_srli_epi16(c, 2));
+
+        _mm_storeu_si128((__m128i*)a[4+i*2].data(), a0);
+    }
+
+    for( int i=0; i<2; i++ )
+    {
+        __m128i d = _mm_loadu_si128((__m128i*)a[i*2].data());
+
+        __m128i t0 = _mm_add_epi16(_mm_mullo_epi16(d, _mm_set1_epi16(15)), _mm_set1_epi16(128));
+        __m128i t1 = _mm_srli_epi16(_mm_add_epi16(t0, _mm_srli_epi16(t0, 8)), 8);
+
+        __m128i t2 = _mm_or_si128(t1, _mm_slli_epi16(t1, 4));
+
+        _mm_storeu_si128((__m128i*)a[i*2].data(), t2);
+    }
+#else
     for( int i=0; i<2; i++ )
     {
         for( int j=0; j<3; j++ )
@@ -102,15 +271,17 @@ static void ProcessAverages( v3i* a )
             a[4+i*2][j] = ( co << 3 ) | ( co >> 2 );
         }
     }
+
     for( int i=0; i<4; i++ )
     {
-        a[i].x = g_avg2[mul8bit( a[i].x, 15 )];
-        a[i].y = g_avg2[mul8bit( a[i].y, 15 )];
-        a[i].z = g_avg2[mul8bit( a[i].z, 15 )];
+        a[i][0] = g_avg2[mul8bit( a[i][0], 15 )];
+        a[i][1] = g_avg2[mul8bit( a[i][1], 15 )];
+        a[i][2] = g_avg2[mul8bit( a[i][2], 15 )];
     }
+#endif
 }
 
-static void EncodeAverages( uint64& _d, const v3i* a, size_t idx )
+static void EncodeAverages( uint64& _d, const v4i* a, size_t idx )
 {
     auto d = _d;
     d |= ( idx << 24 );
@@ -202,7 +373,7 @@ static uint64 CheckSolid_AVX2( const uint8* src )
 }
 #endif
 
-static void PrepareAverages( v3i a[8], const uint8* src, uint err[4] )
+static void PrepareAverages( v4i a[8], const uint8* src, uint err[4] )
 {
     Average( src, a );
     ProcessAverages( a );
@@ -230,9 +401,9 @@ static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         uint8 r = *data++;
         data++;
 
-        int dr = a[bid].x - r;
-        int dg = a[bid].y - g;
-        int db = a[bid].z - b;
+        int dr = a[bid][0] - r;
+        int dg = a[bid][1] - g;
+        int db = a[bid][2] - b;
 
 #ifdef __SSE4_1__
         // Reference implementation
@@ -315,7 +486,7 @@ static void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
 
 #ifdef __SSE4_1__
 // Non-reference implementation, but faster
-static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
+static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32* id, const uint8* data )
 {
     for( size_t i=0; i<16; i++ )
     {
@@ -328,9 +499,9 @@ static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
         uint8 r = *data++;
         data++;
 
-        int dr = a[bid].x - r;
-        int dg = a[bid].y - g;
-        int db = a[bid].z - b;
+        int dr = a[bid][0] - r;
+        int dg = a[bid][1] - g;
+        int db = a[bid][2] - b;
 
         // The scaling values are divided by two and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
@@ -364,7 +535,7 @@ static void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const 
     }
 }
 
-static void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], const uint32* id, const uint8* data )
+static void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32* id, const uint8* data )
 {
     for( size_t i=0; i<16; i+=2 )
     {
@@ -382,13 +553,13 @@ static void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v3i a[8], c
         uint8 r1 = *data++;
         data++;
 
-        int dr0 = a[bid].x - r0;
-        int dg0 = a[bid].y - g0;
-        int db0 = a[bid].z - b0;
+        int dr0 = a[bid][0] - r0;
+        int dg0 = a[bid][1] - g0;
+        int db0 = a[bid][2] - b0;
 
-        int dr1 = a[bid].x - r1;
-        int dg1 = a[bid].y - g1;
-        int db1 = a[bid].z - b1;
+        int dr1 = a[bid][0] - r1;
+        int dg1 = a[bid][1] - g1;
+        int db1 = a[bid][2] - b1;
 
         // The scaling values are divided by two and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
@@ -432,7 +603,7 @@ uint64 ProcessRGB( const uint8* src )
     uint64 d = CheckSolid( src );
     if( d != 0 ) return d;
 
-    v3i a[8];
+    v4i a[8];
     uint err[4] = {};
     PrepareAverages( a, src, err );
     size_t idx = GetLeastError( err, 4 );
@@ -456,7 +627,7 @@ uint64 ProcessRGB_AVX2( const uint8* src )
     uint64 d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
 
-    v3i a[8];
+    v4i a[8];
     uint err[4] = {};
     PrepareAverages( a, src, err );
     size_t idx = GetLeastError( err, 4 );
