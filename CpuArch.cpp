@@ -1,5 +1,7 @@
 #include "CpuArch.hpp"
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+
 #if defined(__INTEL_COMPILER) && (__INTEL_COMPILER >= 1300)
 
 #include <immintrin.h>
@@ -90,3 +92,12 @@ bool can_use_intel_core_4th_gen_features()
 
     return the_4th_gen_features_available == 1;
 }
+
+#else
+
+bool can_use_intel_core_4th_gen_features()
+{
+    return false;
+}
+
+#endif

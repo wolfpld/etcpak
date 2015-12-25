@@ -1,3 +1,5 @@
+#ifdef __SSE4_1__
+
 #include <array>
 #include <string.h>
 
@@ -326,3 +328,4 @@ uint64 ProcessRGB_AVX2( const uint8* src )
 
 #pragma GCC pop_options
 
+#endif

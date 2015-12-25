@@ -7,11 +7,13 @@
 #include "Tables.hpp"
 #include "Types.hpp"
 #include "Vector.hpp"
-#ifdef _MSC_VER
-#  include <intrin.h>
-#  include <Windows.h>
-#else
-#  include <x86intrin.h>
+#ifdef __SSE4_1__
+#  ifdef _MSC_VER
+#    include <intrin.h>
+#    include <Windows.h>
+#  else
+#    include <x86intrin.h>
+#  endif
 #endif
 
 namespace
