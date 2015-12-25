@@ -9,6 +9,7 @@
 #include "mmap.hpp"
 #include "ProcessAlpha.hpp"
 #include "ProcessRGB.hpp"
+#include "ProcessRGB_AVX2.hpp"
 #include "Tables.hpp"
 
 BlockData::BlockData( const char* fn )
