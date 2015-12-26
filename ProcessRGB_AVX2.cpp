@@ -97,14 +97,14 @@ void CalcErrorBlock_AVX2( const uint8* data, uint err[4][4] )
 
         __m256i sum7 = _mm256_hadd_epi32(sum6, sum6);
 
-		__m256i sum8 = _mm256_permute4x64_epi64(sum7, _MM_SHUFFLE(3, 1, 2, 0));
+        __m256i sum8 = _mm256_permute4x64_epi64(sum7, _MM_SHUFFLE(3, 1, 2, 0));
 
         __m256i t = _mm256_shuffle_epi32(sum8, _MM_SHUFFLE(2, 0, 3, 1));
 
         __m256i sum = _mm256_add_epi32(t, sum8);
 
-		sqrSum0 = _mm256_permutevar8x32_epi32(sum, _mm256_setr_epi32(3, 3, 3, 3, 0, 0, 0, 0));
-		sqrSum1 = _mm256_permutevar8x32_epi32(sum, _mm256_setr_epi32(1, 1, 1, 1, 2, 2, 2, 2));
+        sqrSum0 = _mm256_permutevar8x32_epi32(sum, _mm256_setr_epi32(3, 3, 3, 3, 0, 0, 0, 0));
+        sqrSum1 = _mm256_permutevar8x32_epi32(sum, _mm256_setr_epi32(1, 1, 1, 1, 2, 2, 2, 2));
 
         sqrSum0 = _mm256_and_si256(sqrSum0, _mm256_setr_epi32(0, 0, 0, -1, 0, 0, 0, -1));
         sqrSum1 = _mm256_and_si256(sqrSum1, _mm256_setr_epi32(0, 0, 0, -1, 0, 0, 0, -1));
@@ -179,9 +179,8 @@ void ProcessAverages_AVX2( v4i* a )
     }
 }
 
-void EncodeAverages( uint64& _d, const v4i* a, size_t idx )
+uint64 EncodeAverages( uint64 d, const v4i* a, size_t idx )
 {
-    auto d = _d;
     d |= ( idx << 24 );
     size_t base = idx << 1;
 
@@ -203,7 +202,8 @@ void EncodeAverages( uint64& _d, const v4i* a, size_t idx )
             d |= ((uint64)c) << ( i*8 );
         }
     }
-    _d = d;
+
+    return d;
 }
 
 uint64 CheckSolid_AVX2( const uint8* src )
@@ -244,40 +244,34 @@ void PrepareAverages_AVX2( v4i a[8], const uint8* src, uint err[4] )
     }
 }
 
-void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32* id, const uint8* data )
+void FindBestFit_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i a[8], const uint32* id, const uint8* data)
 {
+    __m256i sel = _mm256_setzero_si256();
+
     for( size_t i=0; i<16; i+=2 )
     {
-        uint16* sel = tsel[i];
         uint bid = id[i];
         uint32* ter = terr[bid%2];
 
-        uint8 b0 = *data++;
-        uint8 g0 = *data++;
-        uint8 r0 = *data++;
-        data++;
+        __m128i a0 = _mm_loadl_epi64((const __m128i*)a[bid].data());
+        __m128i a1 = _mm_shufflelo_epi16(a0, _MM_SHUFFLE(3, 0, 1, 2));
+        __m128i rgb = _mm_loadl_epi64((const __m128i*)data);
 
-        uint8 b1 = *data++;
-        uint8 g1 = *data++;
-        uint8 r1 = *data++;
-        data++;
-
-        int dr0 = a[bid][0] - r0;
-        int dg0 = a[bid][1] - g0;
-        int db0 = a[bid][2] - b0;
-
-        int dr1 = a[bid][0] - r1;
-        int dg1 = a[bid][1] - g1;
-        int db1 = a[bid][2] - b1;
+        __m128i rgb16 = _mm_cvtepu8_epi16(rgb);
+        __m128i d = _mm_sub_epi16(_mm_broadcastq_epi64(a1), rgb16);
 
         // The scaling values are divided by two and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
-        int pixel0 = dr0 * 38 + dg0 * 76 + db0 * 14;
-        int pixel1 = dr1 * 38 + dg1 * 76 + db1 * 14;
+        __m128i pixel0 = _mm_madd_epi16(d, _mm_set_epi16(0, 38, 76, 14, 0, 38, 76, 14));
+        __m128i pixel1 = _mm_packs_epi32(pixel0, pixel0);
+        __m128i pixel2 = _mm_hadd_epi16(pixel1, pixel1);
 
-        __m256i pix0 = _mm256_set1_epi16(pixel0);
-        __m128i pix1 = _mm_set1_epi16(pixel1);
-        __m256i pixel = _mm256_insertf128_si256(pix0, pix1, 1);
+        __m128i pix0 = _mm_broadcastw_epi16(pixel2);
+        __m128i pix1 = _mm_broadcastw_epi16(_mm_srli_epi32(pixel2, 16));
+        __m256i pixel = _mm256_insertf128_si256(_mm256_castsi128_si256(pix0), pix1, 1);
+
+        data += 8;
+
         __m256i pix = _mm256_abs_epi16(pixel);
 
         // Taking the absolute value is way faster. The values are only used to sort, so the result will be the same.
@@ -285,11 +279,11 @@ void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const ui
         __m256i error0 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table128_SIMD[0])));
         __m256i error1 = _mm256_abs_epi16(_mm256_sub_epi16(pix, _mm256_broadcastsi128_si256(g_table128_SIMD[1])));
 
-        __m256i index = _mm256_and_si256(_mm256_cmpgt_epi16(error0, error1), _mm256_set1_epi16(1));
+        __m256i minIndex0 = _mm256_and_si256(_mm256_cmpgt_epi16(error0, error1), _mm256_set1_epi16(1));
         __m256i minError = _mm256_min_epi16(error0, error1);
 
         // Exploiting symmetry of the selector table
-        __m256i minIndex = _mm256_or_si256(index, _mm256_and_si256(_mm256_set1_epi16(2), _mm256_cmpgt_epi16(pixel, _mm256_setzero_si256())));
+        __m256i minIndex1 = _mm256_and_si256(_mm256_cmpgt_epi16(pixel, _mm256_setzero_si256()), _mm256_set1_epi16(1));
 
         // Interleaving values so madd instruction can be used
         __m256i minErrorLo = _mm256_permute4x64_epi64(minError, _MM_SHUFFLE(1, 1, 0, 0));
@@ -302,9 +296,77 @@ void FindBestFit_AVX2( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const ui
         __m256i squareError = _mm256_add_epi32(squareErrorSum, _mm256_loadu_si256((__m256i*)ter));
 
         _mm256_storeu_si256((__m256i*)ter, squareError);
-        _mm256_storeu_si256((__m256i*)sel, minIndex);
+
+        __m256i minIndexLo0 = _mm256_unpacklo_epi16(minIndex0, minIndex1);
+        __m256i minIndexHi0 = _mm256_unpackhi_epi16(minIndex0, minIndex1);
+
+        __m256i minIndexLo1 = _mm256_permute2x128_si256(minIndexLo0, minIndexHi0, (0) | (2 << 4));
+        __m256i minIndexHi1 = _mm256_permute2x128_si256(minIndexLo0, minIndexHi0, (1) | (3 << 4));
+
+        __m256i minIndexLo2 = _mm256_sll_epi32(minIndexLo1, _mm_set1_epi64x(i));
+        __m256i minIndexHi2 = _mm256_sll_epi32(minIndexHi1, _mm_set1_epi64x(i + 1));
+
+        sel = _mm256_or_si256(sel, minIndexLo2);
+        sel = _mm256_or_si256(sel, minIndexHi2);
     }
+
+    _mm256_storeu_si256((__m256i*)tsel, sel);
 }
+
+uint64 EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], const uint32 tsel[8], const bool rotate)
+{
+    size_t tidx[2];
+    __m256i err0 = _mm256_loadu_si256((const __m256i*)terr[0]);
+    __m256i err1 = _mm256_loadu_si256((const __m256i*)terr[1]);
+
+    __m256i errLo = _mm256_permute2x128_si256(err0, err1, (0) | (2 << 4));
+    __m256i errHi = _mm256_permute2x128_si256(err0, err1, (1) | (3 << 4));
+
+    __m256i errMin0 = _mm256_min_epu32(errLo, errHi);
+
+    __m256i errMin1 = _mm256_shuffle_epi32(errMin0, _MM_SHUFFLE(1, 1, 1, 1));
+    __m256i errMin2 = _mm256_shuffle_epi32(errMin0, _MM_SHUFFLE(2, 2, 2, 2));
+    __m256i errMin3 = _mm256_shuffle_epi32(errMin0, _MM_SHUFFLE(3, 3, 3, 3));
+
+    __m256i errMin4 = _mm256_min_epu32(errMin0, errMin1);
+    __m256i errMin5 = _mm256_min_epu32(errMin2, errMin3);
+
+    __m256i errMin6 = _mm256_min_epu32(errMin4, errMin5);
+
+    __m256i errMin7 = _mm256_shuffle_epi32(errMin6, _MM_SHUFFLE(0, 0, 0, 0));
+
+    __m256i errMin8 = _mm256_permute2x128_si256(errMin7, errMin7, (0) | (0 << 4));
+    __m256i errMin9 = _mm256_permute2x128_si256(errMin7, errMin7, (1) | (1 << 4));
+
+    __m256i errMask0 = _mm256_cmpeq_epi32(errMin8, err0);
+    __m256i errMask1 = _mm256_cmpeq_epi32(errMin9, err1);
+
+    uint32 mask0 = _mm256_movemask_epi8(errMask0);
+    uint32 mask1 = _mm256_movemask_epi8(errMask1);
+
+    tidx[0] = _bit_scan_forward(mask0) >> 2;
+    tidx[1] = _bit_scan_forward(mask1) >> 2;
+
+    d |= tidx[0] << 26;
+    d |= tidx[1] << 29;
+
+    uint t0 = tsel[tidx[0]];
+    uint t1 = tsel[tidx[1]];
+
+    if (!rotate)
+    {
+        t0 &= 0xFF00FF00;
+        t1 &= 0x00FF00FF;
+    }
+    else
+    {
+        t0 &= 0xCCCCCCCC;
+        t1 &= 0x33333333;
+    }
+
+    return d | static_cast<uint64>(t0 | t1) << 32;
+}
+
 }
 
 uint64 ProcessRGB_AVX2( const uint8* src )
@@ -316,14 +378,14 @@ uint64 ProcessRGB_AVX2( const uint8* src )
     uint err[4] = {};
     PrepareAverages_AVX2( a, src, err );
     size_t idx = GetLeastError( err, 4 );
-    EncodeAverages( d, a, idx );
+    d = EncodeAverages( d, a, idx );
 
     uint32 terr[2][8] = {};
-    uint16 tsel[16][8];
+    uint32 tsel[8];
     auto id = g_id[idx];
     FindBestFit_AVX2( terr, tsel, a, id, src );
 
-    return FixByteOrder( EncodeSelectors( d, terr, tsel, id ) );
+    return FixByteOrder( EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1 ) );
 }
 
 #pragma GCC pop_options
