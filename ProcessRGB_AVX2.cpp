@@ -12,12 +12,22 @@
 #ifdef _MSC_VER
 #  include <intrin.h>
 #  include <Windows.h>
+#  define _bswap(x) _byteswap_ulong(x)
 #else
 #  include <x86intrin.h>
 #endif
 
-#pragma GCC push_options
-#pragma GCC target ("avx2")
+#ifdef _MSC_VER
+    unsigned long _bit_scan_forward( unsigned long mask )
+    {
+        unsigned long ret;
+        _BitScanForward( &ret, mask );
+        return ret;
+    }
+#else
+#  pragma GCC push_options
+#  pragma GCC target ("avx2")
+#endif
 
 namespace
 {
