@@ -323,7 +323,7 @@ void FindBestFit_4x2_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i a[8], const ui
 
     __m256i minIndexHi2 = _mm256_slli_epi32(minIndexHi1, 1);
 
-    __m256i sel = _mm256_or_si256(sel, _mm256_or_si256(minIndexLo1, minIndexHi2));
+    __m256i sel = _mm256_or_si256(minIndexLo1, minIndexHi2);
 
     _mm256_store_si256((__m256i*)tsel, sel);
 }
@@ -448,7 +448,7 @@ void FindBestFit_2x4_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i a[8], const ui
 
     __m256i minIndexHi2 = _mm256_slli_epi32(minIndexHi1, 1);
 
-    __m256i sel = _mm256_or_si256(sel, _mm256_or_si256(minIndexLo1, minIndexHi2));
+    __m256i sel = _mm256_or_si256(minIndexLo1, minIndexHi2);
 
     _mm256_store_si256((__m256i*)tsel, sel);
 }
