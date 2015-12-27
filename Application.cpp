@@ -128,7 +128,6 @@ int main( int argc, char** argv )
 
     if( benchmark )
     {
-        InitTiming();
         auto start = GetTime();
         auto bmp = std::make_shared<Bitmap>( argv[1], std::numeric_limits<uint>::max() );
         auto data = bmp->Data();
