@@ -87,6 +87,7 @@ Bitmap::Bitmap( const char* fn, uint lines )
         {
             png_set_gray_to_rgb(png_ptr);
         }
+        png_set_bgr(png_ptr);
 
         switch( color_type )
         {

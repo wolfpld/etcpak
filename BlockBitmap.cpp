@@ -22,7 +22,7 @@ BlockBitmap::BlockBitmap( const BitmapPtr& bmp, Channels type )
 
 void BlockBitmap::Process( const uint32* __restrict src )
 {
-    uint8* __restrict dst = m_data;
+    uint32* __restrict dst = (uint32*)m_data;
 
     int w = std::max( 4, m_size.x );
     int h = std::max( 4, m_size.y );
@@ -37,16 +37,14 @@ void BlockBitmap::Process( const uint32* __restrict src )
             {
                 for( int x=0; x<4; x++ )
                 {
-                    for( int y=0; y<4; y++ )
-                    {
-                        const uint32 c = *src;
-                        src += m_size.x;
-                        *dst++ = ( c & 0x00FF0000 ) >> 16;
-                        *dst++ = ( c & 0x0000FF00 ) >> 8;
-                        *dst++ =   c & 0x000000FF;
-                        *dst++ = 0;
-                    }
-                    src -= m_size.x * 4 - 1;
+                    *dst++ = *src;
+                    src += m_size.x;
+                    *dst++ = *src;
+                    src += m_size.x;
+                    *dst++ = *src;
+                    src += m_size.x;
+                    *dst++ = *src;
+                    src -= m_size.x * 3 - 1;
                 }
             }
             src += m_size.x * 3;
@@ -60,15 +58,18 @@ void BlockBitmap::Process( const uint32* __restrict src )
             {
                 for( int x=0; x<4; x++ )
                 {
-                    for( int y=0; y<4; y++ )
-                    {
-                        *dst++ = *src >> 24;
-                        *dst++ = *src >> 24;
-                        *dst++ = *src >> 24;
-                        *dst++ = 0;
-                        src += m_size.x;
-                    }
-                    src -= m_size.x * 4 - 1;
+                    uint a = *src >> 24;
+                    *dst++ = a | ( a << 8 ) | ( a << 16 );
+                    src += m_size.x;
+                    a = *src >> 24;
+                    *dst++ = a | ( a << 8 ) | ( a << 16 );
+                    src += m_size.x;
+                    a = *src >> 24;
+                    *dst++ = a | ( a << 8 ) | ( a << 16 );
+                    src += m_size.x;
+                    a = *src >> 24;
+                    *dst++ = a | ( a << 8 ) | ( a << 16 );
+                    src -= m_size.x * 3 - 1;
                 }
             }
             src += m_size.x * 3;
