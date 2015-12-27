@@ -172,7 +172,7 @@ png_read_chunk_header(png_structp png_ptr)
 
    /* Reset the crc and run it over the chunk name. */
    png_reset_crc(png_ptr);
-   png_calculate_crc(png_ptr, buf + 4, 4);
+   //png_calculate_crc(png_ptr, buf + 4, 4);
 
    /* Check to see if chunk name is valid. */
    png_check_chunk_name(png_ptr, png_ptr->chunk_name);
@@ -192,7 +192,7 @@ png_crc_read(png_structp png_ptr, png_bytep buf, png_size_t length)
       return;
 
    png_read_data(png_ptr, buf, length);
-   png_calculate_crc(png_ptr, buf, length);
+   //png_calculate_crc(png_ptr, buf, length);
 }
 
 /* Optionally skip data and then check the CRC.  Depending on whether we
@@ -237,6 +237,21 @@ png_crc_finish(png_structp png_ptr, png_uint_32 skip)
    return (0);
 }
 
+#if 1
+int png_crc_error(png_structp png_ptr)
+{
+    png_byte crc_bytes[4];
+
+#ifdef PNG_IO_STATE_SUPPORTED
+    png_ptr->io_state = PNG_IO_READING | PNG_IO_CHUNK_CRC;
+#endif
+
+    /* The chunk CRC must be serialized in a single I/O call. */
+    png_read_data(png_ptr, crc_bytes, 4);
+
+    return (0);
+}
+#else
 /* Compare the CRC stored in the PNG file with that calculated by libpng from
  * the data it has read thus far.
  */
@@ -276,6 +291,7 @@ png_crc_error(png_structp png_ptr)
    else
       return (0);
 }
+#endif
 
 #ifdef PNG_READ_COMPRESSED_TEXT_SUPPORTED
 static png_size_t
