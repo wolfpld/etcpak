@@ -109,6 +109,9 @@
     <ClCompile Include="..\BitmapDownsampled.cpp" />
     <ClCompile Include="..\Dither.cpp" />
     <ClCompile Include="..\CpuArch.cpp" />
+    <ClCompile Include="..\ProcessRGB_AVX2.cpp" />
+    <ClCompile Include="..\TaskDispatch.cpp" />
+    <ClCompile Include="..\System.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -186,6 +189,9 @@
     <ClInclude Include="..\BitmapDownsampled.hpp" />
     <ClInclude Include="..\Dither.hpp" />
     <ClInclude Include="..\CpuArch.hpp" />
+    <ClInclude Include="..\ProcessRGB_AVX2.hpp" />
+    <ClInclude Include="..\TaskDispatch.hpp" />
+    <ClInclude Include="..\System.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">
