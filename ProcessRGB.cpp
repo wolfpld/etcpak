@@ -100,10 +100,10 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
     __m128i d2 = _mm_loadu_si128(((__m128i*)data) + 2);
     __m128i d3 = _mm_loadu_si128(((__m128i*)data) + 3);
 
-    __m128i dm0 = _mm_and_si128(d0, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
-    __m128i dm1 = _mm_and_si128(d1, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
-    __m128i dm2 = _mm_and_si128(d2, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
-    __m128i dm3 = _mm_and_si128(d3, _mm_setr_epi8(-1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0, -1, -1, -1, 0));
+    __m128i dm0 = _mm_and_si128(d0, _mm_set1_epi32(0x00FFFFFF));
+    __m128i dm1 = _mm_and_si128(d1, _mm_set1_epi32(0x00FFFFFF));
+    __m128i dm2 = _mm_and_si128(d2, _mm_set1_epi32(0x00FFFFFF));
+    __m128i dm3 = _mm_and_si128(d3, _mm_set1_epi32(0x00FFFFFF));
 
     __m128i d0l = _mm_unpacklo_epi8(dm0, _mm_setzero_si128());
     __m128i d0h = _mm_unpackhi_epi8(dm0, _mm_setzero_si128());
@@ -113,43 +113,6 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
     __m128i d2h = _mm_unpackhi_epi8(dm2, _mm_setzero_si128());
     __m128i d3l = _mm_unpacklo_epi8(dm3, _mm_setzero_si128());
     __m128i d3h = _mm_unpackhi_epi8(dm3, _mm_setzero_si128());
-
-    __m128i sqrSum0, sqrSum1, sqrSum2, sqrSum3;
-
-    {
-        __m128i sum0l = _mm_madd_epi16(d0l, d0l);
-        __m128i sum0h = _mm_madd_epi16(d0h, d0h);
-        __m128i sum1l = _mm_madd_epi16(d1l, d1l);
-        __m128i sum1h = _mm_madd_epi16(d1h, d1h);
-        __m128i sum2l = _mm_madd_epi16(d2l, d2l);
-        __m128i sum2h = _mm_madd_epi16(d2h, d2h);
-        __m128i sum3l = _mm_madd_epi16(d3l, d3l);
-        __m128i sum3h = _mm_madd_epi16(d3h, d3h);
-
-        __m128i sum0 = _mm_add_epi32(sum0l, sum1l);
-        __m128i sum1 = _mm_add_epi32(sum0h, sum1h);
-        __m128i sum2 = _mm_add_epi32(sum2l, sum3l);
-        __m128i sum3 = _mm_add_epi32(sum2h, sum3h);
-
-        __m128i sum4 = _mm_hadd_epi32(sum0, sum1);
-        __m128i sum5 = _mm_hadd_epi32(sum2, sum3);
-
-        __m128i sum6 = _mm_hadd_epi32(sum4, sum5);
-
-        __m128i t = _mm_shuffle_epi32(sum6, _MM_SHUFFLE(2, 0, 3, 1));
-
-        __m128i sum = _mm_add_epi32(t, sum6);
-
-        sqrSum0 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(3, 3, 3, 3));
-        sqrSum1 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(0, 0, 0, 0));
-        sqrSum2 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(1, 1, 1, 1));
-        sqrSum3 = _mm_shuffle_epi32(sum, _MM_SHUFFLE(2, 2, 2, 2));
-
-        sqrSum0 = _mm_and_si128(sqrSum0, _mm_setr_epi32(0, 0, 0, -1));
-        sqrSum1 = _mm_and_si128(sqrSum1, _mm_setr_epi32(0, 0, 0, -1));
-        sqrSum2 = _mm_and_si128(sqrSum2, _mm_setr_epi32(0, 0, 0, -1));
-        sqrSum3 = _mm_and_si128(sqrSum3, _mm_setr_epi32(0, 0, 0, -1));
-    }
 
     __m128i sum0 = _mm_add_epi16(d0l, d1l);
     __m128i sum1 = _mm_add_epi16(d0h, d1h);
@@ -170,10 +133,10 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
     __m128i b2 = _mm_add_epi32(sum2l, sum2h);
     __m128i b3 = _mm_add_epi32(sum3l, sum3h);
 
-    __m128i a0 = _mm_or_si128(_mm_add_epi32(b2, b3), sqrSum0);
-    __m128i a1 = _mm_or_si128(_mm_add_epi32(b0, b1), sqrSum1);
-    __m128i a2 = _mm_or_si128(_mm_add_epi32(b1, b3), sqrSum2);
-    __m128i a3 = _mm_or_si128(_mm_add_epi32(b0, b2), sqrSum3);
+    __m128i a0 = _mm_add_epi32(b2, b3);
+    __m128i a1 = _mm_add_epi32(b0, b1);
+    __m128i a2 = _mm_add_epi32(b1, b3);
+    __m128i a3 = _mm_add_epi32(b0, b2);
 
     _mm_storeu_si128((__m128i*)&err[0], a0);
     _mm_storeu_si128((__m128i*)&err[1], a1);
@@ -191,13 +154,10 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
             int index = (j & 2) + (i >> 1);
             uint d = *data++;
             terr[index][0] += d;
-            terr[index][3] += d*d;
             d = *data++;
             terr[index][1] += d;
-            terr[index][3] += d*d;
             d = *data++;
             terr[index][2] += d;
-            terr[index][3] += d*d;
             data++;
         }
     }
@@ -214,7 +174,7 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
 
 uint CalcError( const uint block[4], const v4i& average )
 {
-    uint err = block[3];
+    uint err = 0x3FFFFFFF; // Big value to prevent negative values, but small enough to prevent overflow
     err -= block[0] * 2 * average[2];
     err -= block[1] * 2 * average[1];
     err -= block[2] * 2 * average[0];
