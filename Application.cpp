@@ -153,6 +153,9 @@ int main( int argc, char** argv )
                     block[i]->Dither();
                 }
                 bd[i]->Process( block[i]->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
+
+                block[i].reset();
+                bd[i].reset();
             } );
         }
         TaskDispatch::Sync();
