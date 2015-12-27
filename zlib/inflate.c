@@ -110,8 +110,10 @@ z_streamp strm;
     state = (struct inflate_state FAR *)strm->state;
     strm->total_in = strm->total_out = state->total = 0;
     strm->msg = Z_NULL;
+#if 0
     if (state->wrap)        /* to support ill-conceived Java test suite */
         strm->adler = state->wrap & 1;
+#endif
     state->mode = HEAD;
     state->last = 0;
     state->havedict = 0;
@@ -679,7 +681,9 @@ int flush;
             }
             state->dmax = 1U << len;
             Tracev((stderr, "inflate:   zlib header ok\n"));
+            /*
             strm->adler = state->check = adler32(0L, Z_NULL, 0);
+            */
             state->mode = hold & 0x200 ? DICTID : TYPE;
             INITBITS();
             break;
@@ -813,7 +817,9 @@ int flush;
 #endif
         case DICTID:
             NEEDBITS(32);
+            /*
             strm->adler = state->check = ZSWAP32(hold);
+            */
             INITBITS();
             state->mode = DICT;
         case DICT:
@@ -821,7 +827,9 @@ int flush;
                 RESTORE();
                 return Z_NEED_DICT;
             }
+            /*
             strm->adler = state->check = adler32(0L, Z_NULL, 0);
+            */
             state->mode = TYPE;
         case TYPE:
             if (flush == Z_BLOCK || flush == Z_TREES) goto inf_leave;
@@ -1177,10 +1185,13 @@ int flush;
                 out -= left;
                 strm->total_out += out;
                 state->total += out;
+                /*
                 if (out)
                     strm->adler = state->check =
                         UPDATE(state->check, put - out, out);
+                */
                 out = left;
+                /*
                 if ((
 #ifdef GUNZIP
                      state->flags ? hold :
@@ -1190,6 +1201,7 @@ int flush;
                     state->mode = BAD;
                     break;
                 }
+                */
                 INITBITS();
                 Tracev((stderr, "inflate:   check matches trailer\n"));
             }
@@ -1240,9 +1252,11 @@ int flush;
     strm->total_in += in;
     strm->total_out += out;
     state->total += out;
+    /*
     if (state->wrap && out)
         strm->adler = state->check =
             UPDATE(state->check, strm->next_out - out, out);
+    */
     strm->data_type = state->bits + (state->last ? 64 : 0) +
                       (state->mode == TYPE ? 128 : 0) +
                       (state->mode == LEN_ || state->mode == COPY_ ? 256 : 0);
@@ -1294,7 +1308,7 @@ const Bytef *dictionary;
 uInt dictLength;
 {
     struct inflate_state FAR *state;
-    unsigned long dictid;
+//    unsigned long dictid;
     int ret;
 
     /* check state */
@@ -1304,12 +1318,14 @@ uInt dictLength;
         return Z_STREAM_ERROR;
 
     /* check for correct dictionary identifier */
+    /*
     if (state->mode == DICT) {
         dictid = adler32(0L, Z_NULL, 0);
         dictid = adler32(dictid, dictionary, dictLength);
         if (dictid != state->check)
             return Z_DATA_ERROR;
     }
+    */
 
     /* copy dictionary to window using updatewindow(), which will amend the
        existing dictionary if appropriate */
