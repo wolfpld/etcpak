@@ -1,3 +1,4 @@
+CFLAGS += -DNO_GZIP
 CXXFLAGS := $(CFLAGS) -std=c++11
 DEFINES +=
 INCLUDES :=
