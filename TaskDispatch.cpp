@@ -47,7 +47,7 @@ TaskDispatch::~TaskDispatch()
 void TaskDispatch::Queue( const std::function<void(void)>& f )
 {
     std::unique_lock<std::mutex> lock( s_instance->m_queueLock );
-    s_instance->m_queue.emplace( f );
+    s_instance->m_queue.emplace_back( f );
     const auto size = s_instance->m_queue.size();
     lock.unlock();
     if( size > 1 )
@@ -59,7 +59,7 @@ void TaskDispatch::Queue( const std::function<void(void)>& f )
 void TaskDispatch::Queue( std::function<void(void)>&& f )
 {
     std::unique_lock<std::mutex> lock( s_instance->m_queueLock );
-    s_instance->m_queue.emplace( std::move( f ) );
+    s_instance->m_queue.emplace_back( std::move( f ) );
     const auto size = s_instance->m_queue.size();
     lock.unlock();
     if( size > 1 )
@@ -73,8 +73,8 @@ void TaskDispatch::Sync()
     std::unique_lock<std::mutex> lock( s_instance->m_queueLock );
     while( !s_instance->m_queue.empty() )
     {
-        auto f = s_instance->m_queue.front();
-        s_instance->m_queue.pop();
+        auto f = s_instance->m_queue.back();
+        s_instance->m_queue.pop_back();
         lock.unlock();
         f();
         lock.lock();
@@ -89,8 +89,8 @@ void TaskDispatch::Worker()
         std::unique_lock<std::mutex> lock( m_queueLock );
         m_cvWork.wait( lock, [this]{ return !m_queue.empty() || m_exit; } );
         if( m_exit ) return;
-        auto f = m_queue.front();
-        m_queue.pop();
+        auto f = m_queue.back();
+        m_queue.pop_back();
         m_jobs++;
         lock.unlock();
         f();
