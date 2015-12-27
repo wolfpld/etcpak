@@ -42,7 +42,7 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, uint lines )
     else
     {
         m_linesLeft = h / 4;
-        m_load = std::async( [this, &bmp, w, h]() mutable
+        m_load = std::async( std::launch::async, [this, &bmp, w, h]() mutable
         {
             auto ptr = m_data;
             auto src1 = bmp.Data();
