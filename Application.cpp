@@ -13,6 +13,8 @@
 #include "Debug.hpp"
 #include "Dither.hpp"
 #include "Error.hpp"
+#include "System.hpp"
+#include "TaskDispatch.hpp"
 #include "Timing.hpp"
 
 struct DebugCallback_t : public DebugLog::Callback
@@ -126,37 +128,37 @@ int main( int argc, char** argv )
         InitDither();
     }
 
+    TaskDispatch taskDispatch( System::CPUCores() );
+
     if( benchmark )
     {
-        InitTiming();
         auto start = GetTime();
         auto bmp = std::make_shared<Bitmap>( argv[1], std::numeric_limits<uint>::max() );
         auto data = bmp->Data();
         auto end = GetTime();
         printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
-        start = GetTime();
         enum { NumTasks = 50 };
-        auto tasks = new std::future<void>[NumTasks];
+        auto block = new BlockBitmapPtr[NumTasks];
+        auto bd = new BlockDataPtr[NumTasks];
+        start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
-            tasks[i] = std::async( [&bmp, &dither]()
+            TaskDispatch::Queue( [&bmp, &dither, &bd, &block, i]()
             {
-                auto block = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
-                auto bd = std::make_shared<BlockData>( bmp->Size(), false );
+                block[i] = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
+                bd[i] = std::make_shared<BlockData>( bmp->Size(), false );
                 if( dither )
                 {
-                    block->Dither();
+                    block[i]->Dither();
                 }
-                bd->Process( block->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
+                bd[i]->Process( block[i]->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
             } );
         }
-        for( uint i=0; i<NumTasks; i++ )
-        {
-            tasks[i].wait();
-        }
-        delete[] tasks;
+        TaskDispatch::Sync();
         end = GetTime();
+        delete[] bd;
+        delete[] block;
         printf( "Mean compression time for %i runs: %0.3f ms\n", NumTasks, ( end - start ) / ( NumTasks * 1000.f ) );
     }
     else if( viewMode )
@@ -182,7 +184,6 @@ int main( int argc, char** argv )
             bda = std::make_shared<BlockData>( "outa.pvr", dp.Size(), mipmap );
         }
 
-        auto tasks = new std::future<void>[num];
         auto blocks = new BlockBitmapPtr[num];
         auto blocksa = new BlockBitmapPtr[num];
 
@@ -190,7 +191,7 @@ int main( int argc, char** argv )
         {
             auto part = dp.NextPart();
 
-            tasks[i] = std::async( [part, i, &bd, &blocks, &bda, &blocksa, quality, &dither]()
+            TaskDispatch::Queue( [part, i, &bd, &blocks, &bda, &blocksa, quality, &dither]()
             {
                 blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
                 if( dither )
@@ -206,11 +207,7 @@ int main( int argc, char** argv )
             } );
         }
 
-        for( int i=0; i<num; i++ )
-        {
-            tasks[i].wait();
-        }
-        delete[] tasks;
+        TaskDispatch::Sync();
 
         if( stats )
         {

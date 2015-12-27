@@ -3,7 +3,6 @@
 
 #include "Types.hpp"
 
-void InitTiming();
 uint64 GetTime();
 
 #endif
