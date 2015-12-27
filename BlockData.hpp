@@ -1,6 +1,7 @@
 #ifndef __BLOCKDATA_HPP__
 #define __BLOCKDATA_HPP__
 
+#include <condition_variable>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -31,9 +32,9 @@ private:
     uint8* m_data;
     v2i m_size;
     BlockBitmapPtr m_bmp;
-    bool m_done;
-    std::vector<std::future<void>> m_work;
     std::mutex m_lock;
+    bool m_done;
+    std::condition_variable m_cv;
     size_t m_dataOffset;
     FILE* m_file;
     size_t m_maplen;
