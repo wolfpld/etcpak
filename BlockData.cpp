@@ -14,8 +14,7 @@
 #include "TaskDispatch.hpp"
 
 BlockData::BlockData( const char* fn )
-    : m_done( true )
-    , m_file( fopen( fn, "rb" ) )
+    : m_file( fopen( fn, "rb" ) )
 {
     assert( m_file );
     fseek( m_file, 0, SEEK_END );
@@ -88,7 +87,6 @@ static int AdjustSizeForMipmaps( const v2i& size, int levels )
 
 BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
     : m_size( size )
-    , m_done( false )
     , m_dataOffset( 52 )
     , m_maplen( 52 + m_size.x*m_size.y/2 )
 {
@@ -111,7 +109,6 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
 
 BlockData::BlockData( const v2i& size, bool mipmap )
     : m_size( size )
-    , m_done( false )
     , m_dataOffset( 52 )
     , m_file( nullptr )
     , m_maplen( 52 + m_size.x*m_size.y/2 )
@@ -127,7 +124,6 @@ BlockData::BlockData( const v2i& size, bool mipmap )
 
 BlockData::~BlockData()
 {
-    Finish();
     if( m_file )
     {
         munmap( m_data, m_maplen );
@@ -145,13 +141,7 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
 
     if( type == Channels::Alpha )
     {
-        TaskDispatch::Queue( [src, dst, blocks, this]() mutable
-        {
-            do { *dst++ = ProcessAlpha( src ); src += 4*4; } while( --blocks );
-            std::lock_guard<std::mutex> lock( m_lock );
-            m_done = true;
-            m_cv.notify_all();
-        } );
+        do { *dst++ = ProcessAlpha( src ); src += 4*4; } while( --blocks );
     }
     else
     {
@@ -161,24 +151,12 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
 #ifdef __SSE4_1__
             if( can_use_intel_core_4th_gen_features() )
             {
-                TaskDispatch::Queue( [src, dst, blocks, this]() mutable
-                {
-                    do { *dst++ = ProcessRGB_AVX2( src ); src += 4*4*4; } while( --blocks );
-                    std::lock_guard<std::mutex> lock( m_lock );
-                    m_done = true;
-                    m_cv.notify_all();
-                } );
+                do { *dst++ = ProcessRGB_AVX2( src ); src += 4*4*4; } while( --blocks );
             }
             else
 #endif
             {
-                TaskDispatch::Queue( [src, dst, blocks, this]() mutable
-                {
-                    do { *dst++ = ProcessRGB( src ); src += 4*4*4; } while( --blocks );
-                    std::lock_guard<std::mutex> lock( m_lock );
-                    m_done = true;
-                    m_cv.notify_all();
-                } );
+                do { *dst++ = ProcessRGB( src ); src += 4*4*4; } while( --blocks );
             }
             break;
         case 1:
@@ -189,13 +167,6 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
             break;
         }
     }
-}
-
-void BlockData::Finish()
-{
-    std::unique_lock<std::mutex> lock( m_lock );
-    m_cv.wait( lock, [this]{ return m_done; } );
-    m_bmp.reset();
 }
 
 struct BlockColor
@@ -255,8 +226,6 @@ static void DecodeBlockColor( uint64 d, BlockColor& c )
 
 BitmapPtr BlockData::Decode()
 {
-    Finish();
-
     auto ret = std::make_shared<Bitmap>( m_size );
 
     uint32* l[4];

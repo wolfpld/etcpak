@@ -27,14 +27,8 @@ public:
     void Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type );
 
 private:
-    void Finish();
-
     uint8* m_data;
     v2i m_size;
-    BlockBitmapPtr m_bmp;
-    std::mutex m_lock;
-    bool m_done;
-    std::condition_variable m_cv;
     size_t m_dataOffset;
     FILE* m_file;
     size_t m_maplen;
