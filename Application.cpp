@@ -139,26 +139,22 @@ int main( int argc, char** argv )
         printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
         enum { NumTasks = 50 };
-        auto block = new BlockBitmapPtr[NumTasks];
-        auto bd = new BlockDataPtr[NumTasks];
         start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
-            TaskDispatch::Queue( [&bmp, &dither, &bd, &block, i]()
+            TaskDispatch::Queue( [&bmp, &dither, i]()
             {
-                block[i] = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
-                bd[i] = std::make_shared<BlockData>( bmp->Size(), false );
+                auto block = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
+                auto bd = std::make_shared<BlockData>( bmp->Size(), false );
                 if( dither )
                 {
-                    block[i]->Dither();
+                    block->Dither();
                 }
-                bd[i]->Process( block[i]->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
+                bd->Process( block->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
             } );
         }
         TaskDispatch::Sync();
         end = GetTime();
-        delete[] bd;
-        delete[] block;
         printf( "Mean compression time for %i runs: %0.3f ms\n", NumTasks, ( end - start ) / ( NumTasks * 1000.f ) );
     }
     else if( viewMode )
