@@ -187,24 +187,44 @@ int main( int argc, char** argv )
         auto blocks = new BlockBitmapPtr[num];
         auto blocksa = new BlockBitmapPtr[num];
 
-        for( int i=0; i<num; i++ )
+        if( bda )
         {
-            auto part = dp.NextPart();
-
-            TaskDispatch::Queue( [part, i, &bd, &blocks, &bda, &blocksa, quality, &dither]()
+            for( int i=0; i<num; i++ )
             {
-                blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
-                if( dither )
+                auto part = dp.NextPart();
+
+                TaskDispatch::Queue( [part, i, &bd, &blocks, quality, &dither]()
                 {
-                    blocks[i]->Dither();
-                }
-                bd->Process( blocks[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
-                if( bda )
+                    blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
+                    if( dither )
+                    {
+                        blocks[i]->Dither();
+                    }
+                    bd->Process( blocks[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
+                } );
+                TaskDispatch::Queue( [part, i, &bda, &blocksa, quality]()
                 {
                     blocksa[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::Alpha );
                     bda->Process( blocksa[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
-                }
-            } );
+                } );
+            }
+        }
+        else
+        {
+            for( int i=0; i<num; i++ )
+            {
+                auto part = dp.NextPart();
+
+                TaskDispatch::Queue( [part, i, &bd, &blocks, quality, &dither]()
+                {
+                    blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
+                    if( dither )
+                    {
+                        blocks[i]->Dither();
+                    }
+                    bd->Process( blocks[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
+                } );
+            }
         }
 
         TaskDispatch::Sync();
