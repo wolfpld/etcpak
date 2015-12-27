@@ -18,7 +18,7 @@
 #endif
 
 #ifdef _MSC_VER
-    unsigned long _bit_scan_forward( unsigned long mask )
+    static inline unsigned long _bit_scan_forward( unsigned long mask )
     {
         unsigned long ret;
         _BitScanForward( &ret, mask );
