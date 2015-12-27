@@ -429,7 +429,7 @@ void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32*
 }
 
 #ifdef __SSE4_1__
-// Non-reference implementation, but faster
+// Non-reference implementation, but faster. Produces same results as the AVX2 version
 void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32* id, const uint8* data )
 {
     for( size_t i=0; i<16; i++ )
@@ -460,8 +460,10 @@ void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32*
         __m128i index = _mm_and_si128(_mm_cmplt_epi16(error1, error0), _mm_set1_epi16(1));
         __m128i minError = _mm_min_epi16(error0, error1);
 
-        // Exploiting symmetry of the selector table
-        __m128i minIndex = _mm_or_si128(index, _mm_and_si128(_mm_set1_epi16(2), _mm_cmpgt_epi16(pixel, _mm_setzero_si128())));
+        // Exploiting symmetry of the selector table and use the sign bit
+        // This produces slightly different results, but is needed to produce same results as AVX2 implementation
+        __m128i indexBit = _mm_andnot_si128(_mm_srli_epi16(pixel, 15), _mm_set1_epi8(-1));
+        __m128i minIndex = _mm_or_si128(index, _mm_add_epi16(indexBit, indexBit));
 
         // Squaring the minimum error to produce correct values when adding
         __m128i squareErrorLo = _mm_mullo_epi16(minError, minError);
