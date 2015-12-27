@@ -162,12 +162,16 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
         }
     }
 
-    for( int i=0; i<4; i++ )
+    for( int i=0; i<3; i++ )
     {
         err[0][i] = terr[2][i] + terr[3][i];
         err[1][i] = terr[0][i] + terr[1][i];
         err[2][i] = terr[1][i] + terr[3][i];
         err[3][i] = terr[0][i] + terr[2][i];
+    }
+    for( int i=0; i<4; i++ )
+    {
+        err[i][3] = 0;
     }
 #endif
 }
