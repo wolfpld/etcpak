@@ -67,12 +67,12 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\zlib</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ASMINF;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointers>true</OmitFramePointers>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
+      <BufferSecurityCheck Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -84,7 +84,6 @@
     <ClCompile Include="..\Application.cpp" />
     <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\BitmapDownsampled.cpp" />
-    <ClCompile Include="..\BlockBitmap.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\ColorSpace.cpp" />
     <ClCompile Include="..\CpuArch.cpp" />
@@ -132,7 +131,6 @@
   <ItemGroup>
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\BitmapDownsampled.hpp" />
-    <ClInclude Include="..\BlockBitmap.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\CpuArch.hpp" />

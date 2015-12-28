@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "Bitmap.hpp"
-#include "BlockBitmap.hpp"
 #include "BlockData.hpp"
 #include "CpuArch.hpp"
 #include "DataProvider.hpp"
@@ -41,7 +40,6 @@ void Usage()
     fprintf( stderr, "  SIMD not available.\n" );
 #endif
     fprintf( stderr, "  Options:\n" );
-    //fprintf( stderr, "  -q 0        set quality to given value\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
     fprintf( stderr, "                note: pvr files are written regardless of this option\n" );
@@ -57,7 +55,6 @@ int main( int argc, char** argv )
 {
     DebugLog::AddCallback( &DebugCallback );
 
-    int quality = 0;
     bool viewMode = false;
     int save = 1;
     bool alpha = true;
@@ -76,12 +73,7 @@ int main( int argc, char** argv )
 #define CSTR(x) strcmp( argv[i], x ) == 0
     for( int i=2; i<argc; i++ )
     {
-        if( CSTR( "-q" ) )
-        {
-            i++;
-            quality = atoi( argv[i] );
-        }
-        else if( CSTR( "-v" ) )
+        if( CSTR( "-v" ) )
         {
             viewMode = true;
         }
@@ -138,19 +130,14 @@ int main( int argc, char** argv )
         auto end = GetTime();
         printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
-        enum { NumTasks = 50 };
+        const int NumTasks = System::CPUCores() * 10;
         start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
             TaskDispatch::Queue( [&bmp, &dither, i]()
             {
-                auto block = std::make_shared<BlockBitmap>( bmp, Channels::RGB );
                 auto bd = std::make_shared<BlockData>( bmp->Size(), false );
-                if( dither )
-                {
-                    block->Dither();
-                }
-                bd->Process( block->Data(), bmp->Size().x * bmp->Size().y / 16, 0, 0, Channels::RGB );
+                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
             } );
         }
         TaskDispatch::Sync();
@@ -180,28 +167,19 @@ int main( int argc, char** argv )
             bda = std::make_shared<BlockData>( "outa.pvr", dp.Size(), mipmap );
         }
 
-        auto blocks = new BlockBitmapPtr[num];
-        auto blocksa = new BlockBitmapPtr[num];
-
         if( bda )
         {
             for( int i=0; i<num; i++ )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &blocks, quality, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
-                    if( dither )
-                    {
-                        blocks[i]->Dither();
-                    }
-                    bd->Process( blocks[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
-                TaskDispatch::Queue( [part, i, &bda, &blocksa, quality]()
+                TaskDispatch::Queue( [part, i, &bda]()
                 {
-                    blocksa[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::Alpha );
-                    bda->Process( blocksa[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
+                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
                 } );
             }
         }
@@ -211,14 +189,9 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &blocks, quality, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    blocks[i] = std::make_shared<BlockBitmap>( part.src, v2i( part.width, part.lines * 4 ), Channels::RGB );
-                    if( dither )
-                    {
-                        blocks[i]->Dither();
-                    }
-                    bd->Process( blocks[i]->Data(), part.width / 4 * part.lines, part.offset, quality, Channels::RGB );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
             }
         }
@@ -255,9 +228,6 @@ int main( int argc, char** argv )
 
         bd.reset();
         bda.reset();
-
-        delete[] blocks;
-        delete[] blocksa;
     }
 
     return 0;

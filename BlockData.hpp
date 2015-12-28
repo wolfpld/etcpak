@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <vector>
 
-#include "BlockBitmap.hpp"
 #include "Bitmap.hpp"
 #include "Types.hpp"
 #include "Vector.hpp"
@@ -24,7 +23,7 @@ public:
     BitmapPtr Decode();
     void Dissect();
 
-    void Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type );
+    void Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither );
 
 private:
     uint8* m_data;
