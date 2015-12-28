@@ -93,7 +93,6 @@
     <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\Application.cpp" />
-    <ClCompile Include="..\BlockBitmap.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\ColorSpace.cpp" />
     <ClCompile Include="..\Error.cpp" />
@@ -173,7 +172,6 @@
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\Debug.hpp" />
-    <ClInclude Include="..\BlockBitmap.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\Error.hpp" />

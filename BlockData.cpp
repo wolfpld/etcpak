@@ -135,13 +135,77 @@ BlockData::~BlockData()
     }
 }
 
-void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint quality, Channels type )
+void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, uint quality, Channels type )
 {
+    uint32 buf[4*4];
+    int w = 0;
+
     auto dst = ((uint64*)( m_data + m_dataOffset )) + offset;
 
     if( type == Channels::Alpha )
     {
-        do { *dst++ = ProcessAlpha( src ); src += 4*4; } while( --blocks );
+#ifdef __SSE4_1__
+        if( can_use_intel_core_4th_gen_features() )
+        {
+            do
+            {
+                auto ptr = buf;
+                for( int x=0; x<4; x++ )
+                {
+                    uint a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src -= width * 3 - 1;
+                }
+                if( ++w == width/4 )
+                {
+                    src += width * 3;
+                    w = 0;
+                }
+
+                *dst++ = ProcessRGB_AVX2( (uint8*)buf );
+            }
+            while( --blocks );
+        }
+        else
+#endif
+        {
+            do
+            {
+                auto ptr = buf;
+                for( int x=0; x<4; x++ )
+                {
+                    uint a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src -= width * 3 - 1;
+                }
+                if( ++w == width/4 )
+                {
+                    src += width * 3;
+                    w = 0;
+                }
+
+                *dst++ = ProcessRGB( (uint8*)buf );
+            }
+            while( --blocks );
+        }
     }
     else
     {
@@ -151,17 +215,61 @@ void BlockData::Process( const uint8* src, uint32 blocks, size_t offset, uint qu
 #ifdef __SSE4_1__
             if( can_use_intel_core_4th_gen_features() )
             {
-                do { *dst++ = ProcessRGB_AVX2( src ); src += 4*4*4; } while( --blocks );
+                do
+                {
+                    auto ptr = buf;
+                    for( int x=0; x<4; x++ )
+                    {
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src -= width * 3 - 1;
+                    }
+                    if( ++w == width/4 )
+                    {
+                        src += width * 3;
+                        w = 0;
+                    }
+
+                    *dst++ = ProcessRGB_AVX2( (uint8*)buf );
+                }
+                while( --blocks );
             }
             else
 #endif
             {
-                do { *dst++ = ProcessRGB( src ); src += 4*4*4; } while( --blocks );
+                do
+                {
+                    auto ptr = buf;
+                    for( int x=0; x<4; x++ )
+                    {
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src -= width * 3 - 1;
+                    }
+                    if( ++w == width/4 )
+                    {
+                        src += width * 3;
+                        w = 0;
+                    }
+
+                    *dst++ = ProcessRGB( (uint8*)buf );
+                }
+                while( --blocks );
             }
             break;
         case 1:
             //m_work.push_back( std::async( [src, dst, blocks, this]{ ProcessBlocksLab( src, dst, blocks ); } ) );
-            break;
+            //break;
         default:
             assert( false );
             break;
