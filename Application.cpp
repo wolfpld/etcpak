@@ -40,7 +40,6 @@ void Usage()
     fprintf( stderr, "  SIMD not available.\n" );
 #endif
     fprintf( stderr, "  Options:\n" );
-    //fprintf( stderr, "  -q 0        set quality to given value\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
     fprintf( stderr, "                note: pvr files are written regardless of this option\n" );
@@ -56,7 +55,6 @@ int main( int argc, char** argv )
 {
     DebugLog::AddCallback( &DebugCallback );
 
-    int quality = 0;
     bool viewMode = false;
     int save = 1;
     bool alpha = true;
@@ -75,12 +73,7 @@ int main( int argc, char** argv )
 #define CSTR(x) strcmp( argv[i], x ) == 0
     for( int i=2; i<argc; i++ )
     {
-        if( CSTR( "-q" ) )
-        {
-            i++;
-            quality = atoi( argv[i] );
-        }
-        else if( CSTR( "-v" ) )
+        if( CSTR( "-v" ) )
         {
             viewMode = true;
         }
@@ -144,7 +137,7 @@ int main( int argc, char** argv )
             TaskDispatch::Queue( [&bmp, &dither, i]()
             {
                 auto bd = std::make_shared<BlockData>( bmp->Size(), false );
-                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, 0, Channels::RGB );
+                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
             } );
         }
         TaskDispatch::Sync();
@@ -180,13 +173,13 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, quality, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, quality, Channels::RGB );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
-                TaskDispatch::Queue( [part, i, &bda, quality]()
+                TaskDispatch::Queue( [part, i, &bda]()
                 {
-                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, quality, Channels::Alpha );
+                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
                 } );
             }
         }
@@ -196,9 +189,9 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, quality, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, quality, Channels::RGB );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
             }
         }
