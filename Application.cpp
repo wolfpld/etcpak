@@ -137,7 +137,7 @@ int main( int argc, char** argv )
         auto end = GetTime();
         printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
-        enum { NumTasks = 50 };
+        const int NumTasks = System::CPUCores() * 10;
         start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
