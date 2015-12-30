@@ -56,7 +56,7 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
 
     *dst++ = 0x03525650;  // version
     *dst++ = 0;           // flags
-    *dst++ = 6;           // pixelformat[0]
+    *dst++ = 6;           // pixelformat[0], value 22 is needed for etc2
     *dst++ = 0;           // pixelformat[1]
     *dst++ = 0;           // colourspace
     *dst++ = 0;           // channel type
@@ -327,13 +327,23 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
     }
 }
 
+namespace
+{
 struct BlockColor
 {
     uint32 r1, g1, b1;
     uint32 r2, g2, b2;
 };
 
-static void DecodeBlockColor( uint64 d, BlockColor& c )
+enum class Etc2Mode
+{
+    none,
+    t,
+    h,
+    planar
+};
+
+Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
 {
     if( d & 0x2 )
     {
@@ -360,6 +370,25 @@ static void DecodeBlockColor( uint64 d, BlockColor& c )
             db |= 0xFFFFFFF8;
         }
 
+        int32 r = static_cast<int32_t>(c.r1) + dr;
+        int32 g = static_cast<int32_t>(c.g1) + dg;
+        int32 b = static_cast<int32_t>(c.b1) + db;
+
+        if ((r < 0) || (r > 31))
+        {
+            return Etc2Mode::t;
+        }
+
+        if ((g < 0) || (g > 31))
+        {
+            return Etc2Mode::h;
+        }
+
+        if ((b < 0) || (b > 31))
+        {
+            return Etc2Mode::planar;
+        }
+
         c.r2 = c.r1 + dr;
         c.g2 = c.g1 + dg;
         c.b2 = c.b1 + db;
@@ -380,6 +409,54 @@ static void DecodeBlockColor( uint64 d, BlockColor& c )
         c.b1 = ( ( d & 0x0000F000 ) >> 8  ) | ( ( d & 0x0000F000 ) >> 12 );
         c.b2 = ( ( d & 0x00000F00 ) >> 4  ) | ( ( d & 0x00000F00 ) >> 8  );
     }
+    return Etc2Mode::none;
+}
+
+inline int32 expand6(uint32 value)
+{
+    return (value << 2) | (value >> 4);
+}
+
+inline int32 expand7(uint32 value)
+{
+    return (value << 1) | (value >> 6);
+}
+
+void DecodePlanar(uint64 block, uint32* l[4])
+{
+    const auto bv = expand6((block >> ( 0 + 32)) & 0x3F);
+    const auto gv = expand7((block >> ( 6 + 32)) & 0x7F);
+    const auto rv = expand6((block >> (13 + 32)) & 0x3F);
+
+    const auto bh = expand6((block >> (19 + 32)) & 0x3F);
+    const auto gh = expand7((block >> (25 + 32)) & 0x7F);
+
+    const auto rh0 = (block >> (32 - 32)) & 0x01;
+    const auto rh1 = ((block >> (34 - 32)) & 0x1F) << 1;
+    const auto rh = expand6(rh0 | rh1);
+
+    const auto bo0 = (block >> (39 - 32)) & 0x07;
+    const auto bo1 = ((block >> (43 - 32)) & 0x3) << 3;
+    const auto bo2 = ((block >> (48 - 32)) & 0x1) << 5;
+    const auto bo = expand6(bo0 | bo1 | bo2);
+    const auto go0 = (block >> (49 - 32)) & 0x3F;
+    const auto go1 = ((block >> (56 - 32)) & 0x01) << 6;
+    const auto go = expand7(go0 | go1);
+    const auto ro = expand6((block >> (57 - 32)) & 0x3F);
+
+    for (auto j = 0; j < 4; j++)
+    {
+        for (auto i = 0; i < 4; i++)
+        {
+            uint32 r = clampu8((i * (rh - ro) + j * (rv - ro) + 4 * ro + 2) >> 2);
+            uint32 g = clampu8((i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2);
+            uint32 b = clampu8((i * (bh - bo) + j * (bv - bo) + 4 * bo + 2) >> 2);
+
+            *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+        }
+    }
+}
+
 }
 
 BitmapPtr BlockData::Decode()
@@ -406,7 +483,13 @@ BitmapPtr BlockData::Decode()
                 ( ( d & 0x0000FF000000FF00 ) << 8 );
 
             BlockColor c;
-            DecodeBlockColor( d, c );
+            const auto mode = DecodeBlockColor( d, c );
+
+            if (mode == Etc2Mode::planar)
+            {
+                DecodePlanar(d, l);
+                continue;
+            }
 
             uint tcw[2];
             tcw[0] = ( d & 0xE0 ) >> 5;

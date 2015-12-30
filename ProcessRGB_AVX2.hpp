@@ -6,6 +6,7 @@
 #include "Types.hpp"
 
 uint64 ProcessRGB_AVX2( const uint8* src );
+uint64 ProcessRGB_ETC2_AVX2( const uint8* src );
 
 #endif
 
