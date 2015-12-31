@@ -528,7 +528,7 @@ const uint8 flags[64] =
     0x03, 0x1D, 0x1D, 0x1D,
 };
 
-uint64 Planar_AVX2(const uint8* src)
+std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
@@ -575,25 +575,6 @@ uint64 Planar_AVX2(const uint8* src)
     __m256i difR0 = _mm256_sub_epi16(r16, sr);
     __m256i difG0 = _mm256_sub_epi16(g16, sg);
     __m256i difB0 = _mm256_sub_epi16(b16, sb);
-
-    // Calculate variance
-    __m256i difRzz = _mm256_madd_epi16(difR0, difR0);
-    __m256i difGzz = _mm256_madd_epi16(difG0, difG0);
-    __m256i difBzz = _mm256_madd_epi16(difB0, difB0);
-
-    __m256i sum0 = _mm256_add_epi32(difRzz, difGzz);
-    __m256i sum1 = _mm256_add_epi32(sum0, difBzz);
-    __m128i sqrSum0 = _mm_add_epi32(_mm256_castsi256_si128(sum1), _mm256_extracti128_si256(sum1, 1));
-    __m128i sqrSum1 = _mm_hadd_epi32(sqrSum0, _mm_setzero_si128());
-    __m128i sqrSum2 = _mm_hadd_epi32(sqrSum1, _mm_setzero_si128());
-
-    // Exit if variance is bigger than given value. Value is big, since all values are scaled by 16 (because of the way the average value is calculated)
-    // The variance is not the best exit condition, since all non-planar planes are highly penalized. The biggest advantage of the variance is that
-    // we can calculate it very early and all blocks with low variance are good fits for the planar mode.
-    if (_mm_cvtsi128_si32(sqrSum2) > 0xC0000)
-    {
-        return 0;
-    }
 
     __m256i difRyz = _mm256_madd_epi16(difR0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
     __m256i difGyz = _mm256_madd_epi16(difG0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
@@ -655,6 +636,101 @@ uint64 Planar_AVX2(const uint8* src)
     uint64 rgbho = _mm_extract_epi64(cohv0i2, 0);
     uint32 rgbv0 = _mm_extract_epi32(cohv0i2, 2);
 
+	// Error calculation
+	auto ro0 = (rgbho >> 32) & 0x3F;
+	auto go0 = (rgbho >> 40) & 0x7F;
+	auto bo0 = (rgbho >> 48) & 0x3F;
+	auto ro1 = (ro0 >> 4) | (ro0 << 2);
+	auto go1 = (go0 >> 6) | (go0 << 1);
+	auto bo1 = (bo0 >> 4) | (bo0 << 2);
+	auto ro2 = (ro1 << 2) + 2;
+	auto go2 = (go1 << 2) + 2;
+	auto bo2 = (bo1 << 2) + 2;
+
+    __m256i ro3 = _mm256_set1_epi16(ro2);
+    __m256i go3 = _mm256_set1_epi16(go2);
+    __m256i bo3 = _mm256_set1_epi16(bo2);
+
+	auto rh0 = (rgbho >>  0) & 0x3F;
+	auto gh0 = (rgbho >>  8) & 0x7F;
+	auto bh0 = (rgbho >> 16) & 0x3F;
+	auto rh1 = (rh0 >> 4) | (rh0 << 2);
+	auto gh1 = (gh0 >> 6) | (gh0 << 1);
+	auto bh1 = (bh0 >> 4) | (bh0 << 2);
+
+	auto rh2 = rh1 - ro1;
+	auto gh2 = gh1 - go1;
+	auto bh2 = bh1 - bo1;
+
+    __m256i rh3 = _mm256_set1_epi16(rh2);
+    __m256i gh3 = _mm256_set1_epi16(gh2);
+    __m256i bh3 = _mm256_set1_epi16(bh2);
+
+	auto rv0 = (rgbv0 >>  0) & 0x3F;
+	auto gv0 = (rgbv0 >>  8) & 0x7F;
+	auto bv0 = (rgbv0 >> 16) & 0x3F;
+	auto rv1 = (rv0 >> 4) | (rv0 << 2);
+	auto gv1 = (gv0 >> 6) | (gv0 << 1);
+	auto bv1 = (bv0 >> 4) | (bv0 << 2);
+
+	auto rv2 = rv1 - ro1;
+	auto gv2 = gv1 - go1;
+	auto bv2 = bv1 - bo1;
+
+    __m256i rv3 = _mm256_set1_epi16(rv2);
+    __m256i gv3 = _mm256_set1_epi16(gv2);
+    __m256i bv3 = _mm256_set1_epi16(bv2);
+
+    __m256i x = _mm256_set_epi16(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
+    __m256i y = _mm256_set_epi16(3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0);
+
+    __m256i rh4 = _mm256_mullo_epi16(rh3, x);
+    __m256i gh4 = _mm256_mullo_epi16(gh3, x);
+    __m256i bh4 = _mm256_mullo_epi16(bh3, x);
+
+    __m256i rv4 = _mm256_mullo_epi16(rv3, y);
+    __m256i gv4 = _mm256_mullo_epi16(gv3, y);
+    __m256i bv4 = _mm256_mullo_epi16(bv3, y);
+
+    __m256i rxy = _mm256_add_epi16(rh4, rv4);
+    __m256i gxy = _mm256_add_epi16(gh4, gv4);
+    __m256i bxy = _mm256_add_epi16(bh4, bv4);
+
+    __m256i rp0 = _mm256_add_epi16(rxy, ro3);
+    __m256i gp0 = _mm256_add_epi16(gxy, go3);
+    __m256i bp0 = _mm256_add_epi16(bxy, bo3);
+
+    __m256i rp1 = _mm256_srli_epi16(rp0, 2);
+    __m256i gp1 = _mm256_srli_epi16(gp0, 2);
+    __m256i bp1 = _mm256_srli_epi16(bp0, 2);
+
+    __m256i rp2 = _mm256_max_epi16(_mm256_min_epi16(rp1, _mm256_set1_epi(255)), _mm256_setzero_si256());
+    __m256i gp2 = _mm256_max_epi16(_mm256_min_epi16(gp1, _mm256_set1_epi(255)), _mm256_setzero_si256());
+    __m256i bp2 = _mm256_max_epi16(_mm256_min_epi16(bp1, _mm256_set1_epi(255)), _mm256_setzero_si256());
+
+    __m256i rdif = _mm256_sub_epi16(rp2, r08);
+    __m256i gdif = _mm256_sub_epi16(gp2, g08);
+    __m256i bdif = _mm256_sub_epi16(bp2, b08);
+
+    __m256i rsqr = _mm256_madd_epi16(rdif, rdif);
+    __m256i gsqr = _mm256_madd_epi16(gdif, gdif);
+    __m256i bsqr = _mm256_madd_epi16(bdif, bdif);
+
+    __m128i rsum = _mm_add_epi32(_mm256_castsi256_si128(rsqr), _mm256_extracti128_si256(rsqr, 1));
+    __m128i gsum = _mm_add_epi32(_mm256_castsi256_si128(gsqr), _mm256_extracti128_si256(gsqr, 1));
+    __m128i bsum = _mm_add_epi32(_mm256_castsi256_si128(bsqr), _mm256_extracti128_si256(bsqr, 1));
+
+    __m128i e0 = _mm_hadd_epi32(rsum, gsum);
+    __m128i e1 = _mm_hadd_epi32(bsum, _mm_setzero_si128());
+    __m128i rgb = _mm_hadd_epi32(e0, e1);
+
+	uint32 er = _mm_extract_epi32(rgb, 0);
+	uint32 eg = _mm_extract_epi32(rgb, 1);
+	uint32 eb = _mm_extract_epi32(rgb, 2);
+
+	uint32 error = er * 38 + eg * 76 + eb * 14;
+	/**/
+
     uint32 rgbv = _pext_u32(rgbv0, 0x3F7F3F);
     uint64 rgbho0 = _pext_u64(rgbho, 0x3F7F3F003F7F3F);
 
@@ -666,7 +742,66 @@ uint64 Planar_AVX2(const uint8* src)
     uint64 result = static_cast<uint32>(_bswap(lo));
     result |= static_cast<uint64>(static_cast<uint32>(_bswap(hi))) << 32;
 
-    return result;
+    return std::make_pair(result, error);
+}
+
+uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], const uint32 tsel[8], const bool rotate, const uint64 value, const uint32 error) noexcept
+{
+    size_t tidx[2];
+
+    // Get index of minimum error (terr[0] and terr[1])
+    __m256i err0 = _mm256_load_si256((const __m256i*)terr[0]);
+    __m256i err1 = _mm256_load_si256((const __m256i*)terr[1]);
+
+    __m256i errLo = _mm256_permute2x128_si256(err0, err1, (0) | (2 << 4));
+    __m256i errHi = _mm256_permute2x128_si256(err0, err1, (1) | (3 << 4));
+
+    __m256i errMin0 = _mm256_min_epu32(errLo, errHi);
+
+    __m256i errMin1 = _mm256_shuffle_epi32(errMin0, _MM_SHUFFLE(2, 3, 0, 1));
+    __m256i errMin2 = _mm256_min_epu32(errMin0, errMin1);
+
+    __m256i errMin3 = _mm256_shuffle_epi32(errMin2, _MM_SHUFFLE(1, 0, 3, 2));
+    __m256i errMin4 = _mm256_min_epu32(errMin3, errMin2);
+
+    __m256i errMin5 = _mm256_permute2x128_si256(errMin4, errMin4, (0) | (0 << 4));
+    __m256i errMin6 = _mm256_permute2x128_si256(errMin4, errMin4, (1) | (1 << 4));
+
+    __m256i errMask0 = _mm256_cmpeq_epi32(errMin5, err0);
+    __m256i errMask1 = _mm256_cmpeq_epi32(errMin6, err1);
+
+    uint32 mask0 = _mm256_movemask_epi8(errMask0);
+    uint32 mask1 = _mm256_movemask_epi8(errMask1);
+
+    tidx[0] = _bit_scan_forward(mask0) >> 2;
+    tidx[1] = _bit_scan_forward(mask1) >> 2;
+
+	if ((terr[0][tidx[0]] + terr[1][tidx[1]]) >= error)
+	{
+		return value;
+	}
+
+    d |= tidx[0] << 26;
+    d |= tidx[1] << 29;
+
+    uint t0 = tsel[tidx[0]];
+    uint t1 = tsel[tidx[1]];
+
+    if (!rotate)
+    {
+        t0 &= 0xFF00FF00;
+        t1 &= 0x00FF00FF;
+    }
+    else
+    {
+        t0 &= 0xCCCCCCCC;
+        t1 &= 0x33333333;
+    }
+
+    // Flip selectors from sign bit
+    uint t2 = (t0 | t1) ^ 0xFFFF0000;
+
+    return d | static_cast<uint64>(_bswap(t2)) << 32;
 }
 
 }
@@ -712,8 +847,7 @@ uint64 ProcessRGB_AVX2( const uint8* src )
 
 uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
 {
-    uint64 d = Planar_AVX2( src );
-    if( d != 0 ) return d;
+    auto result = Planar_AVX2( src );
 
     alignas(32) v4i a[8];
 
@@ -732,7 +866,7 @@ uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
 
     size_t idx = _bit_scan_forward(mask) >> 2;
 
-    d |= EncodeAverages_AVX2( a, idx );
+    uint64 d = EncodeAverages_AVX2( a, idx );
 
     alignas(32) uint32 terr[2][8] = {};
     alignas(32) uint32 tsel[8];
@@ -746,7 +880,7 @@ uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
         FindBestFit_2x4_AVX2( terr, tsel, a, idx * 2, src );
     }
 
-    return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1 );
+    return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, result.first, result.second );
 }
 
 #ifndef _MSC_VER
