@@ -5,8 +5,8 @@ INCLUDES :=
 LIBS := -lpthread
 IMAGE := etcpak
 
-SRC := $(shell egrep 'ClCompile.*cpp" />' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
-SRC2 := $(shell egrep 'ClCompile.*c" />' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
+SRC := $(shell egrep 'ClCompile.*cpp"' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
+SRC2 := $(shell egrep 'ClCompile.*c"' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
 OBJ := $(SRC:%.cpp=%.o)
 OBJ2 := $(SRC2:%.c=%.o)
 
