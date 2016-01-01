@@ -1,6 +1,8 @@
 #ifndef __DITHER_HPP__
 #define __DITHER_HPP__
 
+#include <stddef.h>
+
 #include "Types.hpp"
 
 void InitDither();
