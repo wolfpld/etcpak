@@ -704,31 +704,31 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
     __m256i gp1 = _mm256_srli_epi16(gp0, 2);
     __m256i bp1 = _mm256_srli_epi16(bp0, 2);
 
-    __m256i rp2 = _mm256_max_epi16(_mm256_min_epi16(rp1, _mm256_set1_epi(255)), _mm256_setzero_si256());
-    __m256i gp2 = _mm256_max_epi16(_mm256_min_epi16(gp1, _mm256_set1_epi(255)), _mm256_setzero_si256());
-    __m256i bp2 = _mm256_max_epi16(_mm256_min_epi16(bp1, _mm256_set1_epi(255)), _mm256_setzero_si256());
+    __m256i rp2 = _mm256_max_epi16(_mm256_min_epi16(rp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+    __m256i gp2 = _mm256_max_epi16(_mm256_min_epi16(gp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+    __m256i bp2 = _mm256_max_epi16(_mm256_min_epi16(bp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
 
     __m256i rdif = _mm256_sub_epi16(rp2, r08);
     __m256i gdif = _mm256_sub_epi16(gp2, g08);
     __m256i bdif = _mm256_sub_epi16(bp2, b08);
 
-    __m256i rsqr = _mm256_madd_epi16(rdif, rdif);
-    __m256i gsqr = _mm256_madd_epi16(gdif, gdif);
-    __m256i bsqr = _mm256_madd_epi16(bdif, bdif);
+    __m256i rerr = _mm256_mullo_epi16(rdif, _mm256_set1_epi16(38));
+    __m256i gerr = _mm256_mullo_epi16(gdif, _mm256_set1_epi16(76));
+    __m256i berr = _mm256_mullo_epi16(bdif, _mm256_set1_epi16(14));
 
-    __m128i rsum = _mm_add_epi32(_mm256_castsi256_si128(rsqr), _mm256_extracti128_si256(rsqr, 1));
-    __m128i gsum = _mm_add_epi32(_mm256_castsi256_si128(gsqr), _mm256_extracti128_si256(gsqr, 1));
-    __m128i bsum = _mm_add_epi32(_mm256_castsi256_si128(bsqr), _mm256_extracti128_si256(bsqr, 1));
+    __m256i sum0 = _mm256_add_epi16(rerr, gerr);
+    __m256i sum1 = _mm256_add_epi16(sum0, berr);
 
-    __m128i e0 = _mm_hadd_epi32(rsum, gsum);
-    __m128i e1 = _mm_hadd_epi32(bsum, _mm_setzero_si128());
-    __m128i rgb = _mm_hadd_epi32(e0, e1);
+    __m256i sum2 = _mm256_madd_epi16(sum1, sum1);
 
-	uint32 er = _mm_extract_epi32(rgb, 0);
-	uint32 eg = _mm_extract_epi32(rgb, 1);
-	uint32 eb = _mm_extract_epi32(rgb, 2);
+    __m128i sum3 = _mm_add_epi32(_mm256_castsi256_si128(sum2), _mm256_extracti128_si256(sum2, 1));
 
-	uint32 error = er * 38 + eg * 76 + eb * 14;
+	uint32 err0 = _mm_extract_epi32(sum3, 0);
+	uint32 err1 = _mm_extract_epi32(sum3, 1);
+	uint32 err2 = _mm_extract_epi32(sum3, 2);
+	uint32 err3 = _mm_extract_epi32(sum3, 2);
+
+	uint32 error = err0 + err1 + err2 + err3;
 	/**/
 
     uint32 rgbv = _pext_u32(rgbv0, 0x3F7F3F);
