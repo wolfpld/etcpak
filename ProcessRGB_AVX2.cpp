@@ -528,7 +528,47 @@ const uint8 flags[64] =
     0x03, 0x1D, 0x1D, 0x1D,
 };
 
-std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
+__m128i VS_VECTORCALL r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
+{
+    __m128i co = _mm_cvttps_epi32(cof);
+    __m128i ch = _mm_cvttps_epi32(chf);
+    __m128i cv = _mm_cvttps_epi32(cvf);
+
+    __m128i coh = _mm_packus_epi32(co, ch);
+    __m128i cv0 = _mm_packus_epi32(cv, _mm_setzero_si128());
+
+	__m256i cohv0 = _mm256_inserti128_si256(_mm256_castsi128_si256(coh), cv0, 1);
+    __m256i cohv1 = _mm256_min_epu16(cohv0, _mm256_set1_epi16(1023));
+
+    __m256i cohv2 = _mm256_sub_epi16(cohv1, _mm256_set1_epi16(15));
+    __m256i cohv3 = _mm256_srai_epi16(cohv2, 1);
+
+    __m256i cohvrb0 = _mm256_add_epi16(cohv3, _mm256_set1_epi16(11));
+    __m256i cohvrb1 = _mm256_add_epi16(cohv3, _mm256_set1_epi16(4));
+    __m256i cohvg0 = _mm256_add_epi16(cohv3, _mm256_set1_epi16(9));
+    __m256i cohvg1 = _mm256_add_epi16(cohv3, _mm256_set1_epi16(6));
+
+    __m256i cohvrb2 = _mm256_srai_epi16(cohvrb0, 7);
+    __m256i cohvrb3 = _mm256_srai_epi16(cohvrb1, 7);
+    __m256i cohvg2 = _mm256_srai_epi16(cohvg0, 8);
+    __m256i cohvg3 = _mm256_srai_epi16(cohvg1, 8);
+
+
+    __m256i cohvrb4 = _mm256_sub_epi16(cohvrb0, cohvrb2);
+    __m256i cohvrb5 = _mm256_sub_epi16(cohvrb4, cohvrb3);
+    __m256i cohvg4 = _mm256_sub_epi16(cohvg0, cohvg2);
+    __m256i cohvg5 = _mm256_sub_epi16(cohvg4, cohvg3);
+
+    __m256i cohvrb6 = _mm256_srai_epi16(cohvrb5, 3);
+    __m256i cohvg6 = _mm256_srai_epi16(cohvg5, 2);
+
+	__m256i cohv4 = _mm256_blend_epi16(cohvg6, cohvrb6, 0x55);
+
+    __m128i cohv5 = _mm_packus_epi16(_mm256_castsi256_si128(cohv4), _mm256_extracti128_si256(cohv4, 1));
+    return _mm_shuffle_epi8(cohv5, _mm_setr_epi8(6, 5, 4, -1, 2, 1, 0, -1, 10, 9, 8, -1, -1, -1, -1, -1));
+}
+
+std::pair<uint64, uint64> Planar_AVX2(const uint8* src)
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
@@ -548,17 +588,17 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
     // swap channels
     __m128i b8 = _mm_unpacklo_epi64(rg0, rg1);
     __m128i g8 = _mm_unpackhi_epi64(rg0, rg1);
-    __m128i r8 = _mm_unpacklo_epi32(b0, b1);
+    __m128i r8 = _mm_unpacklo_epi64(b0, b1);
 
     __m128i t0 = _mm_sad_epu8(r8, _mm_setzero_si128());
     __m128i t1 = _mm_sad_epu8(g8, _mm_setzero_si128());
     __m128i t2 = _mm_sad_epu8(b8, _mm_setzero_si128());
 
     __m128i t3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(t0), _mm_castsi128_ps(t1), _MM_SHUFFLE(2, 0, 2, 0)));
-    __m128i t4 = _mm_shuffle_epi32(t2,_MM_SHUFFLE(3, 1, 2, 0));
+    __m128i t4 = _mm_shuffle_epi32(t2, _MM_SHUFFLE(3, 1, 2, 0));
     __m128i t5 = _mm_hadd_epi32(t3, t4);
-    __m128i t6 = _mm_shuffle_epi32(t5,_MM_SHUFFLE(1, 1, 1, 1));
-    __m128i t7 = _mm_shuffle_epi32(t6,_MM_SHUFFLE(2, 2, 2, 2));
+    __m128i t6 = _mm_shuffle_epi32(t5, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128i t7 = _mm_shuffle_epi32(t5, _MM_SHUFFLE(2, 2, 2, 2));
 
     __m256i sr = _mm256_broadcastw_epi16(t5);
     __m256i sg = _mm256_broadcastw_epi16(t6);
@@ -604,12 +644,12 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
 
     const float value = (255 * 255 * 8.0f + 85 * 85 * 8.0f) * 16.0f;
 
-    __m128 scale = _mm_set1_ps(-1.0f / value);
+    __m128 scale = _mm_set1_ps(-4.0f / value);
 
     __m128 af = _mm_mul_ps(sumRGBxzf, scale);
     __m128 bf = _mm_mul_ps(sumRGByzf, scale);
 
-    __m128 df = _mm_mul_ps(_mm_cvtepi32_ps(t5), _mm_set1_ps(1.0f / 16.0f));
+    __m128 df = _mm_mul_ps(_mm_cvtepi32_ps(t5), _mm_set1_ps(4.0f / 16.0f));
 
     // calculating the three colors RGBO, RGBH, and RGBV.  RGB = df - af * x - bf * y;
     __m128 cof0 = _mm_fnmadd_ps(af, _mm_set1_ps(-255.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(-255.0f), df));
@@ -617,29 +657,15 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
     __m128 cvf0 = _mm_fnmadd_ps(af, _mm_set1_ps(-255.0f), _mm_fnmadd_ps(bf, _mm_set1_ps( 425.0f), df));
 
     // convert to r6g7b6
-    __m128 s = _mm_set_ps(0.0f, 0.25f, 0.5f, 0.25f);
-    __m128 cof1 = _mm_fmadd_ps(cof0, s, s);
-    __m128 chf1 = _mm_fmadd_ps(chf0, s, s);
-    __m128 cvf1 = _mm_fmadd_ps(cvf0, s, s);
+    __m128i cohv = r6g7b6_AVX2(cof0, chf0, cvf0);
 
-    __m128i co = _mm_cvttps_epi32(cof1);
-    __m128i ch = _mm_cvttps_epi32(chf1);
-    __m128i cv = _mm_cvttps_epi32(cvf1);
-
-    __m128i coh = _mm_packs_epi32(co, ch);
-    __m128i cv0 = _mm_packs_epi32(cv, _mm_setzero_si128());
-
-    __m128i cohv0i0 = _mm_packus_epi16(coh, cv0);
-    __m128i cohv0i1 = _mm_min_epu8(cohv0i0, _mm_set_epi8(0, 63, 127, 63, 0, 63, 127, 63, 0, 63, 127, 63, 0, 63, 127, 63));
-    __m128i cohv0i2 = _mm_shuffle_epi8(cohv0i1, _mm_setr_epi8(6, 5, 4, -1, 2, 1, 0, -1, 10, 9, 8, -1, -1, -1, -1, -1));
-
-    uint64 rgbho = _mm_extract_epi64(cohv0i2, 0);
-    uint32 rgbv0 = _mm_extract_epi32(cohv0i2, 2);
+    uint64 rgbho = _mm_extract_epi64(cohv, 0);
+    uint32 rgbv0 = _mm_extract_epi32(cohv, 2);
 
 	// Error calculation
-	auto ro0 = (rgbho >> 32) & 0x3F;
+	auto ro0 = (rgbho >> 48) & 0x3F;
 	auto go0 = (rgbho >> 40) & 0x7F;
-	auto bo0 = (rgbho >> 48) & 0x3F;
+	auto bo0 = (rgbho >> 32) & 0x3F;
 	auto ro1 = (ro0 >> 4) | (ro0 << 2);
 	auto go1 = (go0 >> 6) | (go0 << 1);
 	auto bo1 = (bo0 >> 4) | (bo0 << 2);
@@ -651,9 +677,9 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
     __m256i go3 = _mm256_set1_epi16(go2);
     __m256i bo3 = _mm256_set1_epi16(bo2);
 
-	auto rh0 = (rgbho >>  0) & 0x3F;
+	auto rh0 = (rgbho >> 16) & 0x3F;
 	auto gh0 = (rgbho >>  8) & 0x7F;
-	auto bh0 = (rgbho >> 16) & 0x3F;
+	auto bh0 = (rgbho >>  0) & 0x3F;
 	auto rh1 = (rh0 >> 4) | (rh0 << 2);
 	auto gh1 = (gh0 >> 6) | (gh0 << 1);
 	auto bh1 = (bh0 >> 4) | (bh0 << 2);
@@ -666,9 +692,9 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
     __m256i gh3 = _mm256_set1_epi16(gh2);
     __m256i bh3 = _mm256_set1_epi16(bh2);
 
-	auto rv0 = (rgbv0 >>  0) & 0x3F;
+	auto rv0 = (rgbv0 >> 16) & 0x3F;
 	auto gv0 = (rgbv0 >>  8) & 0x7F;
-	auto bv0 = (rgbv0 >> 16) & 0x3F;
+	auto bv0 = (rgbv0 >>  0) & 0x3F;
 	auto rv1 = (rv0 >> 4) | (rv0 << 2);
 	auto gv1 = (gv0 >> 6) | (gv0 << 1);
 	auto bv1 = (bv0 >> 4) | (bv0 << 2);
@@ -700,17 +726,17 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
     __m256i gp0 = _mm256_add_epi16(gxy, go3);
     __m256i bp0 = _mm256_add_epi16(bxy, bo3);
 
-    __m256i rp1 = _mm256_srli_epi16(rp0, 2);
-    __m256i gp1 = _mm256_srli_epi16(gp0, 2);
-    __m256i bp1 = _mm256_srli_epi16(bp0, 2);
+    __m256i rp1 = _mm256_srai_epi16(rp0, 2);
+    __m256i gp1 = _mm256_srai_epi16(gp0, 2);
+    __m256i bp1 = _mm256_srai_epi16(bp0, 2);
 
     __m256i rp2 = _mm256_max_epi16(_mm256_min_epi16(rp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
     __m256i gp2 = _mm256_max_epi16(_mm256_min_epi16(gp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
     __m256i bp2 = _mm256_max_epi16(_mm256_min_epi16(bp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
 
-    __m256i rdif = _mm256_sub_epi16(rp2, r08);
-    __m256i gdif = _mm256_sub_epi16(gp2, g08);
-    __m256i bdif = _mm256_sub_epi16(bp2, b08);
+    __m256i rdif = _mm256_sub_epi16(r08, rp2);
+    __m256i gdif = _mm256_sub_epi16(g08, gp2);
+    __m256i bdif = _mm256_sub_epi16(b08, bp2);
 
     __m256i rerr = _mm256_mullo_epi16(rdif, _mm256_set1_epi16(38));
     __m256i gerr = _mm256_mullo_epi16(gdif, _mm256_set1_epi16(76));
@@ -726,9 +752,9 @@ std::pair<uint64, uint32> Planar_AVX2(const uint8* src)
 	uint32 err0 = _mm_extract_epi32(sum3, 0);
 	uint32 err1 = _mm_extract_epi32(sum3, 1);
 	uint32 err2 = _mm_extract_epi32(sum3, 2);
-	uint32 err3 = _mm_extract_epi32(sum3, 2);
+	uint32 err3 = _mm_extract_epi32(sum3, 3);
 
-	uint32 error = err0 + err1 + err2 + err3;
+	uint64 error = err0 + err1 + err2 + err3;
 	/**/
 
     uint32 rgbv = _pext_u32(rgbv0, 0x3F7F3F);
