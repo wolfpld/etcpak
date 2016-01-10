@@ -202,6 +202,13 @@ __m128i VS_VECTORCALL PrepareAverages_AVX2( v4i a[8], const uint8* src) noexcept
     return CalcErrorBlock_AVX2( sum4, a);
 }
 
+__m128i VS_VECTORCALL PrepareAverages_AVX2( v4i a[8], const __m256i sum4) noexcept
+{
+    ProcessAverages_AVX2(Average_AVX2( sum4 ), a );
+
+    return CalcErrorBlock_AVX2( sum4, a);
+}
+
 void VS_VECTORCALL FindBestFit_4x2_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i a[8], const uint32 offset, const uint8* data) noexcept
 {
     __m256i sel0 = _mm256_setzero_si256();
@@ -508,26 +515,6 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     return d | static_cast<uint64>(_bswap(t2)) << 32;
 }
 
-const uint8 flags[64] =
-{
-    0x63, 0x63, 0x63, 0x63,
-    0x63, 0x63, 0x63, 0x7D,
-    0x63, 0x63, 0x7D, 0x7D,
-    0x63, 0x7D, 0x7D, 0x7D,
-    0x43, 0x43, 0x43, 0x43,
-    0x43, 0x43, 0x43, 0x5D,
-    0x43, 0x43, 0x5D, 0x5D,
-    0x43, 0x5D, 0x5D, 0x5D,
-    0x23, 0x23, 0x23, 0x23,
-    0x23, 0x23, 0x23, 0x3D,
-    0x23, 0x23, 0x3D, 0x3D,
-    0x23, 0x3D, 0x3D, 0x3D,
-    0x03, 0x03, 0x03, 0x03,
-    0x03, 0x03, 0x03, 0x1D,
-    0x03, 0x03, 0x1D, 0x1D,
-    0x03, 0x1D, 0x1D, 0x1D,
-};
-
 __m128i VS_VECTORCALL r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
 {
     __m128i co = _mm_cvttps_epi32(cof);
@@ -553,7 +540,6 @@ __m128i VS_VECTORCALL r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
     __m256i cohvg2 = _mm256_srai_epi16(cohvg0, 8);
     __m256i cohvg3 = _mm256_srai_epi16(cohvg1, 8);
 
-
     __m256i cohvrb4 = _mm256_sub_epi16(cohvrb0, cohvrb2);
     __m256i cohvrb5 = _mm256_sub_epi16(cohvrb4, cohvrb3);
     __m256i cohvg4 = _mm256_sub_epi16(cohvg0, cohvg2);
@@ -568,7 +554,14 @@ __m128i VS_VECTORCALL r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
     return _mm_shuffle_epi8(cohv5, _mm_setr_epi8(6, 5, 4, -1, 2, 1, 0, -1, 10, 9, 8, -1, -1, -1, -1, -1));
 }
 
-std::pair<uint64, uint64> Planar_AVX2(const uint8* src)
+struct Plane
+{
+	uint64 plane;
+	uint64 error;
+	__m256i sum4;
+};
+
+Plane Planar_AVX2(const uint8* src)
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
@@ -593,6 +586,24 @@ std::pair<uint64, uint64> Planar_AVX2(const uint8* src)
     __m128i t0 = _mm_sad_epu8(r8, _mm_setzero_si128());
     __m128i t1 = _mm_sad_epu8(g8, _mm_setzero_si128());
     __m128i t2 = _mm_sad_epu8(b8, _mm_setzero_si128());
+
+    __m128i r8s = _mm_shuffle_epi8(r8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+    __m128i g8s = _mm_shuffle_epi8(g8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+    __m128i b8s = _mm_shuffle_epi8(b8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+
+    __m128i s0 = _mm_sad_epu8(r8s, _mm_setzero_si128());
+    __m128i s1 = _mm_sad_epu8(g8s, _mm_setzero_si128());
+    __m128i s2 = _mm_sad_epu8(b8s, _mm_setzero_si128());
+
+    __m256i sr0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t0), s0, 1);
+    __m256i sg0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t1), s1, 1);
+    __m256i sb0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t2), s2, 1);
+
+    __m256i sr1 = _mm256_slli_epi64(sr0, 32);
+    __m256i sg1 = _mm256_slli_epi64(sg0, 16);
+
+    __m256i srb = _mm256_or_si256(sr1, sb0);
+    __m256i srgb = _mm256_or_si256(srb, sg1);
 
     __m128i t3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(t0), _mm_castsi128_ps(t1), _MM_SHUFFLE(2, 0, 2, 0)));
     __m128i t4 = _mm_shuffle_epi32(t2, _MM_SHUFFLE(3, 1, 2, 0));
@@ -625,19 +636,18 @@ std::pair<uint64, uint64> Planar_AVX2(const uint8* src)
     __m256i difBxz = _mm256_madd_epi16(difB0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
 
     __m256i difRGyz = _mm256_hadd_epi32(difRyz, difGyz);
-    __m256i difB0yz = _mm256_hadd_epi32(difByz, _mm256_setzero_si256());
+    __m256i difByzxz = _mm256_hadd_epi32(difByz, difBxz);
 
     __m256i difRGxz = _mm256_hadd_epi32(difRxz, difGxz);
-    __m256i difB0xz = _mm256_hadd_epi32(difBxz, _mm256_setzero_si256());
 
     __m128i sumRGyz = _mm_add_epi32(_mm256_castsi256_si128(difRGyz), _mm256_extracti128_si256(difRGyz, 1));
-    __m128i sumB0yz = _mm_add_epi32(_mm256_castsi256_si128(difB0yz), _mm256_extracti128_si256(difB0yz, 1));
-
+    __m128i sumByzxz = _mm_add_epi32(_mm256_castsi256_si128(difByzxz), _mm256_extracti128_si256(difByzxz, 1));
     __m128i sumRGxz = _mm_add_epi32(_mm256_castsi256_si128(difRGxz), _mm256_extracti128_si256(difRGxz, 1));
-    __m128i sumB0xz = _mm_add_epi32(_mm256_castsi256_si128(difB0xz), _mm256_extracti128_si256(difB0xz, 1));
 
-    __m128i sumRGByz = _mm_hadd_epi32(sumRGyz, sumB0yz);
-    __m128i sumRGBxz = _mm_hadd_epi32(sumRGxz, sumB0xz);
+    __m128i sumRGByz = _mm_hadd_epi32(sumRGyz, sumByzxz);
+    __m128i sumRGByzxz = _mm_hadd_epi32(sumRGxz, sumByzxz);
+
+    __m128i sumRGBxz = _mm_shuffle_epi32(sumRGByzxz, _MM_SHUFFLE(2, 3, 1, 0));
 
     __m128 sumRGByzf = _mm_cvtepi32_ps(sumRGByz);
     __m128 sumRGBxzf = _mm_cvtepi32_ps(sumRGBxz);
@@ -708,11 +718,12 @@ std::pair<uint64, uint64> Planar_AVX2(const uint8* src)
     __m256i bv3 = _mm256_set1_epi16(bv2);
 
     __m256i x = _mm256_set_epi16(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
-    __m256i y = _mm256_set_epi16(3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0);
 
     __m256i rh4 = _mm256_mullo_epi16(rh3, x);
     __m256i gh4 = _mm256_mullo_epi16(gh3, x);
     __m256i bh4 = _mm256_mullo_epi16(bh3, x);
+
+    __m256i y = _mm256_set_epi16(3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0);
 
     __m256i rv4 = _mm256_mullo_epi16(rv3, y);
     __m256i gv4 = _mm256_mullo_epi16(gv3, y);
@@ -764,11 +775,17 @@ std::pair<uint64, uint64> Planar_AVX2(const uint8* src)
     uint32 lo = _pdep_u32(rgbho0 >> 13, 0x7F7F1BFD);
 
     uint32 idx = _pext_u64(rgbho, 0x20201E00000000);
-    lo |= _pdep_u32(flags[idx], 0x8080E402);
+    lo |= _pdep_u32(g_flags_AVX2[idx], 0x8080E402);
     uint64 result = static_cast<uint32>(_bswap(lo));
     result |= static_cast<uint64>(static_cast<uint32>(_bswap(hi))) << 32;
 
-    return std::make_pair(result, error);
+	Plane plane;
+
+	plane.plane = result;
+	plane.error = error;
+	plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
+
+    return plane;
 }
 
 uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], const uint32 tsel[8], const bool rotate, const uint64 value, const uint32 error) noexcept
@@ -873,11 +890,11 @@ uint64 ProcessRGB_AVX2( const uint8* src )
 
 uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
 {
-    auto result = Planar_AVX2( src );
+    auto plane = Planar_AVX2( src );
 
     alignas(32) v4i a[8];
 
-    __m128i err0 = PrepareAverages_AVX2( a, src );
+    __m128i err0 = PrepareAverages_AVX2( a, plane.sum4 );
 
     // Get index of minimum error (err0)
     __m128i err1 = _mm_shuffle_epi32(err0, _MM_SHUFFLE(2, 3, 0, 1));
@@ -906,7 +923,7 @@ uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
         FindBestFit_2x4_AVX2( terr, tsel, a, idx * 2, src );
     }
 
-    return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, result.first, result.second );
+    return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error );
 }
 
 #ifndef _MSC_VER
