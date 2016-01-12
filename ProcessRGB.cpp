@@ -11,6 +11,7 @@
 #  ifdef _MSC_VER
 #    include <intrin.h>
 #    include <Windows.h>
+#    define _bswap(x) _byteswap_ulong(x)
 #  else
 #    include <x86intrin.h>
 #  endif
