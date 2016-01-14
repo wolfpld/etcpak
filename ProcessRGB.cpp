@@ -546,15 +546,15 @@ std::pair<uint64, uint64> Planar(const uint8* src)
     float dB = b * (4.0f / 16.0f);
 
     // calculating the three colors RGBO, RGBH, and RGBV.  RGB = df - af * x - bf * y;
-    float cofR = aR *  255.0f + bR *  255.0f + dR;
-    float cofG = aG *  255.0f + bG *  255.0f + dG;
-    float cofB = aB *  255.0f + bB *  255.0f + dB;
-    float chfR = aR * -425.0f + bR *  255.0f + dR;
-    float chfG = aG * -425.0f + bG *  255.0f + dG;
-    float chfB = aB * -425.0f + bB *  255.0f + dB;
-    float cvfR = aR *  255.0f + bR * -425.0f + dR;
-    float cvfG = aG *  255.0f + bG * -425.0f + dG;
-    float cvfB = aB *  255.0f + bB * -425.0f + dB;
+    float cofR = std::fma(aR,  255.0f, std::fma(bR,  255.0f, dR));
+    float cofG = std::fma(aG,  255.0f, std::fma(bG,  255.0f, dG));
+    float cofB = std::fma(aB,  255.0f, std::fma(bB,  255.0f, dB));
+    float chfR = std::fma(aR, -425.0f, std::fma(bR,  255.0f, dR));
+    float chfG = std::fma(aG, -425.0f, std::fma(bG,  255.0f, dG));
+    float chfB = std::fma(aB, -425.0f, std::fma(bB,  255.0f, dB));
+    float cvfR = std::fma(aR,  255.0f, std::fma(bR, -425.0f, dR));
+    float cvfG = std::fma(aG,  255.0f, std::fma(bG, -425.0f, dG));
+    float cvfB = std::fma(aB,  255.0f, std::fma(bB, -425.0f, dB));
 
     // convert to r6g7b6
     int32 coR = convert6(cofR);
@@ -637,7 +637,7 @@ std::pair<uint64, uint64> Planar(const uint8* src)
 }
 
 template<class T, class S>
-static uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const uint32* id, const uint64 value, const uint64 error)
+uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const uint32* id, const uint64 value, const uint64 error)
 {
     size_t tidx[2];
     tidx[0] = GetLeastError( terr[0], 8 );
