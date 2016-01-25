@@ -49,6 +49,7 @@ void Usage()
     fprintf( stderr, "  -m          generate mipmaps\n" );
     fprintf( stderr, "  -d          enable dithering\n" );
     fprintf( stderr, "  -debug      dissect ETC texture\n" );
+    fprintf( stderr, "  -etc2       enable ETC2 mode\n" );
 }
 
 int main( int argc, char** argv )
@@ -63,6 +64,7 @@ int main( int argc, char** argv )
     bool mipmap = false;
     bool dither = false;
     bool debug = false;
+    bool etc2 = false;
 
     if( argc < 2 )
     {
@@ -107,6 +109,10 @@ int main( int argc, char** argv )
         {
             debug = true;
         }
+        else if( CSTR( "-etc2" ) )
+        {
+            etc2 = true;
+        }
         else
         {
             Usage();
@@ -134,10 +140,10 @@ int main( int argc, char** argv )
         start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
-            TaskDispatch::Queue( [&bmp, &dither, i]()
+            TaskDispatch::Queue( [&bmp, &dither, i, etc2]()
             {
                 auto bd = std::make_shared<BlockData>( bmp->Size(), false );
-                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
+                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither, etc2 );
             } );
         }
         TaskDispatch::Sync();
@@ -173,13 +179,13 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither, etc2]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, etc2 );
                 } );
-                TaskDispatch::Queue( [part, i, &bda]()
+                TaskDispatch::Queue( [part, i, &bda, etc2]()
                 {
-                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
+                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, etc2 );
                 } );
             }
         }
@@ -189,9 +195,9 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither, etc2]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, etc2 );
                 } );
             }
         }

@@ -158,7 +158,7 @@ static uint64 _f_rgb_dither_avx2( uint8* ptr )
     return ProcessRGB_AVX2( ptr );
 }
 
-void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither )
+void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither, bool etc2 )
 {
     uint32 buf[4*4];
     int w = 0;

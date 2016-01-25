@@ -23,7 +23,7 @@ public:
     BitmapPtr Decode();
     void Dissect();
 
-    void Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither );
+    void Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither, bool etc2 );
 
 private:
     uint8* m_data;
