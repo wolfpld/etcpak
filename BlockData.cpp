@@ -158,6 +158,28 @@ static uint64 _f_rgb_dither_avx2( uint8* ptr )
     return ProcessRGB_AVX2( ptr );
 }
 
+static uint64 _f_rgb_etc2( uint8* ptr )
+{
+    return ProcessRGB_ETC2( ptr );
+}
+
+static uint64 _f_rgb_etc2_avx2( uint8* ptr )
+{
+    return ProcessRGB_ETC2_AVX2( ptr );
+}
+
+static uint64 _f_rgb_etc2_dither( uint8* ptr )
+{
+    Dither( ptr );
+    return ProcessRGB_ETC2( ptr );
+}
+
+static uint64 _f_rgb_etc2_dither_avx2( uint8* ptr )
+{
+    Dither( ptr );
+    return ProcessRGB_ETC2_AVX2( ptr );
+}
+
 void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither, bool etc2 )
 {
     uint32 buf[4*4];
@@ -172,12 +194,26 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
 #ifdef __SSE4_1__
         if( can_use_intel_core_4th_gen_features() )
         {
-            func = _f_rgb_avx2;
+            if( etc2 )
+            {
+                func = _f_rgb_etc2_avx2;
+            }
+            else
+            {
+                func = _f_rgb_avx2;
+            }
         }
         else
 #endif
         {
-            func = _f_rgb;
+            if( etc2 )
+            {
+                func = _f_rgb_etc2;
+            }
+            else
+            {
+                func = _f_rgb;
+            }
         }
 
         do
@@ -213,25 +249,53 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
 #ifdef __SSE4_1__
         if( can_use_intel_core_4th_gen_features() )
         {
-            if( dither )
+            if( etc2 )
             {
-                func = _f_rgb_dither_avx2;
+                if( dither )
+                {
+                    func = _f_rgb_etc2_dither_avx2;
+                }
+                else
+                {
+                    func = _f_rgb_etc2_avx2;
+                }
             }
             else
             {
-                func = _f_rgb_avx2;
+                if( dither )
+                {
+                    func = _f_rgb_dither_avx2;
+                }
+                else
+                {
+                    func = _f_rgb_avx2;
+                }
             }
         }
         else
 #endif
         {
-            if( dither )
+            if( etc2 )
             {
-                func = _f_rgb_dither;
+                if( dither )
+                {
+                    func = _f_rgb_etc2_dither;
+                }
+                else
+                {
+                    func = _f_rgb_etc2;
+                }
             }
             else
             {
-                func = _f_rgb;
+                if( dither )
+                {
+                    func = _f_rgb_dither;
+                }
+                else
+                {
+                    func = _f_rgb;
+                }
             }
         }
 
