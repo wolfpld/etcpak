@@ -593,7 +593,7 @@ BitmapPtr BlockData::Decode()
 }
 
 // Block type:
-//  red - 2x4, green - 4x2
+//  red - 2x4, green - 4x2, blue - planar
 //  dark - 444, bright - 555 + 333
 void BlockData::Dissect()
 {
@@ -626,19 +626,33 @@ void BlockData::Dissect()
                 ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
                 ( ( d & 0x0000FF000000FF00 ) << 8 );
 
-            switch( d & 0x3 )
+            BlockColor c;
+            const auto mode = DecodeBlockColor( d, c );
+
+            switch( mode )
             {
-            case 0:
-                *dst++ = 0xFF000088;
+            case Etc2Mode::none:
+                switch( d & 0x3 )
+                {
+                case 0:
+                    *dst++ = 0xFF000088;
+                    break;
+                case 1:
+                    *dst++ = 0xFF008800;
+                    break;
+                case 2:
+                    *dst++ = 0xFF0000FF;
+                    break;
+                case 3:
+                    *dst++ = 0xFF00FF00;
+                    break;
+                default:
+                    assert( false );
+                    break;
+                }
                 break;
-            case 1:
-                *dst++ = 0xFF008800;
-                break;
-            case 2:
-                *dst++ = 0xFF0000FF;
-                break;
-            case 3:
-                *dst++ = 0xFF00FF00;
+            case Etc2Mode::planar:
+                *dst++ = 0xFFFF0000;
                 break;
             default:
                 assert( false );
@@ -650,9 +664,6 @@ void BlockData::Dissect()
             tcw[1] = ( d & 0x1C ) << 3;
 
             *dst3++ = 0xFF000000 | ( tcw[0] << 8 ) | ( tcw[1] );
-
-            BlockColor c;
-            DecodeBlockColor( d, c );
 
             if( d & 0x1 )
             {
