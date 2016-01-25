@@ -136,6 +136,28 @@ BlockData::~BlockData()
     }
 }
 
+static uint64 _f_rgb( uint8* ptr )
+{
+    return ProcessRGB( ptr );
+}
+
+static uint64 _f_rgb_avx2( uint8* ptr )
+{
+    return ProcessRGB_AVX2( ptr );
+}
+
+static uint64 _f_rgb_dither( uint8* ptr )
+{
+    Dither( ptr );
+    return ProcessRGB( ptr );
+}
+
+static uint64 _f_rgb_dither_avx2( uint8* ptr )
+{
+    Dither( ptr );
+    return ProcessRGB_AVX2( ptr );
+}
+
 void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither )
 {
     uint32 buf[4*4];
@@ -143,70 +165,48 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
 
     auto dst = ((uint64*)( m_data + m_dataOffset )) + offset;
 
+    uint64 (*func)(uint8*);
+
     if( type == Channels::Alpha )
     {
 #ifdef __SSE4_1__
         if( can_use_intel_core_4th_gen_features() )
         {
-            do
-            {
-                auto ptr = buf;
-                for( int x=0; x<4; x++ )
-                {
-                    uint a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src -= width * 3 - 1;
-                }
-                if( ++w == width/4 )
-                {
-                    src += width * 3;
-                    w = 0;
-                }
-
-                *dst++ = ProcessRGB_AVX2( (uint8*)buf );
-            }
-            while( --blocks );
+            func = _f_rgb_avx2;
         }
         else
 #endif
         {
-            do
-            {
-                auto ptr = buf;
-                for( int x=0; x<4; x++ )
-                {
-                    uint a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src -= width * 3 - 1;
-                }
-                if( ++w == width/4 )
-                {
-                    src += width * 3;
-                    w = 0;
-                }
-
-                *dst++ = ProcessRGB( (uint8*)buf );
-            }
-            while( --blocks );
+            func = _f_rgb;
         }
+
+        do
+        {
+            auto ptr = buf;
+            for( int x=0; x<4; x++ )
+            {
+                uint a = *src >> 24;
+                *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                src += width;
+                a = *src >> 24;
+                *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                src += width;
+                a = *src >> 24;
+                *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                src += width;
+                a = *src >> 24;
+                *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                src -= width * 3 - 1;
+            }
+            if( ++w == width/4 )
+            {
+                src += width * 3;
+                w = 0;
+            }
+
+            *dst++ = func( (uint8*)buf );
+        }
+        while( --blocks );
     }
     else
     {
@@ -215,56 +215,11 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
         {
             if( dither )
             {
-                do
-                {
-                    auto ptr = buf;
-                    for( int x=0; x<4; x++ )
-                    {
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src -= width * 3 - 1;
-                    }
-                    if( ++w == width/4 )
-                    {
-                        src += width * 3;
-                        w = 0;
-                    }
-                    Dither( (uint8*)buf );
-
-                    *dst++ = ProcessRGB_AVX2( (uint8*)buf );
-                }
-                while( --blocks );
+                func = _f_rgb_dither_avx2;
             }
             else
             {
-                do
-                {
-                    auto ptr = buf;
-                    for( int x=0; x<4; x++ )
-                    {
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src -= width * 3 - 1;
-                    }
-                    if( ++w == width/4 )
-                    {
-                        src += width * 3;
-                        w = 0;
-                    }
-
-                    *dst++ = ProcessRGB_AVX2( (uint8*)buf );
-                }
-                while( --blocks );
+                func = _f_rgb_avx2;
             }
         }
         else
@@ -272,58 +227,37 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
         {
             if( dither )
             {
-                do
-                {
-                    auto ptr = buf;
-                    for( int x=0; x<4; x++ )
-                    {
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src -= width * 3 - 1;
-                    }
-                    if( ++w == width/4 )
-                    {
-                        src += width * 3;
-                        w = 0;
-                    }
-                    Dither( (uint8*)buf );
-
-                    *dst++ = ProcessRGB( (uint8*)buf );
-                }
-                while( --blocks );
+                func = _f_rgb_dither;
             }
             else
             {
-                do
-                {
-                    auto ptr = buf;
-                    for( int x=0; x<4; x++ )
-                    {
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src -= width * 3 - 1;
-                    }
-                    if( ++w == width/4 )
-                    {
-                        src += width * 3;
-                        w = 0;
-                    }
-
-                    *dst++ = ProcessRGB( (uint8*)buf );
-                }
-                while( --blocks );
+                func = _f_rgb;
             }
         }
+
+        do
+        {
+            auto ptr = buf;
+            for( int x=0; x<4; x++ )
+            {
+                *ptr++ = *src;
+                src += width;
+                *ptr++ = *src;
+                src += width;
+                *ptr++ = *src;
+                src += width;
+                *ptr++ = *src;
+                src -= width * 3 - 1;
+            }
+            if( ++w == width/4 )
+            {
+                src += width * 3;
+                w = 0;
+            }
+
+            *dst++ = func( (uint8*)buf );
+        }
+        while( --blocks );
     }
 }
 
