@@ -888,6 +888,48 @@ uint64 ProcessRGB_AVX2( const uint8* src )
     return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1 );
 }
 
+uint64 ProcessRGB_4x2_AVX2( const uint8* src )
+{
+    uint64 d = CheckSolid_AVX2( src );
+    if( d != 0 ) return d;
+
+    alignas(32) v4i a[8];
+
+    __m128i err0 = PrepareAverages_AVX2( a, src );
+
+    uint32 idx = _mm_extract_epi32(err0, 0) < _mm_extract_epi32(err0, 2) ? 0 : 2;
+
+    d |= EncodeAverages_AVX2( a, idx );
+
+    alignas(32) uint32 terr[2][8] = {};
+    alignas(32) uint32 tsel[8];
+
+    FindBestFit_4x2_AVX2( terr, tsel, a, idx * 2, src );
+
+    return EncodeSelectors_AVX2( d, terr, tsel, false);
+}
+
+uint64 ProcessRGB_2x4_AVX2( const uint8* src )
+{
+    uint64 d = CheckSolid_AVX2( src );
+    if( d != 0 ) return d;
+
+    alignas(32) v4i a[8];
+
+    __m128i err0 = PrepareAverages_AVX2( a, src );
+
+    uint32 idx = _mm_extract_epi32(err0, 1) < _mm_extract_epi32(err0, 3) ? 1 : 3;
+
+    d |= EncodeAverages_AVX2( a, idx );
+
+    alignas(32) uint32 terr[2][8] = {};
+    alignas(32) uint32 tsel[8];
+
+    FindBestFit_2x4_AVX2( terr, tsel, a, idx * 2, src );
+
+    return EncodeSelectors_AVX2( d, terr, tsel, true);
+}
+
 uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
 {
     auto plane = Planar_AVX2( src );
