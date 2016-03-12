@@ -7,6 +7,9 @@
     <Filter Include="zlib">
       <UniqueIdentifier>{2d105fc3-3e95-4a1c-8f50-c2101ef5696a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="lz4">
+      <UniqueIdentifier>{881b2f0b-26cb-4a37-b5a1-b2eabec8db59}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\zlib\adler32.c">
@@ -111,6 +114,9 @@
     <ClCompile Include="..\ProcessRGB_AVX2.cpp" />
     <ClCompile Include="..\TaskDispatch.cpp" />
     <ClCompile Include="..\System.cpp" />
+    <ClCompile Include="..\lz4\lz4.c">
+      <Filter>lz4</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -190,6 +196,9 @@
     <ClInclude Include="..\ProcessRGB_AVX2.hpp" />
     <ClInclude Include="..\TaskDispatch.hpp" />
     <ClInclude Include="..\System.hpp" />
+    <ClInclude Include="..\lz4\lz4.h">
+      <Filter>lz4</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">

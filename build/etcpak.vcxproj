@@ -106,6 +106,7 @@
     <ClCompile Include="..\libpng\pngwrite.c" />
     <ClCompile Include="..\libpng\pngwtran.c" />
     <ClCompile Include="..\libpng\pngwutil.c" />
+    <ClCompile Include="..\lz4\lz4.c" />
     <ClCompile Include="..\mmap.cpp" />
     <ClCompile Include="..\ProcessAlpha.cpp" />
     <ClCompile Include="..\ProcessRGB.cpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="..\libpng\pnglibconf.h" />
     <ClInclude Include="..\libpng\pngpriv.h" />
     <ClInclude Include="..\libpng\pngstruct.h" />
+    <ClInclude Include="..\lz4\lz4.h" />
     <ClInclude Include="..\Math.hpp" />
     <ClInclude Include="..\MipMap.hpp" />
     <ClInclude Include="..\mmap.hpp" />

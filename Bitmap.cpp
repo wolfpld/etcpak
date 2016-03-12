@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "libpng/png.h"
+#include "lz4/lz4.h"
 
 #include "Bitmap.hpp"
 #include "Debug.hpp"
@@ -17,10 +18,9 @@ Bitmap::Bitmap( const char* fn, uint lines )
     FILE* f = fopen( fn, "rb" );
     assert( f );
 
-    char buf[3];
-    const char raw[3] = { 'r', 'a', 'w' };
-    fread( buf, 1, 3, f );
-    if( memcmp( buf, raw, 3 ) == 0 )
+    char buf[4];
+    fread( buf, 1, 4, f );
+    if( memcmp( buf, "raw4", 4 ) == 0 )
     {
         uint8 a;
         fread( &a, 1, 1, f );
@@ -35,19 +35,22 @@ Bitmap::Bitmap( const char* fn, uint lines )
         assert( m_size.x % 4 == 0 );
         assert( m_size.y % 4 == 0 );
 
+        int32 csize;
+        fread( &csize, 1, 4, f );
+        char* cbuf = new char[csize];
+        fread( cbuf, 1, csize, f );
+        fclose( f );
+
         m_block = m_data = new uint32[m_size.x*m_size.y];
         m_linesLeft = m_size.y / 4;
-        m_load = std::async( std::launch::async, [this, f]()
+
+        LZ4_decompress_fast( cbuf, (char*)m_data, m_size.x*m_size.y*4 );
+        delete[] cbuf;
+
+        for( int i=0; i<m_size.y/4; i++ )
         {
-            auto ptr = m_data;
-            for( int i=0; i<m_size.y/4; i++ )
-            {
-                fread( ptr, 1, m_size.x*4*4, f );
-                m_sema.unlock();
-                ptr += m_size.x*4;
-            }
-            fclose( f );
-        } );
+            m_sema.unlock();
+        }
     }
     else
     {
