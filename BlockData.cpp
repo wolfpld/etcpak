@@ -141,10 +141,12 @@ static uint64 _f_rgb( uint8* ptr )
     return ProcessRGB( ptr );
 }
 
+#ifdef __SSE4_1__
 static uint64 _f_rgb_avx2( uint8* ptr )
 {
     return ProcessRGB_AVX2( ptr );
 }
+#endif
 
 static uint64 _f_rgb_dither( uint8* ptr )
 {
@@ -152,21 +154,25 @@ static uint64 _f_rgb_dither( uint8* ptr )
     return ProcessRGB( ptr );
 }
 
+#ifdef __SSE4_1__
 static uint64 _f_rgb_dither_avx2( uint8* ptr )
 {
     Dither( ptr );
     return ProcessRGB_AVX2( ptr );
 }
+#endif
 
 static uint64 _f_rgb_etc2( uint8* ptr )
 {
     return ProcessRGB_ETC2( ptr );
 }
 
+#ifdef __SSE4_1__
 static uint64 _f_rgb_etc2_avx2( uint8* ptr )
 {
     return ProcessRGB_ETC2_AVX2( ptr );
 }
+#endif
 
 static uint64 _f_rgb_etc2_dither( uint8* ptr )
 {
@@ -174,11 +180,13 @@ static uint64 _f_rgb_etc2_dither( uint8* ptr )
     return ProcessRGB_ETC2( ptr );
 }
 
+#ifdef __SSE4_1__
 static uint64 _f_rgb_etc2_dither_avx2( uint8* ptr )
 {
     Dither( ptr );
     return ProcessRGB_ETC2_AVX2( ptr );
 }
+#endif
 
 void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither, bool etc2 )
 {

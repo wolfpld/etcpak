@@ -15,6 +15,11 @@
 #  else
 #    include <x86intrin.h>
 #  endif
+#else
+#  ifndef _MSC_VER
+#    include <byteswap.h>
+#    define _bswap(x) bswap_32(x)
+#  endif
 #endif
 
 namespace
@@ -697,7 +702,11 @@ uint64 ProcessRGB_ETC2( const uint8* src )
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
+#if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
     uint32 terr[2][8] = {};
+#else
+    uint64 terr[2][8] = {};
+#endif
     uint16 tsel[16][8];
     auto id = g_id[idx];
     FindBestFit( terr, tsel, a, id, src );
