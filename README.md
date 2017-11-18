@@ -27,7 +27,6 @@ In the following test a [8192x8192 RGB texture](https://bitbucket.org/wolfpld/et
 
 ᶜ [Odroid-C2](http://www.hardkernel.com/main/products/prdt_info.php?g_code=G145457216438)
 
-[Old compression test.](https://bitbucket.org/wolfpld/etcpak/wiki/Old%20compression%20test)  
 [Why there's no image quality metrics? / Quality comparison.](http://i.imgur.com/FxlmUOF.png)  
 [Workload distribution.](https://i.imgur.com/9ZUy4KP.png)
 
