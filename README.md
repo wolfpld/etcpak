@@ -15,9 +15,8 @@ In the following test a [8192x8192 RGB texture](https://bitbucket.org/wolfpld/et
 |mali etcpack 4.2|5.12 s ᵃ|86.31 s|**91.43 s**|0.777 Mpx/s|
 |etc2comp (effort=0, format=ETC1)|6 s ᵃ|34.3 s|**40.3 s**|1.96 Mpx/s|
 |crunch (rg-etc1) 1.04|1.96 s ᵇ|5.82 s ᵇ|**8.872 s** ᵇ|11.53 Mpx/s|
-|*etcpak 0.2.2*|*1.37 s*|*0.63 s*|** *1.5 s* **|106.5 Mpx/s|
-|*etcpak 0.4 (SSE 4.1)*|*1.21 s*|*0.198 s*|** *1.28 s* **|338.2 Mpx/s|
-|*etcpak 0.4 (AVX2)*|*1.21 s*|*0.077 s*|** *1.26 s* **|872.6 Mpx/s|
+|*etcpak 0.5 (SSE 4.1)*|*1.21 s*|*0.198 s*|** *1.28 s* **|338.2 Mpx/s|
+|*etcpak 0.5 (AVX2)*|*1.21 s*|*0.077 s*|** *1.26 s* **|872.6 Mpx/s|
 |*etcpak 0.5 (AVX2, ETC2)*|*1.21 s*|*0.117 s*|** *1.26 s* **|573.5 Mpx/s|
 |*etcpak 0.5 (ARM64ᶜ)*|*4.66 s*|*2.975 s*|** *5.14 s* **|22.6 Mpx/s|
 
