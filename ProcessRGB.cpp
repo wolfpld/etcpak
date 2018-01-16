@@ -22,6 +22,10 @@
 #  endif
 #endif
 
+#ifndef _bswap
+#  define _bswap(x) __builtin_bswap32(x)
+#endif
+
 namespace
 {
 
