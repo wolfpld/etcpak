@@ -12,6 +12,11 @@ OBJ2 := $(SRC2:%.c=%.o)
 
 all: $(IMAGE)
 
+ifeq ($(shell uname | grep -c Darwin), 1)
+../ProcessRGB_AVX2.o : ../ProcessRGB_AVX2.cpp
+	$(CXX) -c $(INCLUDES) $(CXXFLAGS) -mavx2 -mbmi2 -mfma $(DEFINES) $< -o $@
+endif
+
 %.o: %.cpp
 	$(CXX) -c $(INCLUDES) $(CXXFLAGS) $(DEFINES) $< -o $@
 
