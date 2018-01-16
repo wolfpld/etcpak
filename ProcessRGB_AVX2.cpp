@@ -10,7 +10,7 @@
 #include "Types.hpp"
 #include "Vector.hpp"
 #ifdef _MSC_VER
-#  include <intrin.h>
+#  include <emmintrin.h>
 #  include <Windows.h>
 #  define _bswap(x) _byteswap_ulong(x)
 #  define VS_VECTORCALL _vectorcall
@@ -273,8 +273,8 @@ void VS_VECTORCALL FindBestFit_4x2_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i 
                 squareErrorSum = _mm256_add_epi32(squareErrorSum, squareError);
 
                 // Packing selector bits
-                __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64x_si128(i + j * 8));
-                __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64x_si128(i + j * 8));
+                __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64_si128(i + j * 8));
+                __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64_si128(i + j * 8));
 
                 sel0 = _mm256_or_si256(sel0, minIndexLo2);
                 sel1 = _mm256_or_si256(sel1, minIndexHi2);
@@ -311,8 +311,8 @@ void VS_VECTORCALL FindBestFit_4x2_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i 
                 squareErrorSum = _mm256_add_epi32(squareErrorSum, squareError);
 
                 // Packing selector bits
-                __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64x_si128(i + j * 8));
-                __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64x_si128(i + j * 8));
+                __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64_si128(i + j * 8));
+                __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64_si128(i + j * 8));
                 __m256i minIndexLo3 = _mm256_slli_epi16(minIndexLo2, 2);
                 __m256i minIndexHi3 = _mm256_slli_epi16(minIndexHi2, 2);
 
@@ -400,8 +400,8 @@ void VS_VECTORCALL FindBestFit_2x4_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i 
             squareErrorSum0 = _mm256_add_epi32(squareErrorSum0, squareError);
 
             // Packing selector bits
-            __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64x_si128(i));
-            __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64x_si128(i));
+            __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64_si128(i));
+            __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64_si128(i));
 
             sel0 = _mm256_or_si256(sel0, minIndexLo2);
             sel1 = _mm256_or_si256(sel1, minIndexHi2);
@@ -438,8 +438,8 @@ void VS_VECTORCALL FindBestFit_2x4_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i 
             squareErrorSum1 = _mm256_add_epi32(squareErrorSum1, squareError);
 
             // Packing selector bits
-            __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64x_si128(i));
-            __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64x_si128(i));
+            __m256i minIndexLo2 = _mm256_sll_epi16(minIndex0, _mm_cvtsi64_si128(i));
+            __m256i minIndexHi2 = _mm256_sll_epi16(minIndex1, _mm_cvtsi64_si128(i));
             __m256i minIndexLo3 = _mm256_slli_epi16(minIndexLo2, 2);
             __m256i minIndexHi3 = _mm256_slli_epi16(minIndexHi2, 2);
 
