@@ -2,7 +2,7 @@
 #define __DARKRL__MATH_HPP__
 
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 
 #include "Types.hpp"
 
