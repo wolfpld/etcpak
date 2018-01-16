@@ -10,7 +10,7 @@
 #include "Types.hpp"
 #include "Vector.hpp"
 #ifdef _MSC_VER
-#  include <emmintrin.h>
+#  include <intrin.h>
 #  include <Windows.h>
 #  define _bswap(x) _byteswap_ulong(x)
 #  define VS_VECTORCALL _vectorcall
