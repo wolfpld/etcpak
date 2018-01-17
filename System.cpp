@@ -62,7 +62,7 @@ void System::SetThreadName( std::thread& thread, const char* name )
     __except(EXCEPTION_EXECUTE_HANDLER)
     {
     }
-#else
+#elif !defined(__APPLE__)
     pthread_setname_np( thread.native_handle(), name );
 #endif
 }

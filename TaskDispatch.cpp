@@ -22,7 +22,14 @@ TaskDispatch::TaskDispatch( size_t workers )
     {
         char tmp[16];
         sprintf( tmp, "Worker %zu", i );
+#ifdef __APPLE__
+        auto worker = std::thread( [this, tmp]{
+            pthread_setname_np( tmp );
+            Worker();
+        } );
+#else
         auto worker = std::thread( [this]{ Worker(); } );
+#endif
         System::SetThreadName( worker, tmp );
         m_workers.emplace_back( std::move( worker ) );
     }
