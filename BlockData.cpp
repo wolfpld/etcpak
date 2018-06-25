@@ -26,12 +26,14 @@ BlockData::BlockData( const char* fn )
     auto data32 = (uint32*)m_data;
     if( *data32 == 0x03525650 )
     {
+        // PVR
         m_size.y = *(data32+6);
         m_size.x = *(data32+7);
         m_dataOffset = 52 + *(data32+12);
     }
     else if( *data32 == 0x58544BAB )
     {
+        // KTX
         m_size.x = *(data32+9);
         m_size.y = *(data32+10);
         m_dataOffset = 17 + *(data32+15);
