@@ -50,6 +50,7 @@ void Usage()
     fprintf( stderr, "  -d          enable dithering\n" );
     fprintf( stderr, "  -debug      dissect ETC texture\n" );
     fprintf( stderr, "  -etc2       enable ETC2 mode\n" );
+    fprintf( stderr, "  -rgba       enable ETC2 RGBA mode\n" );
 }
 
 int main( int argc, char** argv )
@@ -65,6 +66,7 @@ int main( int argc, char** argv )
     bool dither = false;
     bool debug = false;
     bool etc2 = false;
+    bool rgba = false;
 
     if( argc < 2 )
     {
@@ -111,6 +113,11 @@ int main( int argc, char** argv )
         }
         else if( CSTR( "-etc2" ) )
         {
+            etc2 = true;
+        }
+        else if( CSTR( "-rgba" ) )
+        {
+            rgba = true;
             etc2 = true;
         }
         else
@@ -178,7 +185,7 @@ int main( int argc, char** argv )
 
         auto bd = std::make_shared<BlockData>( "out.pvr", dp.Size(), mipmap, type );
         BlockDataPtr bda;
-        if( alpha && dp.Alpha() )
+        if( alpha && dp.Alpha() && !rgba )
         {
             bda = std::make_shared<BlockData>( "outa.pvr", dp.Size(), mipmap, type );
         }
