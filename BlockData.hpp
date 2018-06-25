@@ -15,15 +15,22 @@
 class BlockData
 {
 public:
+    enum Type
+    {
+        Etc1,
+        Etc2_RGB,
+        Etc2_RGBA,
+    };
+
     BlockData( const char* fn );
-    BlockData( const char* fn, const v2i& size, bool mipmap );
-    BlockData( const v2i& size, bool mipmap );
+    BlockData( const char* fn, const v2i& size, bool mipmap, Type type );
+    BlockData( const v2i& size, bool mipmap, Type type );
     ~BlockData();
 
     BitmapPtr Decode();
     void Dissect();
 
-    void Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither, bool etc2 );
+    void Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither );
 
 private:
     uint8* m_data;
@@ -31,6 +38,7 @@ private:
     size_t m_dataOffset;
     FILE* m_file;
     size_t m_maplen;
+    Type m_type;
 };
 
 typedef std::shared_ptr<BlockData> BlockDataPtr;

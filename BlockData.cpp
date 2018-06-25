@@ -27,6 +27,22 @@ BlockData::BlockData( const char* fn )
     if( *data32 == 0x03525650 )
     {
         // PVR
+        switch( *(data32+2) )
+        {
+        case 6:
+            m_type = Etc1;
+            break;
+        case 22:
+            m_type = Etc2_RGB;
+            break;
+        case 23:
+            m_type = Etc2_RGBA;
+            break;
+        default:
+            assert( false );
+            break;
+        }
+
         m_size.y = *(data32+6);
         m_size.x = *(data32+7);
         m_dataOffset = 52 + *(data32+12);
@@ -34,6 +50,19 @@ BlockData::BlockData( const char* fn )
     else if( *data32 == 0x58544BAB )
     {
         // KTX
+        switch( *(data32+7) )
+        {
+        case 0x9274:
+            m_type = Etc2_RGB;
+            break;
+        case 0x9278:
+            m_type = Etc2_RGBA;
+            break;
+        default:
+            assert( false );
+            break;
+        }
+
         m_size.x = *(data32+9);
         m_size.y = *(data32+10);
         m_dataOffset = 17 + *(data32+15);
@@ -44,7 +73,7 @@ BlockData::BlockData( const char* fn )
     }
 }
 
-static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels )
+static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels, BlockData::Type type )
 {
     *f = fopen( fn, "wb+" );
     assert( *f );
@@ -58,7 +87,21 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
 
     *dst++ = 0x03525650;  // version
     *dst++ = 0;           // flags
-    *dst++ = 6;           // pixelformat[0], value 22 is needed for etc2
+    switch( type )        // pixelformat[0]
+    {
+    case BlockData::Etc1:
+        *dst++ = 6;
+        break;
+    case BlockData::Etc2_RGB:
+        *dst++ = 22;
+        break;
+    case BlockData::Etc2_RGBA:
+        *dst++ = 23;
+        break;
+    default:
+        assert( false );
+        break;
+    }
     *dst++ = 0;           // pixelformat[1]
     *dst++ = 0;           // colourspace
     *dst++ = 0;           // channel type
@@ -88,10 +131,11 @@ static int AdjustSizeForMipmaps( const v2i& size, int levels )
     return len;
 }
 
-BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
+BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
     : m_size( size )
     , m_dataOffset( 52 )
     , m_maplen( 52 + m_size.x*m_size.y/2 )
+    , m_type( type )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
@@ -107,14 +151,15 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels );
+    m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
 }
 
-BlockData::BlockData( const v2i& size, bool mipmap )
+BlockData::BlockData( const v2i& size, bool mipmap, Type type )
     : m_size( size )
     , m_dataOffset( 52 )
     , m_file( nullptr )
     , m_maplen( 52 + m_size.x*m_size.y/2 )
+    , m_type( type )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
     if( mipmap )
@@ -190,7 +235,7 @@ static uint64 _f_rgb_etc2_dither_avx2( uint8* ptr )
 }
 #endif
 
-void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither, bool etc2 )
+void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither )
 {
     uint32 buf[4*4];
     int w = 0;
@@ -204,7 +249,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
 #ifdef __SSE4_1__
         if( can_use_intel_core_4th_gen_features() )
         {
-            if( etc2 )
+            if( m_type != Etc1 )
             {
                 func = _f_rgb_etc2_avx2;
             }
@@ -216,7 +261,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
         else
 #endif
         {
-            if( etc2 )
+            if( m_type != Etc1 )
             {
                 func = _f_rgb_etc2;
             }
@@ -259,7 +304,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
 #ifdef __SSE4_1__
         if( can_use_intel_core_4th_gen_features() )
         {
-            if( etc2 )
+            if( m_type != Etc1 )
             {
                 if( dither )
                 {
@@ -285,7 +330,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
         else
 #endif
         {
-            if( etc2 )
+            if( m_type != Etc1 )
             {
                 if( dither )
                 {

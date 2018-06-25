@@ -142,8 +142,8 @@ int main( int argc, char** argv )
         {
             TaskDispatch::Queue( [&bmp, &dither, i, etc2]()
             {
-                auto bd = std::make_shared<BlockData>( bmp->Size(), false );
-                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither, etc2 );
+                auto bd = std::make_shared<BlockData>( bmp->Size(), false, etc2 ? BlockData::Etc2_RGB : BlockData::Etc1 );
+                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
             } );
         }
         TaskDispatch::Sync();
@@ -166,11 +166,21 @@ int main( int argc, char** argv )
         DataProvider dp( argv[1], mipmap );
         auto num = dp.NumberOfParts();
 
-        auto bd = std::make_shared<BlockData>( "out.pvr", dp.Size(), mipmap );
+        BlockData::Type type;
+        if( etc2 )
+        {
+            type = BlockData::Etc2_RGB;
+        }
+        else
+        {
+            type = BlockData::Etc1;
+        }
+
+        auto bd = std::make_shared<BlockData>( "out.pvr", dp.Size(), mipmap, type );
         BlockDataPtr bda;
         if( alpha && dp.Alpha() )
         {
-            bda = std::make_shared<BlockData>( "outa.pvr", dp.Size(), mipmap );
+            bda = std::make_shared<BlockData>( "outa.pvr", dp.Size(), mipmap, type );
         }
 
         if( bda )
@@ -179,13 +189,13 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &dither, etc2]()
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, etc2 );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
-                TaskDispatch::Queue( [part, i, &bda, etc2]()
+                TaskDispatch::Queue( [part, i, &bda]()
                 {
-                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, etc2 );
+                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
                 } );
             }
         }
@@ -195,9 +205,9 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &dither, etc2]()
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, etc2 );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
             }
         }
