@@ -384,8 +384,7 @@ namespace
 {
 struct BlockColor
 {
-    uint32 r1, g1, b1;
-    uint32 r2, g2, b2;
+    uint32 r[2], g[2], b[2];
 };
 
 enum class Etc2Mode
@@ -402,9 +401,9 @@ Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
     {
         int32 dr, dg, db;
 
-        c.r1 = ( d & 0xF8000000 ) >> 27;
-        c.g1 = ( d & 0x00F80000 ) >> 19;
-        c.b1 = ( d & 0x0000F800 ) >> 11;
+        c.r[0] = ( d & 0xF8000000 ) >> 27;
+        c.g[0] = ( d & 0x00F80000 ) >> 19;
+        c.b[0] = ( d & 0x0000F800 ) >> 11;
 
         dr = ( d & 0x07000000 ) >> 24;
         dg = ( d & 0x00070000 ) >> 16;
@@ -423,9 +422,9 @@ Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
             db |= 0xFFFFFFF8;
         }
 
-        int32 r = static_cast<int32_t>(c.r1) + dr;
-        int32 g = static_cast<int32_t>(c.g1) + dg;
-        int32 b = static_cast<int32_t>(c.b1) + db;
+        int32 r = static_cast<int32_t>(c.r[0]) + dr;
+        int32 g = static_cast<int32_t>(c.g[0]) + dg;
+        int32 b = static_cast<int32_t>(c.b[0]) + db;
 
         if ((r < 0) || (r > 31))
         {
@@ -442,25 +441,25 @@ Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
             return Etc2Mode::planar;
         }
 
-        c.r2 = c.r1 + dr;
-        c.g2 = c.g1 + dg;
-        c.b2 = c.b1 + db;
+        c.r[1] = c.r[0] + dr;
+        c.g[1] = c.g[0] + dg;
+        c.b[1] = c.b[0] + db;
 
-        c.r1 = ( c.r1 << 3 ) | ( c.r1 >> 2 );
-        c.g1 = ( c.g1 << 3 ) | ( c.g1 >> 2 );
-        c.b1 = ( c.b1 << 3 ) | ( c.b1 >> 2 );
-        c.r2 = ( c.r2 << 3 ) | ( c.r2 >> 2 );
-        c.g2 = ( c.g2 << 3 ) | ( c.g2 >> 2 );
-        c.b2 = ( c.b2 << 3 ) | ( c.b2 >> 2 );
+        for( int i=0; i<2; i++ )
+        {
+            c.r[i] = ( c.r[i] << 3 ) | ( c.r[i] >> 2 );
+            c.g[i] = ( c.g[i] << 3 ) | ( c.g[i] >> 2 );
+            c.b[i] = ( c.b[i] << 3 ) | ( c.b[i] >> 2 );
+        }
     }
     else
     {
-        c.r1 = ( ( d & 0xF0000000 ) >> 24 ) | ( ( d & 0xF0000000 ) >> 28 );
-        c.r2 = ( ( d & 0x0F000000 ) >> 20 ) | ( ( d & 0x0F000000 ) >> 24 );
-        c.g1 = ( ( d & 0x00F00000 ) >> 16 ) | ( ( d & 0x00F00000 ) >> 20 );
-        c.g2 = ( ( d & 0x000F0000 ) >> 12 ) | ( ( d & 0x000F0000 ) >> 16 );
-        c.b1 = ( ( d & 0x0000F000 ) >> 8  ) | ( ( d & 0x0000F000 ) >> 12 );
-        c.b2 = ( ( d & 0x00000F00 ) >> 4  ) | ( ( d & 0x00000F00 ) >> 8  );
+        c.r[0] = ( ( d & 0xF0000000 ) >> 24 ) | ( ( d & 0xF0000000 ) >> 28 );
+        c.r[1] = ( ( d & 0x0F000000 ) >> 20 ) | ( ( d & 0x0F000000 ) >> 24 );
+        c.g[0] = ( ( d & 0x00F00000 ) >> 16 ) | ( ( d & 0x00F00000 ) >> 20 );
+        c.g[1] = ( ( d & 0x000F0000 ) >> 12 ) | ( ( d & 0x000F0000 ) >> 16 );
+        c.b[0] = ( ( d & 0x0000F000 ) >> 8  ) | ( ( d & 0x0000F000 ) >> 12 );
+        c.b[1] = ( ( d & 0x00000F00 ) >> 4  ) | ( ( d & 0x00000F00 ) >> 8  );
     }
     return Etc2Mode::none;
 }
@@ -544,91 +543,40 @@ static void DecodeRGBPart( uint32* l[4], uint64 d )
     tcw[0] = ( d & 0xE0 ) >> 5;
     tcw[1] = ( d & 0x1C ) >> 2;
 
-    uint ra, ga, ba;
-    uint rb, gb, bb;
-    uint rc, gc, bc;
-    uint rd, gd, bd;
-
     if( d & 0x1 )
     {
         int o = 0;
         for( int i=0; i<4; i++ )
         {
-            ra = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-            ga = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-            ba = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-
-            rb = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-            gb = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-            bb = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-
-            rc = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-            gc = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-            bc = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-
-            rd = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-            gd = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-            bd = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-
-            *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
-            *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
-            *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
-            *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
-
+            for( int j=0; j<4; j++ )
+            {
+                const auto mod = g_table[tcw[j/2]][ ( ( d & ( 1ll << ( o + 32 + j ) ) ) >> ( o + 32 + j ) ) | ( ( d & ( 1ll << ( o + 48 + j ) ) ) >> ( o + 47 + j ) ) ];
+                const auto r = clampu8( c.r[j/2] + mod );
+                const auto g = clampu8( c.g[j/2] + mod );
+                const auto b = clampu8( c.b[j/2] + mod );
+                *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+            }
             o += 4;
         }
     }
     else
     {
         int o = 0;
-        for( int i=0; i<2; i++ )
+        for( int i=0; i<4; i++ )
         {
-            ra = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-            ga = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-            ba = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            const auto tbl = g_table[tcw[i/2]];
+            const auto cr = c.r[i/2];
+            const auto cg = c.g[i/2];
+            const auto cb = c.b[i/2];
 
-            rb = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-            gb = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-            bb = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-
-            rc = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-            gc = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-            bc = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-
-            rd = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-            gd = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-            bd = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-
-            *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
-            *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
-            *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
-            *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
-
-            o += 4;
-        }
-        for( int i=0; i<2; i++ )
-        {
-            ra = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-            ga = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-            ba = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-
-            rb = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-            gb = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-            bb = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-
-            rc = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-            gc = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-            bc = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-
-            rd = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-            gd = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-            bd = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-
-            *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
-            *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
-            *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
-            *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
-
+            for( int j=0; j<4; j++ )
+            {
+                const auto mod = tbl[ ( ( d & ( 1ll << ( o + 32 + j ) ) ) >> ( o + 32 + j ) ) | ( ( d & ( 1ll << ( o + 48 + j ) ) ) >> ( o + 47 + j ) ) ];
+                const auto r = clampu8( cr + mod );
+                const auto g = clampu8( cg + mod );
+                const auto b = clampu8( cb + mod );
+                *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+            }
             o += 4;
         }
     }
@@ -769,27 +717,27 @@ void BlockData::Dissect()
             {
                 for( int i=0; i<4; i++ )
                 {
-                    *l[0]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
-                    *l[1]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
-                    *l[2]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
-                    *l[3]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                    *l[0]++ = 0xFF000000 | ( c.b[0] << 16 ) | ( c.g[0] << 8 ) | c.r[0];
+                    *l[1]++ = 0xFF000000 | ( c.b[0] << 16 ) | ( c.g[0] << 8 ) | c.r[0];
+                    *l[2]++ = 0xFF000000 | ( c.b[1] << 16 ) | ( c.g[1] << 8 ) | c.r[1];
+                    *l[3]++ = 0xFF000000 | ( c.b[1] << 16 ) | ( c.g[1] << 8 ) | c.r[1];
                 }
             }
             else
             {
                 for( int i=0; i<2; i++ )
                 {
-                    *l[0]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
-                    *l[1]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
-                    *l[2]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
-                    *l[3]++ = 0xFF000000 | ( c.b1 << 16 ) | ( c.g1 << 8 ) | c.r1;
+                    *l[0]++ = 0xFF000000 | ( c.b[0] << 16 ) | ( c.g[0] << 8 ) | c.r[0];
+                    *l[1]++ = 0xFF000000 | ( c.b[0] << 16 ) | ( c.g[0] << 8 ) | c.r[0];
+                    *l[2]++ = 0xFF000000 | ( c.b[0] << 16 ) | ( c.g[0] << 8 ) | c.r[0];
+                    *l[3]++ = 0xFF000000 | ( c.b[0] << 16 ) | ( c.g[0] << 8 ) | c.r[0];
                 }
                 for( int i=0; i<2; i++ )
                 {
-                    *l[0]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
-                    *l[1]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
-                    *l[2]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
-                    *l[3]++ = 0xFF000000 | ( c.b2 << 16 ) | ( c.g2 << 8 ) | c.r2;
+                    *l[0]++ = 0xFF000000 | ( c.b[1] << 16 ) | ( c.g[1] << 8 ) | c.r[1];
+                    *l[1]++ = 0xFF000000 | ( c.b[1] << 16 ) | ( c.g[1] << 8 ) | c.r[1];
+                    *l[2]++ = 0xFF000000 | ( c.b[1] << 16 ) | ( c.g[1] << 8 ) | c.r[1];
+                    *l[3]++ = 0xFF000000 | ( c.b[1] << 16 ) | ( c.g[1] << 8 ) | c.r[1];
                 }
             }
         }
