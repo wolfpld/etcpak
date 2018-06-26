@@ -587,6 +587,37 @@ static void DecodeRGBPart( uint32* l[4], uint64 d )
     }
 }
 
+static void DecodeAlphaPart( uint32* l[4], uint64 d )
+{
+    d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
+        ( ( d & 0x00FF000000000000 ) >> 40 ) |
+        ( ( d & 0x0000FF0000000000 ) >> 24 ) |
+        ( ( d & 0x000000FF00000000 ) >> 8 ) |
+        ( ( d & 0x00000000FF000000 ) << 8 ) |
+        ( ( d & 0x0000000000FF0000 ) << 24 ) |
+        ( ( d & 0x000000000000FF00 ) << 40 ) |
+        ( ( d & 0x00000000000000FF ) << 56 );
+
+    uint base = d >> 56;
+    uint mul = ( d >> 52 ) & 0xF;
+    uint idx = ( d >> 48 ) & 0xF;
+
+    const auto tbl = g_alpha[idx];
+
+    int o = 45;
+    for( int i=0; i<4; i++ )
+    {
+        for( int j=0; j<4; j++ )
+        {
+            const auto mod = tbl[ ( d >> o ) & 0x7 ];
+            const auto a = clampu8( base + mod * mul );
+            *l[j] = ( *l[j] & 0x00FFFFFF ) | ( a << 24 );
+            l[j]++;
+            o -= 3;
+        }
+    }
+}
+
 BitmapPtr BlockData::DecodeRGB()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
@@ -632,8 +663,16 @@ BitmapPtr BlockData::DecodeRGBA()
     {
         for( int x=0; x<m_size.x/4; x++ )
         {
+            uint64 a = *src++;
             uint64 d = *src++;
             DecodeRGBPart( l, d );
+
+            for( int i=0; i<4; i++ )
+            {
+                l[i] -= 4;
+            }
+
+            DecodeAlphaPart( l, a );
         }
 
         for( int i=0; i<4; i++ )
