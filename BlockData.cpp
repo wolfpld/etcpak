@@ -555,7 +555,7 @@ static void DecodeRGBPart( uint32* l[4], uint64 d )
         {
             for( int j=0; j<4; j++ )
             {
-                const auto mod = g_table[tcw[j/2]][ ( ( d & ( 1ll << ( o + 32 + j ) ) ) >> ( o + 32 + j ) ) | ( ( d & ( 1ll << ( o + 48 + j ) ) ) >> ( o + 47 + j ) ) ];
+                const auto mod = g_table[tcw[j/2]][ ( ( d >> ( o + 32 + j ) ) & 0x1 ) | ( ( d >> ( o + 47 + j ) ) & 0x2 ) ];
                 const auto r = clampu8( c.r[j/2] + mod );
                 const auto g = clampu8( c.g[j/2] + mod );
                 const auto b = clampu8( c.b[j/2] + mod );
@@ -576,7 +576,7 @@ static void DecodeRGBPart( uint32* l[4], uint64 d )
 
             for( int j=0; j<4; j++ )
             {
-                const auto mod = tbl[ ( ( d & ( 1ll << ( o + 32 + j ) ) ) >> ( o + 32 + j ) ) | ( ( d & ( 1ll << ( o + 48 + j ) ) ) >> ( o + 47 + j ) ) ];
+                const auto mod = tbl[ ( ( d >> ( o + 32 + j ) ) & 0x1 ) | ( ( d >> ( o + 47 + j ) ) & 0x2 ) ];
                 const auto r = clampu8( cr + mod );
                 const auto g = clampu8( cg + mod );
                 const auto b = clampu8( cb + mod );
