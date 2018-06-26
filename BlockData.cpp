@@ -523,12 +523,17 @@ BitmapPtr BlockData::Decode()
     }
 }
 
+static uint64_t ConvertByteOrder( uint64_t d )
+{
+    return ( ( d & 0xFF000000FF000000 ) >> 24 ) |
+           ( ( d & 0x000000FF000000FF ) << 24 ) |
+           ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
+           ( ( d & 0x0000FF000000FF00 ) << 8 );
+}
+
 static void DecodeRGBPart( uint32* l[4], uint64 d )
 {
-    d = ( ( d & 0xFF000000FF000000 ) >> 24 ) |
-        ( ( d & 0x000000FF000000FF ) << 24 ) |
-        ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
-        ( ( d & 0x0000FF000000FF00 ) << 8 );
+    d = ConvertByteOrder( d );
 
     BlockColor c;
     const auto mode = DecodeBlockColor( d, c );
@@ -667,12 +672,7 @@ void BlockData::Dissect()
     {
         for( int x=0; x<size.x; x++ )
         {
-            uint64 d = *src++;
-
-            d = ( ( d & 0xFF000000FF000000 ) >> 24 ) |
-                ( ( d & 0x000000FF000000FF ) << 24 ) |
-                ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
-                ( ( d & 0x0000FF000000FF00 ) << 8 );
+            uint64 d = ConvertByteOrder( *src++ );
 
             BlockColor c;
             const auto mode = DecodeBlockColor( d, c );
