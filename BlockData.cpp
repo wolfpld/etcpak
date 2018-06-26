@@ -514,6 +514,128 @@ void DecodePlanar(uint64 block, uint32* l[4])
 
 BitmapPtr BlockData::Decode()
 {
+    if( m_type == Etc2_RGBA )
+    {
+        return DecodeRGBA();
+    }
+    else
+    {
+        return DecodeRGB();
+    }
+}
+
+static void DecodeRGBPart( uint32* l[4], uint64 d )
+{
+    d = ( ( d & 0xFF000000FF000000 ) >> 24 ) |
+        ( ( d & 0x000000FF000000FF ) << 24 ) |
+        ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
+        ( ( d & 0x0000FF000000FF00 ) << 8 );
+
+    BlockColor c;
+    const auto mode = DecodeBlockColor( d, c );
+
+    if (mode == Etc2Mode::planar)
+    {
+        DecodePlanar(d, l);
+        return;
+    }
+
+    uint tcw[2];
+    tcw[0] = ( d & 0xE0 ) >> 5;
+    tcw[1] = ( d & 0x1C ) >> 2;
+
+    uint ra, ga, ba;
+    uint rb, gb, bb;
+    uint rc, gc, bc;
+    uint rd, gd, bd;
+
+    if( d & 0x1 )
+    {
+        int o = 0;
+        for( int i=0; i<4; i++ )
+        {
+            ra = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            ga = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            ba = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+
+            rb = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+            gb = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+            bb = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+
+            rc = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+            gc = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+            bc = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+
+            rd = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+            gd = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+            bd = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+
+            *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
+            *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
+            *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
+            *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
+
+            o += 4;
+        }
+    }
+    else
+    {
+        int o = 0;
+        for( int i=0; i<2; i++ )
+        {
+            ra = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            ga = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            ba = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+
+            rb = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+            gb = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+            bb = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+
+            rc = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+            gc = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+            bc = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+
+            rd = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+            gd = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+            bd = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+
+            *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
+            *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
+            *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
+            *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
+
+            o += 4;
+        }
+        for( int i=0; i<2; i++ )
+        {
+            ra = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            ga = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+            ba = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
+
+            rb = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+            gb = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+            bb = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
+
+            rc = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+            gc = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+            bc = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
+
+            rd = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+            gd = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+            bd = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
+
+            *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
+            *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
+            *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
+            *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
+
+            o += 4;
+        }
+    }
+}
+
+BitmapPtr BlockData::DecodeRGB()
+{
     auto ret = std::make_shared<Bitmap>( m_size );
 
     uint32* l[4];
@@ -529,119 +651,42 @@ BitmapPtr BlockData::Decode()
         for( int x=0; x<m_size.x/4; x++ )
         {
             uint64 d = *src++;
-
-            d = ( ( d & 0xFF000000FF000000 ) >> 24 ) |
-                ( ( d & 0x000000FF000000FF ) << 24 ) |
-                ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
-                ( ( d & 0x0000FF000000FF00 ) << 8 );
-
-            BlockColor c;
-            const auto mode = DecodeBlockColor( d, c );
-
-            if (mode == Etc2Mode::planar)
-            {
-                DecodePlanar(d, l);
-                continue;
-            }
-
-            uint tcw[2];
-            tcw[0] = ( d & 0xE0 ) >> 5;
-            tcw[1] = ( d & 0x1C ) >> 2;
-
-            uint ra, ga, ba;
-            uint rb, gb, bb;
-            uint rc, gc, bc;
-            uint rd, gd, bd;
-
-            if( d & 0x1 )
-            {
-                int o = 0;
-                for( int i=0; i<4; i++ )
-                {
-                    ra = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-                    ga = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-                    ba = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-
-                    rb = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-                    gb = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-                    bb = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-
-                    rc = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-                    gc = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-                    bc = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-
-                    rd = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-                    gd = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-                    bd = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-
-                    *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
-                    *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
-                    *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
-                    *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
-
-                    o += 4;
-                }
-            }
-            else
-            {
-                int o = 0;
-                for( int i=0; i<2; i++ )
-                {
-                    ra = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-                    ga = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-                    ba = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-
-                    rb = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-                    gb = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-                    bb = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-
-                    rc = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-                    gc = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-                    bc = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-
-                    rd = clampu8( c.r1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-                    gd = clampu8( c.g1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-                    bd = clampu8( c.b1 + g_table[tcw[0]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-
-                    *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
-                    *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
-                    *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
-                    *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
-
-                    o += 4;
-                }
-                for( int i=0; i<2; i++ )
-                {
-                    ra = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-                    ga = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-                    ba = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 32 ) ) ) >> ( o + 32 ) ) | ( ( d & ( 1ll << ( o + 48 ) ) ) >> ( o + 47 ) ) ] );
-
-                    rb = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-                    gb = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-                    bb = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 33 ) ) ) >> ( o + 33 ) ) | ( ( d & ( 1ll << ( o + 49 ) ) ) >> ( o + 48 ) ) ] );
-
-                    rc = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-                    gc = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-                    bc = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 34 ) ) ) >> ( o + 34 ) ) | ( ( d & ( 1ll << ( o + 50 ) ) ) >> ( o + 49 ) ) ] );
-
-                    rd = clampu8( c.r2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-                    gd = clampu8( c.g2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-                    bd = clampu8( c.b2 + g_table[tcw[1]][ ( ( d & ( 1ll << ( o + 35 ) ) ) >> ( o + 35 ) ) | ( ( d & ( 1ll << ( o + 51 ) ) ) >> ( o + 50 ) ) ] );
-
-                    *l[0]++ = ra | ( ga << 8 ) | ( ba << 16 ) | 0xFF000000;
-                    *l[1]++ = rb | ( gb << 8 ) | ( bb << 16 ) | 0xFF000000;
-                    *l[2]++ = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
-                    *l[3]++ = rd | ( gd << 8 ) | ( bd << 16 ) | 0xFF000000;
-
-                    o += 4;
-                }
-            }
+            DecodeRGBPart( l, d );
         }
 
-        l[0] += m_size.x * 3;
-        l[1] += m_size.x * 3;
-        l[2] += m_size.x * 3;
-        l[3] += m_size.x * 3;
+        for( int i=0; i<4; i++ )
+        {
+            l[i] += m_size.x * 3;
+        }
+    }
+
+    return ret;
+}
+
+BitmapPtr BlockData::DecodeRGBA()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    uint32* l[4];
+    l[0] = ret->Data();
+    l[1] = l[0] + m_size.x;
+    l[2] = l[1] + m_size.x;
+    l[3] = l[2] + m_size.x;
+
+    const uint64* src = (const uint64*)( m_data + m_dataOffset );
+
+    for( int y=0; y<m_size.y/4; y++ )
+    {
+        for( int x=0; x<m_size.x/4; x++ )
+        {
+            uint64 d = *src++;
+            DecodeRGBPart( l, d );
+        }
+
+        for( int i=0; i<4; i++ )
+        {
+            l[i] += m_size.x * 3;
+        }
     }
 
     return ret;
