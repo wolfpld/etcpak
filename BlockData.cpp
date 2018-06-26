@@ -65,7 +65,7 @@ BlockData::BlockData( const char* fn )
 
         m_size.x = *(data32+9);
         m_size.y = *(data32+10);
-        m_dataOffset = 17 + *(data32+15);
+        m_dataOffset = sizeof( uint32 ) * 17 + *(data32+15);
     }
     else
     {
