@@ -134,7 +134,7 @@ static int AdjustSizeForMipmaps( const v2i& size, int levels )
 BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
     : m_size( size )
     , m_dataOffset( 52 )
-    , m_maplen( 52 + m_size.x*m_size.y/2 )
+    , m_maplen( m_size.x*m_size.y/2 )
     , m_type( type )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
@@ -151,6 +151,9 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
+    if( type == Etc2_RGBA ) m_maplen *= 2;
+
+    m_maplen += m_dataOffset;
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
 }
 
@@ -158,7 +161,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
     : m_size( size )
     , m_dataOffset( 52 )
     , m_file( nullptr )
-    , m_maplen( 52 + m_size.x*m_size.y/2 )
+    , m_maplen( m_size.x*m_size.y/2 )
     , m_type( type )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
@@ -167,6 +170,10 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         const int levels = NumberOfMipLevels( size );
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
+
+    if( type == Etc2_RGBA ) m_maplen *= 2;
+
+    m_maplen += m_dataOffset;
     m_data = new uint8_t[m_maplen];
 }
 
