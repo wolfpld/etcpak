@@ -3,8 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
-
-#include "Types.hpp"
+#include <stdint.h>
 
 template<typename T>
 inline T AlignPOT( T val )
@@ -18,7 +17,7 @@ inline T AlignPOT( T val )
     return val + 1;
 }
 
-inline int CountSetBits( uint32 val )
+inline int CountSetBits( uint32_t val )
 {
     val -= ( val >> 1 ) & 0x55555555;
     val = ( ( val >> 2 ) & 0x33333333 ) + ( val & 0x33333333 );
@@ -28,7 +27,7 @@ inline int CountSetBits( uint32 val )
     return val & 0x0000003f;
 }
 
-inline int CountLeadingZeros( uint32 val )
+inline int CountLeadingZeros( uint32_t val )
 {
     val |= val >> 1;
     val |= val >> 2;
@@ -70,7 +69,7 @@ inline T SmoothStep( T x )
     return x*x*(3-2*x);
 }
 
-inline uint8 clampu8( int32 val )
+inline uint8_t clampu8( int32_t val )
 {
     return std::min( std::max( 0, val ), 255 );
 }

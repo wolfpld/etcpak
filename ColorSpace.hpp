@@ -1,7 +1,6 @@
 #ifndef __DARKRL__COLORSPACE_HPP__
 #define __DARKRL__COLORSPACE_HPP__
 
-#include "Types.hpp"
 #include "Vector.hpp"
 
 namespace Color

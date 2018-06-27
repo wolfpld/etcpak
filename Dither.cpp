@@ -12,10 +12,10 @@
 #  endif
 #endif
 
-static uint8 e5[32];
-static uint8 e6[64];
-static uint8 qrb[256+16];
-static uint8 qg[256+16];
+static uint8_t e5[32];
+static uint8_t e6[64];
+static uint8_t qrb[256+16];
+static uint8_t qg[256+16];
 
 void InitDither()
 {
@@ -35,7 +35,7 @@ void InitDither()
     }
 }
 
-void Dither( uint8* data )
+void Dither( uint8_t* data )
 {
     int err[8];
     int* ep1 = err;
@@ -43,13 +43,13 @@ void Dither( uint8* data )
 
     for( int ch=0; ch<3; ch++ )
     {
-        uint8* ptr = data + ch;
-        uint8* quant = (ch == 1) ? qg + 8 : qrb + 8;
+        uint8_t* ptr = data + ch;
+        uint8_t* quant = (ch == 1) ? qg + 8 : qrb + 8;
         memset( err, 0, sizeof( err ) );
 
         for( int y=0; y<4; y++ )
         {
-            uint8 tmp;
+            uint8_t tmp;
             tmp = quant[ptr[0] + ( ( 3 * ep2[1] + 5 * ep2[0] ) >> 4 )];
             ep1[0] = ptr[0] - tmp;
             ptr[0] = tmp;
@@ -68,22 +68,22 @@ void Dither( uint8* data )
     }
 }
 
-void Swizzle(const uint8* data, const ptrdiff_t pitch, uint8* output)
+void Swizzle(const uint8_t* data, const ptrdiff_t pitch, uint8_t* output)
 {
     for (int i = 0; i < 4; ++i)
     {
-        uint64 d0 = *(const uint64*)(data + i * pitch + 0);
-        uint64 d1 = *(const uint64*)(data + i * pitch + 8);
+        uint64_t d0 = *(const uint64_t*)(data + i * pitch + 0);
+        uint64_t d1 = *(const uint64_t*)(data + i * pitch + 8);
 
-        *(uint64*)(output + i * 16 + 0) = d0;
-        *(uint64*)(output + i * 16 + 8) = d1;
+        *(uint64_t*)(output + i * 16 + 0) = d0;
+        *(uint64_t*)(output + i * 16 + 8) = d1;
     }
 }
 
 #ifdef __SSE4_1__
 // This version uses a 5 bit quantization for each channel to allow SIMD acceleration.
 // Tow blocks are processed in parallel
-void Dither_SSE41(const uint8* data0, const uint8* data1, uint8* output0, uint8* output1)
+void Dither_SSE41(const uint8_t* data0, const uint8_t* data1, uint8_t* output0, uint8_t* output1)
 {
     __m128i ep1[4];
     __m128i ep2[4];
@@ -232,7 +232,7 @@ void Dither_SSE41(const uint8* data0, const uint8* data1, uint8* output0, uint8*
 }
 
 // Tow blocks are processed in parallel
-void Swizzle_SSE41(const uint8* data, const ptrdiff_t pitch, uint8* output0, uint8* output1)
+void Swizzle_SSE41(const uint8_t* data, const ptrdiff_t pitch, uint8_t* output0, uint8_t* output1)
 {
     for (int i = 0; i < 4; ++i)
     {
@@ -245,7 +245,7 @@ void Swizzle_SSE41(const uint8* data, const ptrdiff_t pitch, uint8* output0, uin
 
 // This version uses a 5 bit quantization for each channel to allow SIMD acceleration.
 // Tow blocks are processed in parallel
-void Dither_Swizzle_SSE41(const uint8* data, const ptrdiff_t pitch, uint8* output0, uint8* output1)
+void Dither_Swizzle_SSE41(const uint8_t* data, const ptrdiff_t pitch, uint8_t* output0, uint8_t* output1)
 {
     __m128i ep1[4];
     __m128i ep2[4];

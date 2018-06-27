@@ -1,8 +1,8 @@
 #ifndef __PROCESSALPHA_HPP__
 #define __PROCESSALPHA_HPP__
 
-#include "Types.hpp"
+#include <stdint.h>
 
-uint64 ProcessAlpha( const uint8* src );
+uint64_t ProcessAlpha( const uint8_t* src );
 
 #endif

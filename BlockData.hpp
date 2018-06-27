@@ -5,11 +5,11 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <stdint.h>
 #include <stdio.h>
 #include <vector>
 
 #include "Bitmap.hpp"
-#include "Types.hpp"
 #include "Vector.hpp"
 
 class BlockData
@@ -30,13 +30,13 @@ public:
     BitmapPtr Decode();
     void Dissect();
 
-    void Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither );
+    void Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither );
 
 private:
     BitmapPtr DecodeRGB();
     BitmapPtr DecodeRGBA();
 
-    uint8* m_data;
+    uint8_t* m_data;
     v2i m_size;
     size_t m_dataOffset;
     FILE* m_file;

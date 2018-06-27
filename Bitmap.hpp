@@ -4,9 +4,9 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <stdint.h>
 
 #include "Semaphore.hpp"
-#include "Types.hpp"
 #include "Vector.hpp"
 
 enum class Channels
@@ -18,26 +18,26 @@ enum class Channels
 class Bitmap
 {
 public:
-    Bitmap( const char* fn, uint lines );
+    Bitmap( const char* fn, unsigned int lines );
     Bitmap( const v2i& size );
     virtual ~Bitmap();
 
     void Write( const char* fn );
 
-    uint32* Data() { if( m_load.valid() ) m_load.wait(); return m_data; }
-    const uint32* Data() const { if( m_load.valid() ) m_load.wait(); return m_data; }
+    uint32_t* Data() { if( m_load.valid() ) m_load.wait(); return m_data; }
+    const uint32_t* Data() const { if( m_load.valid() ) m_load.wait(); return m_data; }
     const v2i& Size() const { return m_size; }
     bool Alpha() const { return m_alpha; }
 
-    const uint32* NextBlock( uint& lines, bool& done );
+    const uint32_t* NextBlock( unsigned int& lines, bool& done );
 
 protected:
-    Bitmap( const Bitmap& src, uint lines );
+    Bitmap( const Bitmap& src, unsigned int lines );
 
-    uint32* m_data;
-    uint32* m_block;
-    uint m_lines;
-    uint m_linesLeft;
+    uint32_t* m_data;
+    uint32_t* m_block;
+    unsigned int m_lines;
+    unsigned int m_linesLeft;
     v2i m_size;
     bool m_alpha;
     Semaphore m_sema;

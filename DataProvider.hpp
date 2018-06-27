@@ -2,17 +2,17 @@
 #define __DATAPROVIDER_HPP__
 
 #include <memory>
+#include <stdint.h>
 #include <vector>
 
 #include "Bitmap.hpp"
-#include "Types.hpp"
 
 struct DataPart
 {
-    const uint32* src;
-    uint width;
-    uint lines;
-    uint offset;
+    const uint32_t* src;
+    unsigned int width;
+    unsigned int lines;
+    unsigned int offset;
 };
 
 class DataProvider
@@ -21,7 +21,7 @@ public:
     DataProvider( const char* fn, bool mipmap );
     ~DataProvider();
 
-    uint NumberOfParts() const;
+    unsigned int NumberOfParts() const;
 
     DataPart NextPart();
 
@@ -32,8 +32,8 @@ public:
 private:
     std::vector<std::unique_ptr<Bitmap>> m_bmp;
     Bitmap* m_current;
-    uint m_offset;
-    uint m_lines;
+    unsigned int m_offset;
+    unsigned int m_lines;
     bool m_mipmap;
     bool m_done;
 };

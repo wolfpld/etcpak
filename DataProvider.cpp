@@ -19,15 +19,15 @@ DataProvider::~DataProvider()
 {
 }
 
-uint DataProvider::NumberOfParts() const
+unsigned int DataProvider::NumberOfParts() const
 {
-    uint parts = ( ( m_bmp[0]->Size().y / 4 ) + m_lines - 1 ) / m_lines;
+    unsigned int parts = ( ( m_bmp[0]->Size().y / 4 ) + m_lines - 1 ) / m_lines;
 
     if( m_mipmap )
     {
         v2i current = m_bmp[0]->Size();
         int levels = NumberOfMipLevels( current );
-        uint lines = m_lines;
+        unsigned int lines = m_lines;
         for( int i=1; i<levels; i++ )
         {
             assert( current.x != 1 || current.y != 1 );
@@ -46,12 +46,12 @@ DataPart DataProvider::NextPart()
 {
     assert( !m_done );
 
-    uint lines = m_lines;
+    unsigned int lines = m_lines;
     bool done;
 
     DataPart ret = {
         m_current->NextBlock( lines, done ),
-        std::max<uint>( 4, m_current->Size().x ),
+        std::max<unsigned int>( 4, m_current->Size().x ),
         lines,
         m_offset
     };

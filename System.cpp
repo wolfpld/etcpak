@@ -8,9 +8,9 @@
 
 #include "System.hpp"
 
-uint System::CPUCores()
+unsigned int System::CPUCores()
 {
-    static uint cores = 0;
+    static unsigned int cores = 0;
     if( cores == 0 )
     {
         int tmp;
@@ -28,7 +28,7 @@ uint System::CPUCores()
 #  endif
         tmp = (int)(long)sysconf( _SC_NPROCESSORS_ONLN );
 #endif
-        cores = (uint)std::max( tmp, 1 );
+        cores = (unsigned int)std::max( tmp, 1 );
     }
     return cores;
 }

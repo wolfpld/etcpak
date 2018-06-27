@@ -4,7 +4,7 @@
 #include "BitmapDownsampled.hpp"
 #include "Debug.hpp"
 
-BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, uint lines )
+BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
     : Bitmap( bmp, lines )
 {
     m_size.x = std::max( 1, bmp.Size().x / 2 );
@@ -15,13 +15,13 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, uint lines )
 
     DBGPRINT( "Subbitmap " << m_size.x << "x" << m_size.y );
 
-    m_block = m_data = new uint32[w*h];
+    m_block = m_data = new uint32_t[w*h];
 
     if( m_size.x < w || m_size.y < h )
     {
-        memset( m_data, 0, w*h*sizeof( uint32 ) );
+        memset( m_data, 0, w*h*sizeof( uint32_t ) );
         m_linesLeft = h / 4;
-        uint lines = 0;
+        unsigned int lines = 0;
         for( int i=0; i<h/4; i++ )
         {
             for( int j=0; j<4; j++ )
@@ -47,7 +47,7 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, uint lines )
             auto ptr = m_data;
             auto src1 = bmp.Data();
             auto src2 = src1 + bmp.Size().x;
-            uint lines = 0;
+            unsigned int lines = 0;
             for( int i=0; i<h/4; i++ )
             {
                 for( int j=0; j<4; j++ )

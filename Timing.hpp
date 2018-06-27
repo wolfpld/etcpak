@@ -1,8 +1,8 @@
 #ifndef __DARKRL__TIMING_HPP__
 #define __DARKRL__TIMING_HPP__
 
-#include "Types.hpp"
+#include <stdint.h>
 
-uint64 GetTime();
+uint64_t GetTime();
 
 #endif

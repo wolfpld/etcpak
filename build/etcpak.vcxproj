@@ -169,7 +169,6 @@
     <ClInclude Include="..\Tables.hpp" />
     <ClInclude Include="..\TaskDispatch.hpp" />
     <ClInclude Include="..\Timing.hpp" />
-    <ClInclude Include="..\Types.hpp" />
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\zlib\crc32.h" />
     <ClInclude Include="..\zlib\deflate.h" />

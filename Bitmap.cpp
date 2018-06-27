@@ -9,7 +9,7 @@
 #include "Bitmap.hpp"
 #include "Debug.hpp"
 
-Bitmap::Bitmap( const char* fn, uint lines )
+Bitmap::Bitmap( const char* fn, unsigned int lines )
     : m_block( nullptr )
     , m_lines( lines )
     , m_alpha( true )
@@ -22,10 +22,10 @@ Bitmap::Bitmap( const char* fn, uint lines )
     fread( buf, 1, 4, f );
     if( memcmp( buf, "raw4", 4 ) == 0 )
     {
-        uint8 a;
+        uint8_t a;
         fread( &a, 1, 1, f );
         m_alpha = a == 1;
-        uint32 d;
+        uint32_t d;
         fread( &d, 1, 4, f );
         m_size.x = d;
         fread( &d, 1, 4, f );
@@ -35,13 +35,13 @@ Bitmap::Bitmap( const char* fn, uint lines )
         assert( m_size.x % 4 == 0 );
         assert( m_size.y % 4 == 0 );
 
-        int32 csize;
+        int32_t csize;
         fread( &csize, 1, 4, f );
         char* cbuf = new char[csize];
         fread( cbuf, 1, csize, f );
         fclose( f );
 
-        m_block = m_data = new uint32[m_size.x*m_size.y];
+        m_block = m_data = new uint32_t[m_size.x*m_size.y];
         m_linesLeft = m_size.y / 4;
 
         LZ4_decompress_fast( cbuf, (char*)m_data, m_size.x*m_size.y*4 );
@@ -117,13 +117,13 @@ Bitmap::Bitmap( const char* fn, uint lines )
         assert( w % 4 == 0 );
         assert( h % 4 == 0 );
 
-        m_block = m_data = new uint32[w*h];
+        m_block = m_data = new uint32_t[w*h];
         m_linesLeft = h / 4;
 
         m_load = std::async( std::launch::async, [this, f, png_ptr, info_ptr]() mutable
         {
             auto ptr = m_data;
-            uint lines = 0;
+            unsigned int lines = 0;
             for( int i=0; i<m_size.y / 4; i++ )
             {
                 for( int j=0; j<4; j++ )
@@ -152,7 +152,7 @@ Bitmap::Bitmap( const char* fn, uint lines )
 }
 
 Bitmap::Bitmap( const v2i& size )
-    : m_data( new uint32[size.x*size.y] )
+    : m_data( new uint32_t[size.x*size.y] )
     , m_block( nullptr )
     , m_lines( 1 )
     , m_linesLeft( size.y / 4 )
@@ -161,7 +161,7 @@ Bitmap::Bitmap( const v2i& size )
 {
 }
 
-Bitmap::Bitmap( const Bitmap& src, uint lines )
+Bitmap::Bitmap( const Bitmap& src, unsigned int lines )
     : m_lines( lines )
     , m_alpha( src.Alpha() )
     , m_sema( 0 )
@@ -187,7 +187,7 @@ void Bitmap::Write( const char* fn )
 
     png_write_info( png_ptr, info_ptr );
 
-    uint32* ptr = m_data;
+    uint32_t* ptr = m_data;
     for( int i=0; i<m_size.y; i++ )
     {
         png_write_rows( png_ptr, (png_bytepp)(&ptr), 1 );
@@ -200,7 +200,7 @@ void Bitmap::Write( const char* fn )
     fclose( f );
 }
 
-const uint32* Bitmap::NextBlock( uint& lines, bool& done )
+const uint32_t* Bitmap::NextBlock( unsigned int& lines, bool& done )
 {
     std::lock_guard<std::mutex> lock( m_lock );
     lines = std::min( m_lines, m_linesLeft );

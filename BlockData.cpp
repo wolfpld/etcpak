@@ -21,9 +21,9 @@ BlockData::BlockData( const char* fn )
     fseek( m_file, 0, SEEK_END );
     m_maplen = ftell( m_file );
     fseek( m_file, 0, SEEK_SET );
-    m_data = (uint8*)mmap( nullptr, m_maplen, PROT_READ, MAP_SHARED, fileno( m_file ), 0 );
+    m_data = (uint8_t*)mmap( nullptr, m_maplen, PROT_READ, MAP_SHARED, fileno( m_file ), 0 );
 
-    auto data32 = (uint32*)m_data;
+    auto data32 = (uint32_t*)m_data;
     if( *data32 == 0x03525650 )
     {
         // PVR
@@ -65,7 +65,7 @@ BlockData::BlockData( const char* fn )
 
         m_size.x = *(data32+9);
         m_size.y = *(data32+10);
-        m_dataOffset = sizeof( uint32 ) * 17 + *(data32+15);
+        m_dataOffset = sizeof( uint32_t ) * 17 + *(data32+15);
     }
     else
     {
@@ -73,7 +73,7 @@ BlockData::BlockData( const char* fn )
     }
 }
 
-static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels, BlockData::Type type )
+static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels, BlockData::Type type )
 {
     *f = fopen( fn, "wb+" );
     assert( *f );
@@ -82,8 +82,8 @@ static uint8* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE*
     fwrite( &zero, 1, 1, *f );
     fseek( *f, 0, SEEK_SET );
 
-    auto ret = (uint8*)mmap( nullptr, len, PROT_WRITE, MAP_SHARED, fileno( *f ), 0 );
-    auto dst = (uint32*)ret;
+    auto ret = (uint8_t*)mmap( nullptr, len, PROT_WRITE, MAP_SHARED, fileno( *f ), 0 );
+    auto dst = (uint32_t*)ret;
 
     *dst++ = 0x03525650;  // version
     *dst++ = 0;           // flags
@@ -139,7 +139,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
 {
     assert( m_size.x%4 == 0 && m_size.y%4 == 0 );
 
-    uint32 cnt = m_size.x * m_size.y / 16;
+    uint32_t cnt = m_size.x * m_size.y / 16;
     DBGPRINT( cnt << " blocks" );
 
     int levels = 1;
@@ -167,7 +167,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         const int levels = NumberOfMipLevels( size );
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
-    m_data = new uint8[m_maplen];
+    m_data = new uint8_t[m_maplen];
 }
 
 BlockData::~BlockData()
@@ -183,66 +183,66 @@ BlockData::~BlockData()
     }
 }
 
-static uint64 _f_rgb( uint8* ptr )
+static uint64_t _f_rgb( uint8_t* ptr )
 {
     return ProcessRGB( ptr );
 }
 
 #ifdef __SSE4_1__
-static uint64 _f_rgb_avx2( uint8* ptr )
+static uint64_t _f_rgb_avx2( uint8_t* ptr )
 {
     return ProcessRGB_AVX2( ptr );
 }
 #endif
 
-static uint64 _f_rgb_dither( uint8* ptr )
+static uint64_t _f_rgb_dither( uint8_t* ptr )
 {
     Dither( ptr );
     return ProcessRGB( ptr );
 }
 
 #ifdef __SSE4_1__
-static uint64 _f_rgb_dither_avx2( uint8* ptr )
+static uint64_t _f_rgb_dither_avx2( uint8_t* ptr )
 {
     Dither( ptr );
     return ProcessRGB_AVX2( ptr );
 }
 #endif
 
-static uint64 _f_rgb_etc2( uint8* ptr )
+static uint64_t _f_rgb_etc2( uint8_t* ptr )
 {
     return ProcessRGB_ETC2( ptr );
 }
 
 #ifdef __SSE4_1__
-static uint64 _f_rgb_etc2_avx2( uint8* ptr )
+static uint64_t _f_rgb_etc2_avx2( uint8_t* ptr )
 {
     return ProcessRGB_ETC2_AVX2( ptr );
 }
 #endif
 
-static uint64 _f_rgb_etc2_dither( uint8* ptr )
+static uint64_t _f_rgb_etc2_dither( uint8_t* ptr )
 {
     Dither( ptr );
     return ProcessRGB_ETC2( ptr );
 }
 
 #ifdef __SSE4_1__
-static uint64 _f_rgb_etc2_dither_avx2( uint8* ptr )
+static uint64_t _f_rgb_etc2_dither_avx2( uint8_t* ptr )
 {
     Dither( ptr );
     return ProcessRGB_ETC2_AVX2( ptr );
 }
 #endif
 
-void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t width, Channels type, bool dither )
+void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither )
 {
-    uint32 buf[4*4];
+    uint32_t buf[4*4];
     int w = 0;
 
-    auto dst = ((uint64*)( m_data + m_dataOffset )) + offset;
+    auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset;
 
-    uint64 (*func)(uint8*);
+    uint64_t (*func)(uint8_t*);
 
     if( type == Channels::Alpha )
     {
@@ -276,7 +276,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
             auto ptr = buf;
             for( int x=0; x<4; x++ )
             {
-                uint a = *src >> 24;
+                unsigned int a = *src >> 24;
                 *ptr++ = a | ( a << 8 ) | ( a << 16 );
                 src += width;
                 a = *src >> 24;
@@ -295,7 +295,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
                 w = 0;
             }
 
-            *dst++ = func( (uint8*)buf );
+            *dst++ = func( (uint8_t*)buf );
         }
         while( --blocks );
     }
@@ -374,7 +374,7 @@ void BlockData::Process( const uint32* src, uint32 blocks, size_t offset, size_t
                 w = 0;
             }
 
-            *dst++ = func( (uint8*)buf );
+            *dst++ = func( (uint8_t*)buf );
         }
         while( --blocks );
     }
@@ -384,7 +384,7 @@ namespace
 {
 struct BlockColor
 {
-    uint32 r[2], g[2], b[2];
+    uint32_t r[2], g[2], b[2];
 };
 
 enum class Etc2Mode
@@ -395,11 +395,11 @@ enum class Etc2Mode
     planar
 };
 
-Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
+Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c )
 {
     if( d & 0x2 )
     {
-        int32 dr, dg, db;
+        int32_t dr, dg, db;
 
         c.r[0] = ( d & 0xF8000000 ) >> 27;
         c.g[0] = ( d & 0x00F80000 ) >> 19;
@@ -422,9 +422,9 @@ Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
             db |= 0xFFFFFFF8;
         }
 
-        int32 r = static_cast<int32_t>(c.r[0]) + dr;
-        int32 g = static_cast<int32_t>(c.g[0]) + dg;
-        int32 b = static_cast<int32_t>(c.b[0]) + db;
+        int32_t r = static_cast<int32_t>(c.r[0]) + dr;
+        int32_t g = static_cast<int32_t>(c.g[0]) + dg;
+        int32_t b = static_cast<int32_t>(c.b[0]) + db;
 
         if ((r < 0) || (r > 31))
         {
@@ -464,17 +464,17 @@ Etc2Mode DecodeBlockColor( uint64 d, BlockColor& c )
     return Etc2Mode::none;
 }
 
-inline int32 expand6(uint32 value)
+inline int32_t expand6(uint32_t value)
 {
     return (value << 2) | (value >> 4);
 }
 
-inline int32 expand7(uint32 value)
+inline int32_t expand7(uint32_t value)
 {
     return (value << 1) | (value >> 6);
 }
 
-void DecodePlanar(uint64 block, uint32* l[4])
+void DecodePlanar(uint64_t block, uint32_t* l[4])
 {
     const auto bv = expand6((block >> ( 0 + 32)) & 0x3F);
     const auto gv = expand7((block >> ( 6 + 32)) & 0x7F);
@@ -500,9 +500,9 @@ void DecodePlanar(uint64 block, uint32* l[4])
     {
         for (auto i = 0; i < 4; i++)
         {
-            uint32 r = clampu8((i * (rh - ro) + j * (rv - ro) + 4 * ro + 2) >> 2);
-            uint32 g = clampu8((i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2);
-            uint32 b = clampu8((i * (bh - bo) + j * (bv - bo) + 4 * bo + 2) >> 2);
+            uint32_t r = clampu8((i * (rh - ro) + j * (rv - ro) + 4 * ro + 2) >> 2);
+            uint32_t g = clampu8((i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2);
+            uint32_t b = clampu8((i * (bh - bo) + j * (bv - bo) + 4 * bo + 2) >> 2);
 
             *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
         }
@@ -531,7 +531,7 @@ static uint64_t ConvertByteOrder( uint64_t d )
            ( ( d & 0x0000FF000000FF00 ) << 8 );
 }
 
-static void DecodeRGBPart( uint32* l[4], uint64 d )
+static void DecodeRGBPart( uint32_t* l[4], uint64_t d )
 {
     d = ConvertByteOrder( d );
 
@@ -544,7 +544,7 @@ static void DecodeRGBPart( uint32* l[4], uint64 d )
         return;
     }
 
-    uint tcw[2];
+    unsigned int tcw[2];
     tcw[0] = ( d & 0xE0 ) >> 5;
     tcw[1] = ( d & 0x1C ) >> 2;
 
@@ -587,7 +587,7 @@ static void DecodeRGBPart( uint32* l[4], uint64 d )
     }
 }
 
-static void DecodeAlphaPart( uint32* l[4], uint64 d )
+static void DecodeAlphaPart( uint32_t* l[4], uint64_t d )
 {
     d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
         ( ( d & 0x00FF000000000000 ) >> 40 ) |
@@ -598,9 +598,9 @@ static void DecodeAlphaPart( uint32* l[4], uint64 d )
         ( ( d & 0x000000000000FF00 ) << 40 ) |
         ( ( d & 0x00000000000000FF ) << 56 );
 
-    uint base = d >> 56;
-    uint mul = ( d >> 52 ) & 0xF;
-    uint idx = ( d >> 48 ) & 0xF;
+    unsigned int base = d >> 56;
+    unsigned int mul = ( d >> 52 ) & 0xF;
+    unsigned int idx = ( d >> 48 ) & 0xF;
 
     const auto tbl = g_alpha[idx];
 
@@ -622,19 +622,19 @@ BitmapPtr BlockData::DecodeRGB()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
-    uint32* l[4];
+    uint32_t* l[4];
     l[0] = ret->Data();
     l[1] = l[0] + m_size.x;
     l[2] = l[1] + m_size.x;
     l[3] = l[2] + m_size.x;
 
-    const uint64* src = (const uint64*)( m_data + m_dataOffset );
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
 
     for( int y=0; y<m_size.y/4; y++ )
     {
         for( int x=0; x<m_size.x/4; x++ )
         {
-            uint64 d = *src++;
+            uint64_t d = *src++;
             DecodeRGBPart( l, d );
         }
 
@@ -651,20 +651,20 @@ BitmapPtr BlockData::DecodeRGBA()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
-    uint32* l[4];
+    uint32_t* l[4];
     l[0] = ret->Data();
     l[1] = l[0] + m_size.x;
     l[2] = l[1] + m_size.x;
     l[3] = l[2] + m_size.x;
 
-    const uint64* src = (const uint64*)( m_data + m_dataOffset );
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
 
     for( int y=0; y<m_size.y/4; y++ )
     {
         for( int x=0; x<m_size.x/4; x++ )
         {
-            uint64 a = *src++;
-            uint64 d = *src++;
+            uint64_t a = *src++;
+            uint64_t d = *src++;
             DecodeRGBPart( l, d );
 
             for( int i=0; i<4; i++ )
@@ -690,7 +690,7 @@ BitmapPtr BlockData::DecodeRGBA()
 void BlockData::Dissect()
 {
     auto size = m_size / 4;
-    const uint64* data = (const uint64*)( m_data + m_dataOffset );
+    const uint64_t* data = (const uint64_t*)( m_data + m_dataOffset );
 
     auto src = data;
 
@@ -698,7 +698,7 @@ void BlockData::Dissect()
     auto dst = bmp->Data();
 
     auto bmp2 = std::make_shared<Bitmap>( m_size );
-    uint32* l[4];
+    uint32_t* l[4];
     l[0] = bmp2->Data();
     l[1] = l[0] + m_size.x;
     l[2] = l[1] + m_size.x;
@@ -711,7 +711,7 @@ void BlockData::Dissect()
     {
         for( int x=0; x<size.x; x++ )
         {
-            uint64 d = ConvertByteOrder( *src++ );
+            uint64_t d = ConvertByteOrder( *src++ );
 
             BlockColor c;
             const auto mode = DecodeBlockColor( d, c );
@@ -746,7 +746,7 @@ void BlockData::Dissect()
                 break;
             }
 
-            uint tcw[2];
+            unsigned int tcw[2];
             tcw[0] = ( d & 0xE0 );
             tcw[1] = ( d & 0x1C ) << 3;
 

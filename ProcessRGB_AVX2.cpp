@@ -7,7 +7,6 @@
 #include "ProcessCommon.hpp"
 #include "ProcessRGB_AVX2.hpp"
 #include "Tables.hpp"
-#include "Types.hpp"
 #include "Vector.hpp"
 #ifdef _MSC_VER
 #  include <intrin.h>
@@ -37,9 +36,9 @@ namespace
     }
 #endif
 
-typedef std::array<uint16, 4> v4i;
+typedef std::array<uint16_t, 4> v4i;
 
-__m256i VS_VECTORCALL Sum4_AVX2( const uint8* data) noexcept
+__m256i VS_VECTORCALL Sum4_AVX2( const uint8_t* data) noexcept
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)data) + 1);
@@ -139,9 +138,9 @@ void VS_VECTORCALL ProcessAverages_AVX2(const __m256i d, v4i a[8] ) noexcept
     _mm256_store_si256((__m256i*)a[0].data(), t2);
 }
 
-uint64 VS_VECTORCALL EncodeAverages_AVX2( const v4i a[8], size_t idx ) noexcept
+uint64_t VS_VECTORCALL EncodeAverages_AVX2( const v4i a[8], size_t idx ) noexcept
 {
-    uint64 d = ( idx << 24 );
+    uint64_t d = ( idx << 24 );
     size_t base = idx << 1;
 
     __m128i a0 = _mm_load_si128((const __m128i*)a[base].data());
@@ -174,7 +173,7 @@ uint64 VS_VECTORCALL EncodeAverages_AVX2( const v4i a[8], size_t idx ) noexcept
     return d;
 }
 
-uint64 VS_VECTORCALL CheckSolid_AVX2( const uint8* src ) noexcept
+uint64_t VS_VECTORCALL CheckSolid_AVX2( const uint8_t* src ) noexcept
 {
     __m256i d0 = _mm256_loadu_si256(((__m256i*)src) + 0);
     __m256i d1 = _mm256_loadu_si256(((__m256i*)src) + 1);
@@ -192,12 +191,12 @@ uint64 VS_VECTORCALL CheckSolid_AVX2( const uint8* src ) noexcept
     }
 
     return 0x02000000 |
-        ( uint( src[0] & 0xF8 ) << 16 ) |
-        ( uint( src[1] & 0xF8 ) << 8 ) |
-        ( uint( src[2] & 0xF8 ) );
+        ( (unsigned int)( src[0] & 0xF8 ) << 16 ) |
+        ( (unsigned int)( src[1] & 0xF8 ) << 8 ) |
+        ( (unsigned int)( src[2] & 0xF8 ) );
 }
 
-__m128i VS_VECTORCALL PrepareAverages_AVX2( v4i a[8], const uint8* src) noexcept
+__m128i VS_VECTORCALL PrepareAverages_AVX2( v4i a[8], const uint8_t* src) noexcept
 {
     __m256i sum4 = Sum4_AVX2( src );
 
@@ -213,14 +212,14 @@ __m128i VS_VECTORCALL PrepareAverages_AVX2( v4i a[8], const __m256i sum4) noexce
     return CalcErrorBlock_AVX2( sum4, a);
 }
 
-void VS_VECTORCALL FindBestFit_4x2_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i a[8], const uint32 offset, const uint8* data) noexcept
+void VS_VECTORCALL FindBestFit_4x2_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], const uint32_t offset, const uint8_t* data) noexcept
 {
     __m256i sel0 = _mm256_setzero_si256();
     __m256i sel1 = _mm256_setzero_si256();
 
-    for (uint j = 0; j < 2; ++j)
+    for (unsigned int j = 0; j < 2; ++j)
     {
-        uint bid = offset + 1 - j;
+        unsigned int bid = offset + 1 - j;
 
         __m256i squareErrorSum = _mm256_setzero_si256();
 
@@ -340,7 +339,7 @@ void VS_VECTORCALL FindBestFit_4x2_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i 
     _mm256_store_si256((__m256i*)tsel, sel);
 }
 
-void VS_VECTORCALL FindBestFit_2x4_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i a[8], const uint32 offset, const uint8* data) noexcept
+void VS_VECTORCALL FindBestFit_2x4_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], const uint32_t offset, const uint8_t* data) noexcept
 {
     __m256i sel0 = _mm256_setzero_si256();
     __m256i sel1 = _mm256_setzero_si256();
@@ -465,7 +464,7 @@ void VS_VECTORCALL FindBestFit_2x4_AVX2( uint32 terr[2][8], uint32 tsel[8], v4i 
     _mm256_store_si256((__m256i*)tsel, sel);
 }
 
-uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], const uint32 tsel[8], const bool rotate) noexcept
+uint64_t VS_VECTORCALL EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate) noexcept
 {
     size_t tidx[2];
 
@@ -490,8 +489,8 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     __m256i errMask0 = _mm256_cmpeq_epi32(errMin5, err0);
     __m256i errMask1 = _mm256_cmpeq_epi32(errMin6, err1);
 
-    uint32 mask0 = _mm256_movemask_epi8(errMask0);
-    uint32 mask1 = _mm256_movemask_epi8(errMask1);
+    uint32_t mask0 = _mm256_movemask_epi8(errMask0);
+    uint32_t mask1 = _mm256_movemask_epi8(errMask1);
 
     tidx[0] = _bit_scan_forward(mask0) >> 2;
     tidx[1] = _bit_scan_forward(mask1) >> 2;
@@ -499,8 +498,8 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     d |= tidx[0] << 26;
     d |= tidx[1] << 29;
 
-    uint t0 = tsel[tidx[0]];
-    uint t1 = tsel[tidx[1]];
+    unsigned int t0 = tsel[tidx[0]];
+    unsigned int t1 = tsel[tidx[1]];
 
     if (!rotate)
     {
@@ -514,9 +513,9 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     }
 
     // Flip selectors from sign bit
-    uint t2 = (t0 | t1) ^ 0xFFFF0000;
+    unsigned int t2 = (t0 | t1) ^ 0xFFFF0000;
 
-    return d | static_cast<uint64>(_bswap(t2)) << 32;
+    return d | static_cast<uint64_t>(_bswap(t2)) << 32;
 }
 
 __m128i VS_VECTORCALL r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
@@ -560,12 +559,12 @@ __m128i VS_VECTORCALL r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
 
 struct Plane
 {
-	uint64 plane;
-	uint64 error;
+	uint64_t plane;
+	uint64_t error;
 	__m256i sum4;
 };
 
-Plane Planar_AVX2(const uint8* src)
+Plane Planar_AVX2(const uint8_t* src)
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
@@ -673,8 +672,8 @@ Plane Planar_AVX2(const uint8* src)
     // convert to r6g7b6
     __m128i cohv = r6g7b6_AVX2(cof0, chf0, cvf0);
 
-    uint64 rgbho = _mm_extract_epi64(cohv, 0);
-    uint32 rgbv0 = _mm_extract_epi32(cohv, 2);
+    uint64_t rgbho = _mm_extract_epi64(cohv, 0);
+    uint32_t rgbv0 = _mm_extract_epi32(cohv, 2);
 
 	// Error calculation
 	auto ro0 = (rgbho >> 48) & 0x3F;
@@ -764,24 +763,24 @@ Plane Planar_AVX2(const uint8* src)
 
     __m128i sum3 = _mm_add_epi32(_mm256_castsi256_si128(sum2), _mm256_extracti128_si256(sum2, 1));
 
-	uint32 err0 = _mm_extract_epi32(sum3, 0);
-	uint32 err1 = _mm_extract_epi32(sum3, 1);
-	uint32 err2 = _mm_extract_epi32(sum3, 2);
-	uint32 err3 = _mm_extract_epi32(sum3, 3);
+	uint32_t err0 = _mm_extract_epi32(sum3, 0);
+	uint32_t err1 = _mm_extract_epi32(sum3, 1);
+	uint32_t err2 = _mm_extract_epi32(sum3, 2);
+	uint32_t err3 = _mm_extract_epi32(sum3, 3);
 
-	uint64 error = err0 + err1 + err2 + err3;
+	uint64_t error = err0 + err1 + err2 + err3;
 	/**/
 
-    uint32 rgbv = _pext_u32(rgbv0, 0x3F7F3F);
-    uint64 rgbho0 = _pext_u64(rgbho, 0x3F7F3F003F7F3F);
+    uint32_t rgbv = _pext_u32(rgbv0, 0x3F7F3F);
+    uint64_t rgbho0 = _pext_u64(rgbho, 0x3F7F3F003F7F3F);
 
-    uint32 hi = rgbv | ((rgbho0 & 0x1FFF) << 19);
-    uint32 lo = _pdep_u32(rgbho0 >> 13, 0x7F7F1BFD);
+    uint32_t hi = rgbv | ((rgbho0 & 0x1FFF) << 19);
+    uint32_t lo = _pdep_u32(rgbho0 >> 13, 0x7F7F1BFD);
 
-    uint32 idx = _pext_u64(rgbho, 0x20201E00000000);
+    uint32_t idx = _pext_u64(rgbho, 0x20201E00000000);
     lo |= _pdep_u32(g_flags_AVX2[idx], 0x8080E402);
-    uint64 result = static_cast<uint32>(_bswap(lo));
-    result |= static_cast<uint64>(static_cast<uint32>(_bswap(hi))) << 32;
+    uint64_t result = static_cast<uint32_t>(_bswap(lo));
+    result |= static_cast<uint64_t>(static_cast<uint32_t>(_bswap(hi))) << 32;
 
 	Plane plane;
 
@@ -792,7 +791,7 @@ Plane Planar_AVX2(const uint8* src)
     return plane;
 }
 
-uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], const uint32 tsel[8], const bool rotate, const uint64 value, const uint32 error) noexcept
+uint64_t VS_VECTORCALL EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error) noexcept
 {
     size_t tidx[2];
 
@@ -817,8 +816,8 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     __m256i errMask0 = _mm256_cmpeq_epi32(errMin5, err0);
     __m256i errMask1 = _mm256_cmpeq_epi32(errMin6, err1);
 
-    uint32 mask0 = _mm256_movemask_epi8(errMask0);
-    uint32 mask1 = _mm256_movemask_epi8(errMask1);
+    uint32_t mask0 = _mm256_movemask_epi8(errMask0);
+    uint32_t mask1 = _mm256_movemask_epi8(errMask1);
 
     tidx[0] = _bit_scan_forward(mask0) >> 2;
     tidx[1] = _bit_scan_forward(mask1) >> 2;
@@ -831,8 +830,8 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     d |= tidx[0] << 26;
     d |= tidx[1] << 29;
 
-    uint t0 = tsel[tidx[0]];
-    uint t1 = tsel[tidx[1]];
+    unsigned int t0 = tsel[tidx[0]];
+    unsigned int t1 = tsel[tidx[1]];
 
     if (!rotate)
     {
@@ -846,16 +845,16 @@ uint64 VS_VECTORCALL EncodeSelectors_AVX2( uint64 d, const uint32 terr[2][8], co
     }
 
     // Flip selectors from sign bit
-    uint t2 = (t0 | t1) ^ 0xFFFF0000;
+    unsigned int t2 = (t0 | t1) ^ 0xFFFF0000;
 
-    return d | static_cast<uint64>(_bswap(t2)) << 32;
+    return d | static_cast<uint64_t>(_bswap(t2)) << 32;
 }
 
 }
 
-uint64 ProcessRGB_AVX2( const uint8* src )
+uint64_t ProcessRGB_AVX2( const uint8_t* src )
 {
-    uint64 d = CheckSolid_AVX2( src );
+    uint64_t d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
 
     alignas(32) v4i a[8];
@@ -871,14 +870,14 @@ uint64 ProcessRGB_AVX2( const uint8* src )
 
     __m128i errMask = _mm_cmpeq_epi32(errMin2, err0);
 
-    uint32 mask = _mm_movemask_epi8(errMask);
+    uint32_t mask = _mm_movemask_epi8(errMask);
 
-    uint32 idx = _bit_scan_forward(mask) >> 2;
+    uint32_t idx = _bit_scan_forward(mask) >> 2;
 
     d |= EncodeAverages_AVX2( a, idx );
 
-    alignas(32) uint32 terr[2][8] = {};
-    alignas(32) uint32 tsel[8];
+    alignas(32) uint32_t terr[2][8] = {};
+    alignas(32) uint32_t tsel[8];
 
     if ((idx == 0) || (idx == 2))
     {
@@ -892,49 +891,49 @@ uint64 ProcessRGB_AVX2( const uint8* src )
     return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1 );
 }
 
-uint64 ProcessRGB_4x2_AVX2( const uint8* src )
+uint64_t ProcessRGB_4x2_AVX2( const uint8_t* src )
 {
-    uint64 d = CheckSolid_AVX2( src );
+    uint64_t d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
 
     alignas(32) v4i a[8];
 
     __m128i err0 = PrepareAverages_AVX2( a, src );
 
-    uint32 idx = _mm_extract_epi32(err0, 0) < _mm_extract_epi32(err0, 2) ? 0 : 2;
+    uint32_t idx = _mm_extract_epi32(err0, 0) < _mm_extract_epi32(err0, 2) ? 0 : 2;
 
     d |= EncodeAverages_AVX2( a, idx );
 
-    alignas(32) uint32 terr[2][8] = {};
-    alignas(32) uint32 tsel[8];
+    alignas(32) uint32_t terr[2][8] = {};
+    alignas(32) uint32_t tsel[8];
 
     FindBestFit_4x2_AVX2( terr, tsel, a, idx * 2, src );
 
     return EncodeSelectors_AVX2( d, terr, tsel, false);
 }
 
-uint64 ProcessRGB_2x4_AVX2( const uint8* src )
+uint64_t ProcessRGB_2x4_AVX2( const uint8_t* src )
 {
-    uint64 d = CheckSolid_AVX2( src );
+    uint64_t d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
 
     alignas(32) v4i a[8];
 
     __m128i err0 = PrepareAverages_AVX2( a, src );
 
-    uint32 idx = _mm_extract_epi32(err0, 1) < _mm_extract_epi32(err0, 3) ? 1 : 3;
+    uint32_t idx = _mm_extract_epi32(err0, 1) < _mm_extract_epi32(err0, 3) ? 1 : 3;
 
     d |= EncodeAverages_AVX2( a, idx );
 
-    alignas(32) uint32 terr[2][8] = {};
-    alignas(32) uint32 tsel[8];
+    alignas(32) uint32_t terr[2][8] = {};
+    alignas(32) uint32_t tsel[8];
 
     FindBestFit_2x4_AVX2( terr, tsel, a, idx * 2, src );
 
     return EncodeSelectors_AVX2( d, terr, tsel, true);
 }
 
-uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
+uint64_t ProcessRGB_ETC2_AVX2( const uint8_t* src )
 {
     auto plane = Planar_AVX2( src );
 
@@ -951,14 +950,14 @@ uint64 ProcessRGB_ETC2_AVX2( const uint8* src )
 
     __m128i errMask = _mm_cmpeq_epi32(errMin2, err0);
 
-    uint32 mask = _mm_movemask_epi8(errMask);
+    uint32_t mask = _mm_movemask_epi8(errMask);
 
     size_t idx = _bit_scan_forward(mask) >> 2;
 
-    uint64 d = EncodeAverages_AVX2( a, idx );
+    uint64_t d = EncodeAverages_AVX2( a, idx );
 
-    alignas(32) uint32 terr[2][8] = {};
-    alignas(32) uint32 tsel[8];
+    alignas(32) uint32_t terr[2][8] = {};
+    alignas(32) uint32_t tsel[8];
 
     if ((idx == 0) || (idx == 2))
     {

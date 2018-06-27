@@ -174,7 +174,6 @@
       <Filter>libpng</Filter>
     </ClInclude>
     <ClInclude Include="..\Math.hpp" />
-    <ClInclude Include="..\Types.hpp" />
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\Debug.hpp" />

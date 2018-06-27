@@ -1,5 +1,5 @@
-#include <new>
 #include <math.h>
+#include <stdint.h>
 
 #include "Math.hpp"
 #include "ColorSpace.hpp"
@@ -65,7 +65,7 @@ namespace Color
         const float g = linear2sRGB( gl );
         const float b = linear2sRGB( bl );
 
-        return v3i( clampu8( int32( r * 255 ) ), clampu8( int32( g * 255 ) ), clampu8( int32( b * 255 ) ) );
+        return v3i( clampu8( int32_t( r * 255 ) ), clampu8( int32_t( g * 255 ) ), clampu8( int32_t( b * 255 ) ) );
     }
 
 

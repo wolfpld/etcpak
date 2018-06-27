@@ -5,7 +5,6 @@
 #include "ProcessCommon.hpp"
 #include "ProcessRGB.hpp"
 #include "Tables.hpp"
-#include "Types.hpp"
 #include "Vector.hpp"
 #ifdef __SSE4_1__
 #  ifdef _MSC_VER
@@ -29,9 +28,9 @@
 namespace
 {
 
-typedef std::array<uint16, 4> v4i;
+typedef std::array<uint16_t, 4> v4i;
 
-void Average( const uint8* data, v4i* a )
+void Average( const uint8_t* data, v4i* a )
 {
 #ifdef __SSE4_1__
     __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
@@ -75,9 +74,9 @@ void Average( const uint8* data, v4i* a )
     _mm_storeu_si128((__m128i*)&a[0], _mm_packus_epi32(_mm_shuffle_epi32(a0, _MM_SHUFFLE(3, 0, 1, 2)), _mm_shuffle_epi32(a1, _MM_SHUFFLE(3, 0, 1, 2))));
     _mm_storeu_si128((__m128i*)&a[2], _mm_packus_epi32(_mm_shuffle_epi32(a2, _MM_SHUFFLE(3, 0, 1, 2)), _mm_shuffle_epi32(a3, _MM_SHUFFLE(3, 0, 1, 2))));
 #else
-    uint32 r[4];
-    uint32 g[4];
-    uint32 b[4];
+    uint32_t r[4];
+    uint32_t g[4];
+    uint32_t b[4];
 
     memset(r, 0, sizeof(r));
     memset(g, 0, sizeof(g));
@@ -95,14 +94,14 @@ void Average( const uint8* data, v4i* a )
         }
     }
 
-    a[0] = v4i{ uint16( (r[2] + r[3] + 4) / 8 ), uint16( (g[2] + g[3] + 4) / 8 ), uint16( (b[2] + b[3] + 4) / 8 ), 0};
-    a[1] = v4i{ uint16( (r[0] + r[1] + 4) / 8 ), uint16( (g[0] + g[1] + 4) / 8 ), uint16( (b[0] + b[1] + 4) / 8 ), 0};
-    a[2] = v4i{ uint16( (r[1] + r[3] + 4) / 8 ), uint16( (g[1] + g[3] + 4) / 8 ), uint16( (b[1] + b[3] + 4) / 8 ), 0};
-    a[3] = v4i{ uint16( (r[0] + r[2] + 4) / 8 ), uint16( (g[0] + g[2] + 4) / 8 ), uint16( (b[0] + b[2] + 4) / 8 ), 0};
+    a[0] = v4i{ uint16_t( (r[2] + r[3] + 4) / 8 ), uint16_t( (g[2] + g[3] + 4) / 8 ), uint16_t( (b[2] + b[3] + 4) / 8 ), 0};
+    a[1] = v4i{ uint16_t( (r[0] + r[1] + 4) / 8 ), uint16_t( (g[0] + g[1] + 4) / 8 ), uint16_t( (b[0] + b[1] + 4) / 8 ), 0};
+    a[2] = v4i{ uint16_t( (r[1] + r[3] + 4) / 8 ), uint16_t( (g[1] + g[3] + 4) / 8 ), uint16_t( (b[1] + b[3] + 4) / 8 ), 0};
+    a[3] = v4i{ uint16_t( (r[0] + r[2] + 4) / 8 ), uint16_t( (g[0] + g[2] + 4) / 8 ), uint16_t( (b[0] + b[2] + 4) / 8 ), 0};
 #endif
 }
 
-void CalcErrorBlock( const uint8* data, uint err[4][4] )
+void CalcErrorBlock( const uint8_t* data, unsigned int err[4][4] )
 {
 #ifdef __SSE4_1__
     __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
@@ -153,16 +152,16 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
     _mm_storeu_si128((__m128i*)&err[2], a2);
     _mm_storeu_si128((__m128i*)&err[3], a3);
 #else
-    uint terr[4][4];
+    unsigned int terr[4][4];
 
-    memset(terr, 0, 16 * sizeof(uint));
+    memset(terr, 0, 16 * sizeof(unsigned int));
 
     for( int j=0; j<4; j++ )
     {
         for( int i=0; i<4; i++ )
         {
             int index = (j & 2) + (i >> 1);
-            uint d = *data++;
+            unsigned int d = *data++;
             terr[index][0] += d;
             d = *data++;
             terr[index][1] += d;
@@ -186,9 +185,9 @@ void CalcErrorBlock( const uint8* data, uint err[4][4] )
 #endif
 }
 
-uint CalcError( const uint block[4], const v4i& average )
+unsigned int CalcError( const unsigned int block[4], const v4i& average )
 {
-    uint err = 0x3FFFFFFF; // Big value to prevent negative values, but small enough to prevent overflow
+    unsigned int err = 0x3FFFFFFF; // Big value to prevent negative values, but small enough to prevent overflow
     err -= block[0] * 2 * average[2];
     err -= block[1] * 2 * average[1];
     err -= block[2] * 2 * average[0];
@@ -237,14 +236,14 @@ void ProcessAverages( v4i* a )
     {
         for( int j=0; j<3; j++ )
         {
-            int32 c1 = mul8bit( a[i*2+1][j], 31 );
-            int32 c2 = mul8bit( a[i*2][j], 31 );
+            int32_t c1 = mul8bit( a[i*2+1][j], 31 );
+            int32_t c2 = mul8bit( a[i*2][j], 31 );
 
-            int32 diff = c2 - c1;
+            int32_t diff = c2 - c1;
             if( diff > 3 ) diff = 3;
             else if( diff < -4 ) diff = -4;
 
-            int32 co = c1 + diff;
+            int32_t co = c1 + diff;
 
             a[5+i*2][j] = ( c1 << 3 ) | ( c1 >> 2 );
             a[4+i*2][j] = ( co << 3 ) | ( co >> 2 );
@@ -260,7 +259,7 @@ void ProcessAverages( v4i* a )
 #endif
 }
 
-void EncodeAverages( uint64& _d, const v4i* a, size_t idx )
+void EncodeAverages( uint64_t& _d, const v4i* a, size_t idx )
 {
     auto d = _d;
     d |= ( idx << 24 );
@@ -270,24 +269,24 @@ void EncodeAverages( uint64& _d, const v4i* a, size_t idx )
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+0][i] >> 4 ) << ( i*8 );
-            d |= uint64( a[base+1][i] >> 4 ) << ( i*8 + 4 );
+            d |= uint64_t( a[base+0][i] >> 4 ) << ( i*8 );
+            d |= uint64_t( a[base+1][i] >> 4 ) << ( i*8 + 4 );
         }
     }
     else
     {
         for( int i=0; i<3; i++ )
         {
-            d |= uint64( a[base+1][i] & 0xF8 ) << ( i*8 );
-            int32 c = ( ( a[base+0][i] & 0xF8 ) - ( a[base+1][i] & 0xF8 ) ) >> 3;
+            d |= uint64_t( a[base+1][i] & 0xF8 ) << ( i*8 );
+            int32_t c = ( ( a[base+0][i] & 0xF8 ) - ( a[base+1][i] & 0xF8 ) ) >> 3;
             c &= ~0xFFFFFFF8;
-            d |= ((uint64)c) << ( i*8 );
+            d |= ((uint64_t)c) << ( i*8 );
         }
     }
     _d = d;
 }
 
-uint64 CheckSolid( const uint8* src )
+uint64_t CheckSolid( const uint8_t* src )
 {
 #ifdef __SSE4_1__
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
@@ -311,7 +310,7 @@ uint64 CheckSolid( const uint8* src )
         return 0;
     }
 #else
-    const uint8* ptr = src + 4;
+    const uint8_t* ptr = src + 4;
     for( int i=1; i<16; i++ )
     {
         if( memcmp( src, ptr, 4 ) != 0 )
@@ -322,17 +321,17 @@ uint64 CheckSolid( const uint8* src )
     }
 #endif
     return 0x02000000 |
-        ( uint( src[0] & 0xF8 ) << 16 ) |
-        ( uint( src[1] & 0xF8 ) << 8 ) |
-        ( uint( src[2] & 0xF8 ) );
+        ( (unsigned int)( src[0] & 0xF8 ) << 16 ) |
+        ( (unsigned int)( src[1] & 0xF8 ) << 8 ) |
+        ( (unsigned int)( src[2] & 0xF8 ) );
 }
 
-void PrepareAverages( v4i a[8], const uint8* src, uint err[4] )
+void PrepareAverages( v4i a[8], const uint8_t* src, unsigned int err[4] )
 {
     Average( src, a );
     ProcessAverages( a );
 
-    uint errblock[4][4];
+    unsigned int errblock[4][4];
     CalcErrorBlock( src, errblock );
 
     for( int i=0; i<4; i++ )
@@ -342,17 +341,17 @@ void PrepareAverages( v4i a[8], const uint8* src, uint err[4] )
     }
 }
 
-void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32* id, const uint8* data )
+void FindBestFit( uint64_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
 {
     for( size_t i=0; i<16; i++ )
     {
-        uint16* sel = tsel[i];
-        uint bid = id[i];
-        uint64* ter = terr[bid%2];
+        uint16_t* sel = tsel[i];
+        unsigned int bid = id[i];
+        uint64_t* ter = terr[bid%2];
 
-        uint8 b = *data++;
-        uint8 g = *data++;
-        uint8 r = *data++;
+        uint8_t b = *data++;
+        uint8_t g = *data++;
+        uint8_t r = *data++;
         data++;
 
         int dr = a[bid][0] - r;
@@ -419,12 +418,12 @@ void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32*
 
         for( int t=0; t<8; t++ )
         {
-            const int64* tab = g_table256[t];
-            uint idx = 0;
-            uint64 err = sq( tab[0] + pix );
+            const int64_t* tab = g_table256[t];
+            unsigned int idx = 0;
+            uint64_t err = sq( tab[0] + pix );
             for( int j=1; j<4; j++ )
             {
-                uint64 local = sq( tab[j] + pix );
+                uint64_t local = sq( tab[j] + pix );
                 if( local < err )
                 {
                     err = local;
@@ -440,17 +439,17 @@ void FindBestFit( uint64 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32*
 
 #ifdef __SSE4_1__
 // Non-reference implementation, but faster. Produces same results as the AVX2 version
-void FindBestFit( uint32 terr[2][8], uint16 tsel[16][8], v4i a[8], const uint32* id, const uint8* data )
+void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
 {
     for( size_t i=0; i<16; i++ )
     {
-        uint16* sel = tsel[i];
-        uint bid = id[i];
-        uint32* ter = terr[bid%2];
+        uint16_t* sel = tsel[i];
+        unsigned int bid = id[i];
+        uint32_t* ter = terr[bid%2];
 
-        uint8 b = *data++;
-        uint8 g = *data++;
-        uint8 r = *data++;
+        uint8_t b = *data++;
+        uint8_t g = *data++;
+        uint8_t r = *data++;
         data++;
 
         int dr = a[bid][0] - r;
@@ -504,11 +503,11 @@ uint8_t convert7(float f)
     return (i + 9 - ((i + 9) >> 8) - ((i + 6) >> 8)) >> 2;
 }
 
-std::pair<uint64, uint64> Planar(const uint8* src)
+std::pair<uint64_t, uint64_t> Planar(const uint8_t* src)
 {
-    int32 r = 0;
-    int32 g = 0;
-    int32 b = 0;
+    int32_t r = 0;
+    int32_t g = 0;
+    int32_t b = 0;
 
     for (int i = 0; i < 16; ++i)
     {
@@ -517,20 +516,20 @@ std::pair<uint64, uint64> Planar(const uint8* src)
         r += src[i * 4 + 2];
     }
 
-    int32 difRyz = 0;
-    int32 difGyz = 0;
-    int32 difByz = 0;
-    int32 difRxz = 0;
-    int32 difGxz = 0;
-    int32 difBxz = 0;
+    int32_t difRyz = 0;
+    int32_t difGyz = 0;
+    int32_t difByz = 0;
+    int32_t difRxz = 0;
+    int32_t difGxz = 0;
+    int32_t difBxz = 0;
 
-    const int32 scaling[] = { -255, -85, 85, 255 };
+    const int32_t scaling[] = { -255, -85, 85, 255 };
 
     for (int i = 0; i < 16; ++i)
     {
-        int32 difB = (static_cast<int>(src[i * 4 + 0]) << 4) - b;
-        int32 difG = (static_cast<int>(src[i * 4 + 1]) << 4) - g;
-        int32 difR = (static_cast<int>(src[i * 4 + 2]) << 4) - r;
+        int32_t difB = (static_cast<int>(src[i * 4 + 0]) << 4) - b;
+        int32_t difG = (static_cast<int>(src[i * 4 + 1]) << 4) - g;
+        int32_t difR = (static_cast<int>(src[i * 4 + 2]) << 4) - r;
 
         difRyz += difR * scaling[i % 4];
         difGyz += difG * scaling[i % 4];
@@ -567,15 +566,15 @@ std::pair<uint64, uint64> Planar(const uint8* src)
     float cvfB = std::fma(aB,  255.0f, std::fma(bB, -425.0f, dB));
 
     // convert to r6g7b6
-    int32 coR = convert6(cofR);
-    int32 coG = convert7(cofG);
-    int32 coB = convert6(cofB);
-    int32 chR = convert6(chfR);
-    int32 chG = convert7(chfG);
-    int32 chB = convert6(chfB);
-    int32 cvR = convert6(cvfR);
-    int32 cvG = convert7(cvfG);
-    int32 cvB = convert6(cvfB);
+    int32_t coR = convert6(cofR);
+    int32_t coG = convert7(cofG);
+    int32_t coB = convert6(cofB);
+    int32_t chR = convert6(chfR);
+    int32_t chG = convert7(chfG);
+    int32_t chB = convert6(chfB);
+    int32_t cvR = convert6(cvfR);
+    int32_t cvG = convert7(cvfG);
+    int32_t cvB = convert6(cvfB);
 
     // Error calculation
     auto ro0 = coR;
@@ -610,28 +609,28 @@ std::pair<uint64, uint64> Planar(const uint8* src)
     auto gv2 = gv1 - go1;
     auto bv2 = bv1 - bo1;
 
-    uint64 error = 0;
+    uint64_t error = 0;
 
     for (int i = 0; i < 16; ++i)
     {
-        int32 cR = clampu8((rh2 * (i / 4) + rv2 * (i % 4) + ro2) >> 2);
-        int32 cG = clampu8((gh2 * (i / 4) + gv2 * (i % 4) + go2) >> 2);
-        int32 cB = clampu8((bh2 * (i / 4) + bv2 * (i % 4) + bo2) >> 2);
+        int32_t cR = clampu8((rh2 * (i / 4) + rv2 * (i % 4) + ro2) >> 2);
+        int32_t cG = clampu8((gh2 * (i / 4) + gv2 * (i % 4) + go2) >> 2);
+        int32_t cB = clampu8((bh2 * (i / 4) + bv2 * (i % 4) + bo2) >> 2);
 
-        int32 difB = static_cast<int>(src[i * 4 + 0]) - cB;
-        int32 difG = static_cast<int>(src[i * 4 + 1]) - cG;
-        int32 difR = static_cast<int>(src[i * 4 + 2]) - cR;
+        int32_t difB = static_cast<int>(src[i * 4 + 0]) - cB;
+        int32_t difG = static_cast<int>(src[i * 4 + 1]) - cG;
+        int32_t difR = static_cast<int>(src[i * 4 + 2]) - cR;
 
-        int32 dif = difR * 38 + difG * 76 + difB * 14;
+        int32_t dif = difR * 38 + difG * 76 + difB * 14;
 
         error += dif * dif;
     }
 
     /**/
-    uint32 rgbv = cvB | (cvG << 6) | (cvR << 13);
-    uint32 rgbh = chB | (chG << 6) | (chR << 13);
-    uint32 hi = rgbv | ((rgbh & 0x1FFF) << 19);
-    uint32 lo = (chR & 0x1) | 0x2 | ((chR << 1) & 0x7C);
+    uint32_t rgbv = cvB | (cvG << 6) | (cvR << 13);
+    uint32_t rgbh = chB | (chG << 6) | (chR << 13);
+    uint32_t hi = rgbv | ((rgbh & 0x1FFF) << 19);
+    uint32_t lo = (chR & 0x1) | 0x2 | ((chR << 1) & 0x7C);
     lo |= ((coB & 0x07) <<  7) | ((coB & 0x18) <<  8) | ((coB & 0x20) << 11);
     lo |= ((coG & 0x3F) << 17) | ((coG & 0x40) << 18);
     lo |= coR << 25;
@@ -640,14 +639,14 @@ std::pair<uint64, uint64> Planar(const uint8* src)
 
     lo |= g_flags[idx];
 
-    uint64 result = static_cast<uint32>(_bswap(lo));
-    result |= static_cast<uint64>(static_cast<uint32>(_bswap(hi))) << 32;
+    uint64_t result = static_cast<uint32_t>(_bswap(lo));
+    result |= static_cast<uint64_t>(static_cast<uint32_t>(_bswap(hi))) << 32;
 
     return std::make_pair(result, error);
 }
 
 template<class T, class S>
-uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const uint32* id, const uint64 value, const uint64 error)
+uint64_t EncodeSelectors( uint64_t d, const T terr[2][8], const S tsel[16][8], const uint32_t* id, const uint64_t value, const uint64_t error)
 {
     size_t tidx[2];
     tidx[0] = GetLeastError( terr[0], 8 );
@@ -662,7 +661,7 @@ uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const
     d |= tidx[1] << 29;
     for( int i=0; i<16; i++ )
     {
-        uint64 t = tsel[i][tidx[id[i]%2]];
+        uint64_t t = tsel[i][tidx[id[i]%2]];
         d |= ( t & 0x1 ) << ( i + 32 );
         d |= ( t & 0x2 ) << ( i + 47 );
     }
@@ -671,47 +670,47 @@ uint64 EncodeSelectors( uint64 d, const T terr[2][8], const S tsel[16][8], const
 }
 }
 
-uint64 ProcessRGB( const uint8* src )
+uint64_t ProcessRGB( const uint8_t* src )
 {
-    uint64 d = CheckSolid( src );
+    uint64_t d = CheckSolid( src );
     if( d != 0 ) return d;
 
     v4i a[8];
-    uint err[4] = {};
+    unsigned int err[4] = {};
     PrepareAverages( a, src, err );
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
 #if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
-    uint32 terr[2][8] = {};
+    uint32_t terr[2][8] = {};
 #else
-    uint64 terr[2][8] = {};
+    uint64_t terr[2][8] = {};
 #endif
-    uint16 tsel[16][8];
+    uint16_t tsel[16][8];
     auto id = g_id[idx];
     FindBestFit( terr, tsel, a, id, src );
 
     return FixByteOrder( EncodeSelectors( d, terr, tsel, id ) );
 }
 
-uint64 ProcessRGB_ETC2( const uint8* src )
+uint64_t ProcessRGB_ETC2( const uint8_t* src )
 {
     auto result = Planar( src );
 
-    uint64 d = 0;
+    uint64_t d = 0;
 
     v4i a[8];
-    uint err[4] = {};
+    unsigned int err[4] = {};
     PrepareAverages( a, src, err );
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
 #if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
-    uint32 terr[2][8] = {};
+    uint32_t terr[2][8] = {};
 #else
-    uint64 terr[2][8] = {};
+    uint64_t terr[2][8] = {};
 #endif
-    uint16 tsel[16][8];
+    uint16_t tsel[16][8];
     auto id = g_id[idx];
     FindBestFit( terr, tsel, a, id, src );
 

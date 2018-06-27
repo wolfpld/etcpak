@@ -3,14 +3,12 @@
 
 #include <thread>
 
-#include "Types.hpp"
-
 class System
 {
 public:
     System() = delete;
 
-    static uint CPUCores();
+    static unsigned int CPUCores();
     static void SetThreadName( std::thread& thread, const char* name );
 };
 
