@@ -176,7 +176,14 @@ int main( int argc, char** argv )
         BlockData::Type type;
         if( etc2 )
         {
-            type = BlockData::Etc2_RGB;
+            if( rgba && dp.Alpha() )
+            {
+                type = BlockData::Etc2_RGBA;
+            }
+            else
+            {
+                type = BlockData::Etc2_RGB;
+            }
         }
         else
         {
