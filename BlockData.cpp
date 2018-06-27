@@ -387,6 +387,78 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     }
 }
 
+void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither )
+{
+    assert( m_type == Etc2_RGBA );
+
+    uint32_t buf[4*4];
+    uint8_t buf8[4*4];
+    int w = 0;
+
+    auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
+
+    uint64_t (*func)(uint8_t*);
+
+#ifdef __SSE4_1__
+    if( can_use_intel_core_4th_gen_features() )
+    {
+        if( dither )
+        {
+            func = _f_rgb_etc2_dither_avx2;
+        }
+        else
+        {
+            func = _f_rgb_etc2_avx2;
+        }
+    }
+    else
+#endif
+    {
+        if( dither )
+        {
+            func = _f_rgb_etc2_dither;
+        }
+        else
+        {
+            func = _f_rgb_etc2;
+        }
+    }
+
+    do
+    {
+        auto ptr = buf;
+        auto ptr8 = buf8;
+        for( int x=0; x<4; x++ )
+        {
+            auto v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src += width;
+            v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src += width;
+            v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src += width;
+            v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src -= width * 3 - 1;
+        }
+        if( ++w == width/4 )
+        {
+            src += width * 3;
+            w = 0;
+        }
+
+        *dst++ = ProcessAlpha( buf8 );
+        *dst++ = func( (uint8_t*)buf );
+    }
+    while( --blocks );
+}
+
 namespace
 {
 struct BlockColor
