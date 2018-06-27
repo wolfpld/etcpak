@@ -212,10 +212,20 @@ int main( int argc, char** argv )
             {
                 auto part = dp.NextPart();
 
-                TaskDispatch::Queue( [part, i, &bd, &dither]()
+                if( type == BlockData::Etc2_RGBA )
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
-                } );
+                    TaskDispatch::Queue( [part, i, &bd, &dither]()
+                    {
+                        bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, dither );
+                    } );
+                }
+                else
+                {
+                    TaskDispatch::Queue( [part, i, &bd, &dither]()
+                    {
+                        bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
+                    } );
+                }
             }
         }
 
