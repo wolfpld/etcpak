@@ -70,7 +70,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
         }
     }
 
-    const int base = min + g_alphaRange[sel] / 2;
+    const int base = min - g_alpha[sel][3] * selmul;
     uint64_t d = ( uint64_t( base ) << 56 ) |
                  ( uint64_t( selmul ) << 52 ) |
                  ( uint64_t( sel ) << 48 );
