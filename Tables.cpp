@@ -86,6 +86,25 @@ const int32_t g_alpha[16][8] = {
     { -3, -5,  -7,  -9, 2, 4, 6,  8 }
 };
 
+const int32_t g_alphaRange[16] = {
+    1 + g_alpha[0][7] - g_alpha[0][3],
+    1 + g_alpha[1][7] - g_alpha[1][3],
+    1 + g_alpha[2][7] - g_alpha[2][3],
+    1 + g_alpha[3][7] - g_alpha[3][3],
+    1 + g_alpha[4][7] - g_alpha[4][3],
+    1 + g_alpha[5][7] - g_alpha[5][3],
+    1 + g_alpha[6][7] - g_alpha[6][3],
+    1 + g_alpha[7][7] - g_alpha[7][3],
+    1 + g_alpha[8][7] - g_alpha[8][3],
+    1 + g_alpha[9][7] - g_alpha[9][3],
+    1 + g_alpha[10][7] - g_alpha[10][3],
+    1 + g_alpha[11][7] - g_alpha[11][3],
+    1 + g_alpha[12][7] - g_alpha[12][3],
+    1 + g_alpha[13][7] - g_alpha[13][3],
+    1 + g_alpha[14][7] - g_alpha[14][3],
+    1 + g_alpha[15][7] - g_alpha[15][3],
+};
+
 #ifdef __SSE4_1__
 const uint8_t g_flags_AVX2[64] =
 {
