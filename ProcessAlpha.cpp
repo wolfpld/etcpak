@@ -47,20 +47,27 @@ uint64_t ProcessAlpha( const uint8_t* src )
         {
             const auto srcVal = src[i];
 
-            int idx;
-            int localErr = std::numeric_limits<int>::max();
-            for( int j=0; j<8; j++ )
+            int idx = 0;
+            const auto modVal = g_alpha[r][0] * mul;
+            const auto recVal = clampu8( srcMid + modVal );
+            int localErr = sq( srcVal - recVal );
+
+            if( localErr != 0 )
             {
-                const auto modVal = g_alpha[r][j] * mul;
-                const auto recVal = clampu8( srcMid + modVal );
-                const auto errProbe = sq( srcVal - recVal );
-                if( errProbe < localErr )
+                for( int j=1; j<8; j++ )
                 {
-                    localErr = errProbe;
-                    idx = j;
-                    if( localErr == 0 ) break;
+                    const auto modVal = g_alpha[r][j] * mul;
+                    const auto recVal = clampu8( srcMid + modVal );
+                    const auto errProbe = sq( srcVal - recVal );
+                    if( errProbe < localErr )
+                    {
+                        localErr = errProbe;
+                        idx = j;
+                        if( localErr == 0 ) break;
+                    }
                 }
             }
+
             buf[r][i] = idx;
             rangeErr += localErr;
         }
