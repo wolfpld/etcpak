@@ -32,6 +32,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
         else if( max < src[i] ) max = src[i];
     }
     int srcRange = max - min;
+    int srcMid = min + srcRange / 2;
 
     int buf[16][16];
     int err = std::numeric_limits<int>::max();
@@ -43,7 +44,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
 
         for( int i=0; i<16; i++ )
         {
-            buf[r][i] = int( src[i] - min ) / mul + g_alpha[r][3];
+            buf[r][i] = int( src[i] - srcMid ) / mul;
         }
 
         int rangeErr = 0;
@@ -70,8 +71,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
         }
     }
 
-    const int base = min - g_alpha[sel][3] * selmul;
-    uint64_t d = ( uint64_t( base ) << 56 ) |
+    uint64_t d = ( uint64_t( srcMid ) << 56 ) |
                  ( uint64_t( selmul ) << 52 ) |
                  ( uint64_t( sel ) << 48 );
 
