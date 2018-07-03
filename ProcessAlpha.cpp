@@ -45,17 +45,23 @@ uint64_t ProcessAlpha( const uint8_t* src )
         int rangeErr = 0;
         for( int i=0; i<16; i++ )
         {
-            buf[r][i] = int( src[i] - srcMid ) / mul;
+            const auto srcVal = src[i];
 
+            int idx;
             int localErr = std::numeric_limits<int>::max();
             for( int j=0; j<8; j++ )
             {
-                const auto errProbe = sq( ( buf[r][i] - g_alpha[r][j] ) * mul );
+                const auto modVal = g_alpha[r][j] * mul;
+                const auto recVal = clampu8( srcMid + modVal );
+                const auto errProbe = sq( srcVal - recVal );
                 if( errProbe < localErr )
                 {
                     localErr = errProbe;
+                    idx = j;
+                    if( localErr == 0 ) break;
                 }
             }
+            buf[r][i] = idx;
             rangeErr += localErr;
         }
 
@@ -75,19 +81,8 @@ uint64_t ProcessAlpha( const uint8_t* src )
     int offset = 45;
     for( int i=0; i<16; i++ )
     {
-        int idx = 0;
         int localErr = std::numeric_limits<int>::max();
-        for( int j=0; j<8; j++ )
-        {
-            const auto errProbe = sq( buf[sel][i] - g_alpha[sel][j] );
-            if( errProbe < localErr )
-            {
-                localErr = errProbe;
-                idx = j;
-            }
-        }
-
-        d |= uint64_t( idx ) << offset;
+        d |= uint64_t( buf[sel][i] ) << offset;
         offset -= 3;
     }
 
