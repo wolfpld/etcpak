@@ -53,7 +53,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
             int localErr = std::numeric_limits<int>::max();
             for( int j=0; j<8; j++ )
             {
-                const auto errProbe = sq( buf[r][i] - g_alpha[r][j] );
+                const auto errProbe = sq( ( buf[r][i] - g_alpha[r][j] ) * mul );
                 if( errProbe < localErr )
                 {
                     localErr = errProbe;
