@@ -63,7 +63,6 @@ uint64_t ProcessAlpha( const uint8_t* src )
                     {
                         localErr = errProbe;
                         idx = j;
-                        if( localErr == 0 ) break;
                     }
                 }
             }
