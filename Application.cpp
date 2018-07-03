@@ -147,10 +147,18 @@ int main( int argc, char** argv )
         start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
-            TaskDispatch::Queue( [&bmp, &dither, i, etc2]()
+            TaskDispatch::Queue( [&bmp, &dither, i, etc2, rgba]()
             {
-                auto bd = std::make_shared<BlockData>( bmp->Size(), false, etc2 ? BlockData::Etc2_RGB : BlockData::Etc1 );
-                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
+                const BlockData::Type type = rgba ? BlockData::Etc2_RGBA : ( etc2 ? BlockData::Etc2_RGB : BlockData::Etc1 );
+                auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
+                if( rgba )
+                {
+                    bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, dither );
+                }
+                else
+                {
+                    bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
+                }
             } );
         }
         TaskDispatch::Sync();
