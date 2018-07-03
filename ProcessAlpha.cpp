@@ -4,8 +4,37 @@
 #include "ProcessAlpha.hpp"
 #include "Tables.hpp"
 
+#ifdef __SSE4_1__
+#  ifdef _MSC_VER
+#    include <intrin.h>
+#    include <Windows.h>
+#    define _bswap(x) _byteswap_ulong(x)
+#  else
+#    include <x86intrin.h>
+#  endif
+#else
+#  ifndef _MSC_VER
+#    include <byteswap.h>
+#    define _bswap(x) bswap_32(x)
+#  endif
+#endif
+
+#ifndef _bswap
+#  define _bswap(x) __builtin_bswap32(x)
+#endif
+
+
 uint64_t ProcessAlpha( const uint8_t* src )
 {
+#ifdef __SSE4_1__
+    __m128i s = _mm_loadu_si128( (__m128i*)src );
+    __m128i solidCmp = _mm_set1_epi8( src[0] );
+    __m128i cmpRes = _mm_cmpeq_epi8( s, solidCmp );
+    if( _mm_testc_si128( cmpRes, _mm_set1_epi32( -1 ) ) )
+    {
+        return src[0];
+    }
+#else
     {
         bool solid = true;
         const uint8_t* ptr = src + 1;
@@ -23,6 +52,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
             return ref;
         }
     }
+#endif
 
     uint8_t min = src[0];
     uint8_t max = src[0];
