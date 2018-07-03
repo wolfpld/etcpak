@@ -42,14 +42,11 @@ uint64_t ProcessAlpha( const uint8_t* src )
     {
         int mul = ( srcRange / g_alphaRange[r] ) + 1;
 
-        for( int i=0; i<16; i++ )
-        {
-            buf[r][i] = int( src[i] - srcMid ) / mul;
-        }
-
         int rangeErr = 0;
         for( int i=0; i<16; i++ )
         {
+            buf[r][i] = int( src[i] - srcMid ) / mul;
+
             int localErr = std::numeric_limits<int>::max();
             for( int j=0; j<8; j++ )
             {
