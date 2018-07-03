@@ -86,10 +86,10 @@ uint64_t ProcessAlpha( const uint8_t* src )
                  ( uint64_t( sel ) << 48 );
 
     int offset = 45;
+    auto ptr = buf[sel];
     for( int i=0; i<16; i++ )
     {
-        int localErr = std::numeric_limits<int>::max();
-        d |= uint64_t( buf[sel][i] ) << offset;
+        d |= uint64_t( *ptr++ ) << offset;
         offset -= 3;
     }
 
