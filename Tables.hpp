@@ -27,7 +27,6 @@ extern const __m128i g_table256_SIMD[4];
 
 extern const __m128i g_alpha_SIMD[16];
 extern const __m128i g_alphaRange_SIMD[2];
-extern const __m128i g_one_SIMD16;
 #endif
 
 #endif

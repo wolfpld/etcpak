@@ -184,7 +184,5 @@ const __m128i g_alphaRange_SIMD[2] = {
         g_alphaRange[15] )
 };
 
-const __m128i g_one_SIMD16 = _mm_set1_epi16( 1 );
-
 #endif
 

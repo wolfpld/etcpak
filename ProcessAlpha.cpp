@@ -26,7 +26,7 @@
 
 uint64_t ProcessAlpha( const uint8_t* src )
 {
-#if defined __SSE4_1__ && 0
+#if defined __SSE4_1__
     // Check solid
     __m128i s = _mm_loadu_si128( (__m128i*)src );
     __m128i solidCmp = _mm_set1_epi8( src[0] );
@@ -58,13 +58,15 @@ uint64_t ProcessAlpha( const uint8_t* src )
     __m128i srcRangeHalf1 = _mm_srli_epi16( srcRange, 1 );
     __m128i srcRangeHalf2 = _mm_and_si128( srcRangeHalf1, _mm_set1_epi8( 0x7F ) );
     __m128i srcMid = _mm_add_epi8( min, srcRangeHalf2 );
+    __m128i srcMid16 = _mm_unpacklo_epi8( srcMid, _mm_setzero_si128() );
 
     // multiplier
     __m128i srcRange16 = _mm_unpacklo_epi8( srcRange, _mm_setzero_si128() );
     __m128i mulA1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[0] );
     __m128i mulB1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[1] );
-    __m128i mul[2] = { _mm_add_epi16( mulA1, g_one_SIMD16 ),_mm_add_epi16( mulB1, g_one_SIMD16 ) };
+    __m128i mul[2] = { _mm_add_epi16( mulA1, _mm_set1_epi16( 1 ) ), _mm_add_epi16( mulB1, _mm_set1_epi16( 1 ) ) };
 
+    // wide multiplier
     __m128i rangeMul[16];
     __m128i rmtmp = _mm_shufflelo_epi16( mul[0], _MM_SHUFFLE( 0, 0, 0, 0 ) );
     rangeMul[0] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
@@ -99,7 +101,101 @@ uint64_t ProcessAlpha( const uint8_t* src )
     rmtmp = _mm_shufflehi_epi16( mul[1], _MM_SHUFFLE( 3, 3, 3, 3 ) );
     rangeMul[15] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
 
-    return 0;
+    // wide source
+    __m128i s16_1 = _mm_shuffle_epi32( s, _MM_SHUFFLE( 3, 2, 3, 2 ) );
+    __m128i s16[2] = { _mm_unpacklo_epi8( s, _mm_setzero_si128() ), _mm_unpacklo_epi8( s16_1, _mm_setzero_si128() ) };
+
+    __m128i sr[16];
+    rmtmp = _mm_shufflelo_epi16( s16[0], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    sr[0] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[0], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    sr[1] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[0], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    sr[2] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[0], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    sr[3] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[0], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    sr[4] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[0], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    sr[5] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[0], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    sr[6] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[0], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    sr[7] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[1], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    sr[8] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[1], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    sr[9] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[1], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    sr[10] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( s16[1], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    sr[11] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[1], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    sr[12] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[1], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    sr[13] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[1], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    sr[14] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( s16[1], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    sr[15] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+
+    // find indices
+    int buf[16][16];
+    int err = std::numeric_limits<int>::max();
+    int sel;
+    for( int r=0; r<16; r++ )
+    {
+        __m128i modVal = _mm_mullo_epi16( rangeMul[r], g_alpha_SIMD[r] );
+        __m128i recVal1 = _mm_add_epi16( srcMid16, modVal );
+        __m128i recVal = _mm_packus_epi16( recVal1, recVal1 );
+        __m128i recVal16 = _mm_unpacklo_epi8( recVal, _mm_setzero_si128() );
+
+        int rangeErr = 0;
+        for( int i=0; i<16; i++ )
+        {
+            __m128i err1 = _mm_sub_epi16( sr[i], recVal16 );
+            __m128i err = _mm_abs_epi16( err1 );
+            __m128i minerr = _mm_minpos_epu16( err );
+            uint32_t tmp;
+            _mm_storeu_si32( &tmp, minerr );
+            buf[r][i] = tmp >> 16;
+            rangeErr += tmp & 0xFFFF;
+        }
+
+        if( rangeErr < err )
+        {
+            err = rangeErr;
+            sel = r;
+            if( err == 0 ) break;
+        }
+    }
+
+    uint16_t sm, selmul;
+    _mm_storeu_si16( &sm, srcMid16 );
+    _mm_storeu_si16( &selmul, rangeMul[sel] );
+
+    uint64_t d = ( uint64_t( sm ) << 56 ) |
+        ( uint64_t( selmul ) << 52 ) |
+        ( uint64_t( sel ) << 48 );
+
+    int offset = 45;
+    auto ptr = buf[sel];
+    for( int i=0; i<16; i++ )
+    {
+        d |= uint64_t( *ptr++ ) << offset;
+        offset -= 3;
+    }
+
+    d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
+        ( ( d & 0x00FF000000000000 ) >> 40 ) |
+        ( ( d & 0x0000FF0000000000 ) >> 24 ) |
+        ( ( d & 0x000000FF00000000 ) >> 8 ) |
+        ( ( d & 0x00000000FF000000 ) << 8 ) |
+        ( ( d & 0x0000000000FF0000 ) << 24 ) |
+        ( ( d & 0x000000000000FF00 ) << 40 ) |
+        ( ( d & 0x00000000000000FF ) << 56 );
+
+    return d;
 #else
     {
         bool solid = true;
