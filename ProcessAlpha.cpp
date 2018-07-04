@@ -9,6 +9,7 @@
 #    include <intrin.h>
 #    include <Windows.h>
 #    define _bswap(x) _byteswap_ulong(x)
+#    define _bswap64(x) _byteswap_uint64(x)
 #  else
 #    include <x86intrin.h>
 #  endif
@@ -16,11 +17,13 @@
 #  ifndef _MSC_VER
 #    include <byteswap.h>
 #    define _bswap(x) bswap_32(x)
+#    define _bswap64(x) bswap_64(x)
 #  endif
 #endif
 
 #ifndef _bswap
 #  define _bswap(x) __builtin_bswap32(x)
+#  define _bswap64(x) __builtin_bswap64(x)
 #endif
 
 
@@ -186,16 +189,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
         offset -= 3;
     }
 
-    d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
-        ( ( d & 0x00FF000000000000 ) >> 40 ) |
-        ( ( d & 0x0000FF0000000000 ) >> 24 ) |
-        ( ( d & 0x000000FF00000000 ) >> 8 ) |
-        ( ( d & 0x00000000FF000000 ) << 8 ) |
-        ( ( d & 0x0000000000FF0000 ) << 24 ) |
-        ( ( d & 0x000000000000FF00 ) << 40 ) |
-        ( ( d & 0x00000000000000FF ) << 56 );
-
-    return d;
+    return _bswap64( d );
 #else
     {
         bool solid = true;
@@ -283,15 +277,6 @@ uint64_t ProcessAlpha( const uint8_t* src )
         offset -= 3;
     }
 
-    d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
-        ( ( d & 0x00FF000000000000 ) >> 40 ) |
-        ( ( d & 0x0000FF0000000000 ) >> 24 ) |
-        ( ( d & 0x000000FF00000000 ) >> 8 ) |
-        ( ( d & 0x00000000FF000000 ) << 8 ) |
-        ( ( d & 0x0000000000FF0000 ) << 24 ) |
-        ( ( d & 0x000000000000FF00 ) << 40 ) |
-        ( ( d & 0x00000000000000FF ) << 56 );
-
-    return d;
+    return _bswap64( d );
 #endif
 }
