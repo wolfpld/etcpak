@@ -154,12 +154,12 @@ uint64_t ProcessAlpha( const uint8_t* src )
         for( int i=0; i<16; i++ )
         {
             __m128i err1 = _mm_sub_epi16( sr[i], recVal16 );
-            __m128i err = _mm_abs_epi16( err1 );
+            __m128i err = _mm_mullo_epi16( err1, err1 );
             __m128i minerr = _mm_minpos_epu16( err );
             uint32_t tmp;
             _mm_storeu_si32( &tmp, minerr );
             buf[r][i] = tmp >> 16;
-            rangeErr += sq( tmp & 0xFFFF );
+            rangeErr += tmp & 0xFFFF;
         }
 
         if( rangeErr < err )
