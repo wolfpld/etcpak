@@ -143,5 +143,23 @@ const __m128i g_table256_SIMD[4] =
     _mm_setr_epi32( 18*256,  24*256,  33*256,  47*256),
     _mm_setr_epi32( 60*256,  80*256, 106*256, 183*256)
 };
+
+const __m128i g_alphaRange_SIMD = _mm_setr_epi8(
+    g_alphaRange[0],
+    g_alphaRange[1],
+    g_alphaRange[2],
+    g_alphaRange[3],
+    g_alphaRange[4],
+    g_alphaRange[5],
+    g_alphaRange[6],
+    g_alphaRange[7],
+    g_alphaRange[8],
+    g_alphaRange[9],
+    g_alphaRange[10],
+    g_alphaRange[11],
+    g_alphaRange[12],
+    g_alphaRange[13],
+    g_alphaRange[14],
+    g_alphaRange[15] );
 #endif
 
