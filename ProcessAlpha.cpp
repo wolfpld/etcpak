@@ -159,7 +159,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
             uint32_t tmp;
             _mm_storeu_si32( &tmp, minerr );
             buf[r][i] = tmp >> 16;
-            rangeErr += tmp & 0xFFFF;
+            rangeErr += sq( tmp & 0xFFFF );
         }
 
         if( rangeErr < err )
