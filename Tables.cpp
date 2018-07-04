@@ -87,22 +87,22 @@ const int32_t g_alpha[16][8] = {
 };
 
 const int32_t g_alphaRange[16] = {
-    0x1012 / ( 1 + g_alpha[0][7] - g_alpha[0][3] ),
-    0x1012 / ( 1 + g_alpha[1][7] - g_alpha[1][3] ),
-    0x1012 / ( 1 + g_alpha[2][7] - g_alpha[2][3] ),
-    0x1012 / ( 1 + g_alpha[3][7] - g_alpha[3][3] ),
-    0x1012 / ( 1 + g_alpha[4][7] - g_alpha[4][3] ),
-    0x1012 / ( 1 + g_alpha[5][7] - g_alpha[5][3] ),
-    0x1012 / ( 1 + g_alpha[6][7] - g_alpha[6][3] ),
-    0x1012 / ( 1 + g_alpha[7][7] - g_alpha[7][3] ),
-    0x1012 / ( 1 + g_alpha[8][7] - g_alpha[8][3] ),
-    0x1012 / ( 1 + g_alpha[9][7] - g_alpha[9][3] ),
-    0x1012 / ( 1 + g_alpha[10][7] - g_alpha[10][3] ),
-    0x1012 / ( 1 + g_alpha[11][7] - g_alpha[11][3] ),
-    0x1012 / ( 1 + g_alpha[12][7] - g_alpha[12][3] ),
-    0x1012 / ( 1 + g_alpha[13][7] - g_alpha[13][3] ),
-    0x1012 / ( 1 + g_alpha[14][7] - g_alpha[14][3] ),
-    0x1012 / ( 1 + g_alpha[15][7] - g_alpha[15][3] ),
+    0x100FF / ( 1 + g_alpha[0][7] - g_alpha[0][3] ),
+    0x100FF / ( 1 + g_alpha[1][7] - g_alpha[1][3] ),
+    0x100FF / ( 1 + g_alpha[2][7] - g_alpha[2][3] ),
+    0x100FF / ( 1 + g_alpha[3][7] - g_alpha[3][3] ),
+    0x100FF / ( 1 + g_alpha[4][7] - g_alpha[4][3] ),
+    0x100FF / ( 1 + g_alpha[5][7] - g_alpha[5][3] ),
+    0x100FF / ( 1 + g_alpha[6][7] - g_alpha[6][3] ),
+    0x100FF / ( 1 + g_alpha[7][7] - g_alpha[7][3] ),
+    0x100FF / ( 1 + g_alpha[8][7] - g_alpha[8][3] ),
+    0x100FF / ( 1 + g_alpha[9][7] - g_alpha[9][3] ),
+    0x100FF / ( 1 + g_alpha[10][7] - g_alpha[10][3] ),
+    0x100FF / ( 1 + g_alpha[11][7] - g_alpha[11][3] ),
+    0x100FF / ( 1 + g_alpha[12][7] - g_alpha[12][3] ),
+    0x100FF / ( 1 + g_alpha[13][7] - g_alpha[13][3] ),
+    0x100FF / ( 1 + g_alpha[14][7] - g_alpha[14][3] ),
+    0x100FF / ( 1 + g_alpha[15][7] - g_alpha[15][3] ),
 };
 
 #ifdef __SSE4_1__
@@ -144,22 +144,28 @@ const __m128i g_table256_SIMD[4] =
     _mm_setr_epi32( 60*256,  80*256, 106*256, 183*256)
 };
 
-const __m128i g_alphaRange_SIMD = _mm_setr_epi8(
-    g_alphaRange[0],
-    g_alphaRange[1],
-    g_alphaRange[2],
-    g_alphaRange[3],
-    g_alphaRange[4],
-    g_alphaRange[5],
-    g_alphaRange[6],
-    g_alphaRange[7],
-    g_alphaRange[8],
-    g_alphaRange[9],
-    g_alphaRange[10],
-    g_alphaRange[11],
-    g_alphaRange[12],
-    g_alphaRange[13],
-    g_alphaRange[14],
-    g_alphaRange[15] );
+const __m128i g_alphaRange_SIMD[2] = {
+    _mm_setr_epi16(
+        g_alphaRange[0],
+        g_alphaRange[1],
+        g_alphaRange[2],
+        g_alphaRange[3],
+        g_alphaRange[4],
+        g_alphaRange[5],
+        g_alphaRange[6],
+        g_alphaRange[7] ),
+    _mm_setr_epi16(
+        g_alphaRange[8],
+        g_alphaRange[9],
+        g_alphaRange[10],
+        g_alphaRange[11],
+        g_alphaRange[12],
+        g_alphaRange[13],
+        g_alphaRange[14],
+        g_alphaRange[15] )
+};
+
+const __m128i g_one_SIMD16 = _mm_set1_epi16( 1 );
+
 #endif
 

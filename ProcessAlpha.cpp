@@ -60,7 +60,11 @@ uint64_t ProcessAlpha( const uint8_t* src )
     __m128i srcMid = _mm_add_epi8( min, srcRangeHalf2 );
 
     // multiplier
-
+    __m128i srcRange16 = _mm_srai_epi16( srcRange, 8 );
+    __m128i mulA1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[0] );
+    __m128i mulB1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[1] );
+    __m128i mulA = _mm_add_epi16( mulA1, g_one_SIMD16 );
+    __m128i mulB = _mm_add_epi16( mulB1, g_one_SIMD16 );
 
     return 0;
 #else
@@ -98,7 +102,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     int selmul;
     for( int r=0; r<16; r++ )
     {
-        int mul = ( ( srcRange * g_alphaRange[r] ) >> 12 ) + 1;
+        int mul = ( ( srcRange * g_alphaRange[r] ) >> 16 ) + 1;
 
         int rangeErr = 0;
         for( int i=0; i<16; i++ )
