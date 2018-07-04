@@ -45,11 +45,11 @@ uint64_t ProcessAlpha( const uint8_t* src )
     __m128i max2 = _mm_max_epu8( max1, smax2 );
     __m128i min2 = _mm_min_epu8( min1, smin2 );
     __m128i smax3 = _mm_alignr_epi8( max2, max2, 2 );
-    __m128i smin3 = _mm_alignr_epi8( max2, max2, 2 );
+    __m128i smin3 = _mm_alignr_epi8( min2, min2, 2 );
     __m128i max3 = _mm_max_epu8( max2, smax3 );
     __m128i min3 = _mm_min_epu8( min2, smin3 );
     __m128i smax4 = _mm_alignr_epi8( max3, max3, 1 );
-    __m128i smin4 = _mm_alignr_epi8( max3, max3, 1 );
+    __m128i smin4 = _mm_alignr_epi8( min3, min3, 1 );
     __m128i max = _mm_max_epu8( max3, smax4 );
     __m128i min = _mm_min_epu8( min3, smin4 );
 
