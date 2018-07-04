@@ -63,8 +63,41 @@ uint64_t ProcessAlpha( const uint8_t* src )
     __m128i srcRange16 = _mm_srai_epi16( srcRange, 8 );
     __m128i mulA1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[0] );
     __m128i mulB1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[1] );
-    __m128i mulA = _mm_add_epi16( mulA1, g_one_SIMD16 );
-    __m128i mulB = _mm_add_epi16( mulB1, g_one_SIMD16 );
+    __m128i mul[2] = { _mm_add_epi16( mulA1, g_one_SIMD16 ),_mm_add_epi16( mulB1, g_one_SIMD16 ) };
+
+    __m128i rangeMul[16];
+    __m128i rmtmp = _mm_shufflelo_epi16( mul[0], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rangeMul[0] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[0], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    rangeMul[1] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[0], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rangeMul[2] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[0], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    rangeMul[3] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[0], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rangeMul[4] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[0], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    rangeMul[5] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[0], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rangeMul[6] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[0], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    rangeMul[7] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[1], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rangeMul[8] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[1], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    rangeMul[9] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[1], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rangeMul[10] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflelo_epi16( mul[1], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    rangeMul[11] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[1], _MM_SHUFFLE( 0, 0, 0, 0 ) );
+    rangeMul[12] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[1], _MM_SHUFFLE( 1, 1, 1, 1 ) );
+    rangeMul[13] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[1], _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rangeMul[14] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    rmtmp = _mm_shufflehi_epi16( mul[1], _MM_SHUFFLE( 3, 3, 3, 3 ) );
+    rangeMul[15] = _mm_shuffle_epi32( rmtmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
 
     return 0;
 #else
