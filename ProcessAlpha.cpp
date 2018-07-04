@@ -160,8 +160,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
             __m128i err1 = _mm_sub_epi16( sr[i], recVal16 );
             __m128i err = _mm_mullo_epi16( err1, err1 );
             __m128i minerr = _mm_minpos_epu16( err );
-            uint32_t tmp;
-            _mm_storeu_si32( &tmp, minerr );
+            uint32_t tmp = _mm_cvtsi128_si32( minerr );
             buf[r][i] = tmp >> 16;
             rangeErr += tmp & 0xFFFF;
         }
@@ -174,9 +173,8 @@ uint64_t ProcessAlpha( const uint8_t* src )
         }
     }
 
-    uint16_t sm, selmul;
-    _mm_storeu_si16( &sm, srcMid16 );
-    _mm_storeu_si16( &selmul, rangeMul[sel] );
+    uint16_t sm = _mm_cvtsi128_si32( srcMid16 );
+    uint16_t selmul = _mm_cvtsi128_si32( rangeMul[sel] );
 
     uint64_t d = ( uint64_t( sm ) << 56 ) |
         ( uint64_t( selmul ) << 52 ) |
