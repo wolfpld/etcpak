@@ -26,7 +26,8 @@
 
 uint64_t ProcessAlpha( const uint8_t* src )
 {
-#ifdef __SSE4_1__
+#if defined __SSE4_1__ && 0
+    // Check solid
     __m128i s = _mm_loadu_si128( (__m128i*)src );
     __m128i solidCmp = _mm_set1_epi8( src[0] );
     __m128i cmpRes = _mm_cmpeq_epi8( s, solidCmp );
@@ -34,6 +35,34 @@ uint64_t ProcessAlpha( const uint8_t* src )
     {
         return src[0];
     }
+
+    // Calculate min, max
+    __m128i s1 = _mm_shuffle_epi32( s, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+    __m128i max1 = _mm_max_epu8( s, s1 );
+    __m128i min1 = _mm_min_epu8( s, s1 );
+    __m128i smax2 = _mm_shuffle_epi32( max1, _MM_SHUFFLE( 0, 0, 2, 2 ) );
+    __m128i smin2 = _mm_shuffle_epi32( min1, _MM_SHUFFLE( 0, 0, 2, 2 ) );
+    __m128i max2 = _mm_max_epu8( max1, smax2 );
+    __m128i min2 = _mm_min_epu8( min1, smin2 );
+    __m128i smax3 = _mm_alignr_epi8( max2, max2, 2 );
+    __m128i smin3 = _mm_alignr_epi8( max2, max2, 2 );
+    __m128i max3 = _mm_max_epu8( max2, smax3 );
+    __m128i min3 = _mm_min_epu8( min2, smin3 );
+    __m128i smax4 = _mm_alignr_epi8( max3, max3, 1 );
+    __m128i smin4 = _mm_alignr_epi8( max3, max3, 1 );
+    __m128i max = _mm_max_epu8( max3, smax4 );
+    __m128i min = _mm_min_epu8( min3, smin4 );
+
+    // src range, mid
+    __m128i srcRange = _mm_sub_epi8( max, min );
+    __m128i srcRangeHalf1 = _mm_srli_epi16( srcRange, 1 );
+    __m128i srcRangeHalf2 = _mm_and_si128( srcRangeHalf1, _mm_set1_epi8( 0x7F ) );
+    __m128i srcMid = _mm_add_epi8( min, srcRangeHalf2 );
+
+    // multiplier
+
+
+    return 0;
 #else
     {
         bool solid = true;
@@ -52,7 +81,6 @@ uint64_t ProcessAlpha( const uint8_t* src )
             return ref;
         }
     }
-#endif
 
     uint8_t min = src[0];
     uint8_t max = src[0];
@@ -132,4 +160,5 @@ uint64_t ProcessAlpha( const uint8_t* src )
         ( ( d & 0x00000000000000FF ) << 56 );
 
     return d;
+#endif
 }
