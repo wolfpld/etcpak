@@ -97,28 +97,27 @@ uint64_t ProcessAlpha( const uint8_t* src )
 
     // multiplier
     __m128i srcRange16 = _mm_unpacklo_epi8( srcRange, _mm_setzero_si128() );
-    __m128i mulA1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[0] );
-    __m128i mulB1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD[1] );
-    __m128i mul[2] = { _mm_add_epi16( mulA1, _mm_set1_epi16( 1 ) ), _mm_add_epi16( mulB1, _mm_set1_epi16( 1 ) ) };
+    __m128i mul1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD );
+    __m128i mul = _mm_add_epi16( mul1, _mm_set1_epi16( 1 ) );
 
     // wide multiplier
     __m128i rangeMul[16] = {
-        Widen<0>( mul[0] ),
-        Widen<1>( mul[0] ),
-        Widen<2>( mul[0] ),
-        Widen<3>( mul[0] ),
-        Widen<4>( mul[0] ),
-        Widen<5>( mul[0] ),
-        Widen<6>( mul[0] ),
-        Widen<7>( mul[0] ),
-        Widen<0>( mul[1] ),
-        Widen<1>( mul[1] ),
-        Widen<2>( mul[1] ),
-        Widen<3>( mul[1] ),
-        Widen<4>( mul[1] ),
-        Widen<5>( mul[1] ),
-        Widen<6>( mul[1] ),
-        Widen<7>( mul[1] )
+        Widen<0>( mul ),
+        Widen<1>( mul ),
+        Widen<1>( mul ),
+        Widen<1>( mul ),
+        Widen<2>( mul ),
+        Widen<3>( mul ),
+        Widen<3>( mul ),
+        Widen<3>( mul ),
+        Widen<4>( mul ),
+        Widen<4>( mul ),
+        Widen<4>( mul ),
+        Widen<4>( mul ),
+        Widen<4>( mul ),
+        Widen<4>( mul ),
+        Widen<5>( mul ),
+        Widen<5>( mul )
     };
 
     // wide source

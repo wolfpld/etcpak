@@ -163,26 +163,15 @@ const __m128i g_alpha_SIMD[16] = {
     _mm_setr_epi16( g_alpha[15][0], g_alpha[15][1], g_alpha[15][2], g_alpha[15][3], g_alpha[15][4], g_alpha[15][5], g_alpha[15][6], g_alpha[15][7] ),
 };
 
-const __m128i g_alphaRange_SIMD[2] = {
-    _mm_setr_epi16(
-        g_alphaRange[0],
-        g_alphaRange[1],
-        g_alphaRange[2],
-        g_alphaRange[3],
-        g_alphaRange[4],
-        g_alphaRange[5],
-        g_alphaRange[6],
-        g_alphaRange[7] ),
-    _mm_setr_epi16(
-        g_alphaRange[8],
-        g_alphaRange[9],
-        g_alphaRange[10],
-        g_alphaRange[11],
-        g_alphaRange[12],
-        g_alphaRange[13],
-        g_alphaRange[14],
-        g_alphaRange[15] )
-};
+const __m128i g_alphaRange_SIMD = _mm_setr_epi16(
+    g_alphaRange[0],
+    g_alphaRange[1],
+    g_alphaRange[4],
+    g_alphaRange[5],
+    g_alphaRange[8],
+    g_alphaRange[14],
+    0,
+    0 );
 
 #endif
 
