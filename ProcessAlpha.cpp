@@ -98,7 +98,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     int selmul;
     for( int r=0; r<16; r++ )
     {
-        int mul = ( srcRange / g_alphaRange[r] ) + 1;
+        int mul = ( ( srcRange * g_alphaRange[r] ) >> 12 ) + 1;
 
         int rangeErr = 0;
         for( int i=0; i<16; i++ )
