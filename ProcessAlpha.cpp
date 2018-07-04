@@ -26,6 +26,7 @@
 #  define _bswap64(x) __builtin_bswap64(x)
 #endif
 
+#ifdef __SSE4_1__
 template<int K>
 static inline __m128i Widen( const __m128i src )
 {
@@ -58,6 +59,7 @@ static inline __m128i Widen( const __m128i src )
         return _mm_shuffle_epi32( tmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
     }
 }
+#endif
 
 uint64_t ProcessAlpha( const uint8_t* src )
 {
