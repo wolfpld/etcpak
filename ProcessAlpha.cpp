@@ -89,17 +89,16 @@ uint64_t ProcessAlpha( const uint8_t* src )
     __m128i smin4 = _mm_alignr_epi8( min3, min3, 1 );
     __m128i max = _mm_max_epu8( max3, smax4 );
     __m128i min = _mm_min_epu8( min3, smin4 );
+    __m128i max16 = _mm_unpacklo_epi8( max, _mm_setzero_si128() );
+    __m128i min16 = _mm_unpacklo_epi8( min, _mm_setzero_si128() );
 
     // src range, mid
-    __m128i srcRange = _mm_sub_epi8( max, min );
-    __m128i srcRangeHalf1 = _mm_srli_epi16( srcRange, 1 );
-    __m128i srcRangeHalf2 = _mm_and_si128( srcRangeHalf1, _mm_set1_epi8( 0x7F ) );
-    __m128i srcMid = _mm_add_epi8( min, srcRangeHalf2 );
-    __m128i srcMid16 = _mm_unpacklo_epi8( srcMid, _mm_setzero_si128() );
+    __m128i srcRange = _mm_sub_epi16( max16, min16 );
+    __m128i srcRangeHalf = _mm_srli_epi16( srcRange, 1 );
+    __m128i srcMid = _mm_add_epi16( min16, srcRangeHalf );
 
     // multiplier
-    __m128i srcRange16 = _mm_unpacklo_epi8( srcRange, _mm_setzero_si128() );
-    __m128i mul1 = _mm_mulhi_epi16( srcRange16, g_alphaRange_SIMD );
+    __m128i mul1 = _mm_mulhi_epi16( srcRange, g_alphaRange_SIMD );
     __m128i mul = _mm_add_epi16( mul1, _mm_set1_epi16( 1 ) );
 
     // wide multiplier
@@ -152,7 +151,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     for( int r=0; r<16; r++ )
     {
         __m128i modVal = _mm_mullo_epi16( rangeMul[r], g_alpha_SIMD[r] );
-        __m128i recVal1 = _mm_add_epi16( srcMid16, modVal );
+        __m128i recVal1 = _mm_add_epi16( srcMid, modVal );
         __m128i recVal = _mm_packus_epi16( recVal1, recVal1 );
         __m128i recVal16 = _mm_unpacklo_epi8( recVal, _mm_setzero_si128() );
 
@@ -175,7 +174,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
         }
     }
 
-    uint16_t sm = _mm_cvtsi128_si32( srcMid16 );
+    uint16_t sm = _mm_cvtsi128_si32( srcMid );
     uint16_t selmul = _mm_cvtsi128_si32( rangeMul[sel] );
 
     uint64_t d = ( uint64_t( sm ) << 56 ) |
