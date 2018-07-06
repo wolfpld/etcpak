@@ -61,6 +61,35 @@ static inline __m128i Widen( const __m128i src )
         return _mm_shuffle_epi32( tmp, _MM_SHUFFLE( 2, 2, 2, 2 ) );
     }
 }
+
+static inline int GetMulSel( int sel )
+{
+    switch( sel )
+    {
+    case 0:
+        return 0;
+    case 1:
+    case 2:
+    case 3:
+        return 1;
+    case 4:
+        return 2;
+    case 5:
+    case 6:
+    case 7:
+        return 3;
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+        return 4;
+    case 14:
+    case 15:
+        return 5;
+    }
+}
 #endif
 
 uint64_t ProcessAlpha( const uint8_t* src )
@@ -105,22 +134,22 @@ uint64_t ProcessAlpha( const uint8_t* src )
 
     // wide multiplier
     __m128i rangeMul[16] = {
-        Widen<0>( mul ),
-        Widen<1>( mul ),
-        Widen<1>( mul ),
-        Widen<1>( mul ),
-        Widen<2>( mul ),
-        Widen<3>( mul ),
-        Widen<3>( mul ),
-        Widen<3>( mul ),
-        Widen<4>( mul ),
-        Widen<4>( mul ),
-        Widen<4>( mul ),
-        Widen<4>( mul ),
-        Widen<4>( mul ),
-        Widen<4>( mul ),
-        Widen<5>( mul ),
-        Widen<5>( mul )
+        _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ),
+        _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ),
+        _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ),
+        _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ),
+        _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ),
+        _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ),
+        _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ),
+        _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ),
+        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ),
+        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ),
+        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ),
+        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ),
+        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ),
+        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ),
+        _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ),
+        _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] )
     };
 
     // wide source
@@ -152,8 +181,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     int sel;
     for( int r=0; r<16; r++ )
     {
-        __m128i modVal = _mm_mullo_epi16( rangeMul[r], g_alpha_SIMD[r] );
-        __m128i recVal1 = _mm_add_epi16( srcMid, modVal );
+        __m128i recVal1 = _mm_add_epi16( srcMid, rangeMul[r] );
         __m128i recVal = _mm_packus_epi16( recVal1, recVal1 );
         __m128i recVal16 = _mm_unpacklo_epi8( recVal, _mm_setzero_si128() );
 
@@ -176,11 +204,12 @@ uint64_t ProcessAlpha( const uint8_t* src )
         }
     }
 
+    uint16_t rm[8];
+    _mm_storeu_si128( (__m128i*)rm, mul );
     uint16_t sm = _mm_cvtsi128_si64( srcMid );
-    uint16_t selmul = _mm_cvtsi128_si64( rangeMul[sel] );
 
     uint64_t d = ( uint64_t( sm ) << 56 ) |
-        ( uint64_t( selmul ) << 52 ) |
+        ( uint64_t( rm[GetMulSel( sel )] ) << 52 ) |
         ( uint64_t( sel ) << 48 );
 
     int offset = 45;
