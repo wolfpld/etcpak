@@ -134,22 +134,22 @@ uint64_t ProcessAlpha( const uint8_t* src )
 
     // wide multiplier
     __m128i rangeMul[16] = {
-        _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ),
-        _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ),
-        _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ),
-        _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ),
-        _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ),
-        _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ),
-        _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ),
-        _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ),
-        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ),
-        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ),
-        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ),
-        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ),
-        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ),
-        _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ),
-        _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ),
-        _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] )
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ) ), _mm_setzero_si128() )
     };
 
     // wide source
@@ -181,9 +181,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     int sel;
     for( int r=0; r<16; r++ )
     {
-        __m128i recVal1 = _mm_add_epi16( srcMid, rangeMul[r] );
-        __m128i recVal = _mm_packus_epi16( recVal1, recVal1 );
-        __m128i recVal16 = _mm_unpacklo_epi8( recVal, _mm_setzero_si128() );
+        __m128i recVal16 = rangeMul[r];
 
         int rangeErr = 0;
         for( int i=0; i<16; i++ )
