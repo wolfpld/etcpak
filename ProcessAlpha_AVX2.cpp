@@ -92,7 +92,7 @@ uint64_t ProcessAlpha_AVX2( const uint8_t* src )
 {
     // Check solid
     __m128i s = _mm_loadu_si128( (__m128i*)src );
-    __m128i solidCmp = _mm_set1_epi8( src[0] );
+    __m128i solidCmp = _mm_broadcastb_epi8( s );
     __m128i cmpRes = _mm_cmpeq_epi8( s, solidCmp );
     if( _mm_testc_si128( cmpRes, _mm_set1_epi32( -1 ) ) )
     {
