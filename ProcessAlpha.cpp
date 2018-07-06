@@ -30,6 +30,8 @@
 template<int K>
 static inline __m128i Widen( const __m128i src )
 {
+    static_assert( K >= 0 && K <= 7, "Index out of range" );
+
     __m128i tmp;
     switch( K )
     {
