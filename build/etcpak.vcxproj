@@ -114,6 +114,12 @@
     <ClCompile Include="..\lz4\lz4.c" />
     <ClCompile Include="..\mmap.cpp" />
     <ClCompile Include="..\ProcessAlpha.cpp" />
+    <ClCompile Include="..\ProcessAlpha_AVX2.cpp">
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
     <ClCompile Include="..\ProcessRGB.cpp" />
     <ClCompile Include="..\ProcessRGB_AVX2.cpp">
       <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -161,6 +167,7 @@
     <ClInclude Include="..\MipMap.hpp" />
     <ClInclude Include="..\mmap.hpp" />
     <ClInclude Include="..\ProcessAlpha.hpp" />
+    <ClInclude Include="..\ProcessAlpha_AVX2.hpp" />
     <ClInclude Include="..\ProcessCommon.hpp" />
     <ClInclude Include="..\ProcessRGB.hpp" />
     <ClInclude Include="..\ProcessRGB_AVX2.hpp" />

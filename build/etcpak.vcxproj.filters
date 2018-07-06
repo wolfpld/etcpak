@@ -117,6 +117,7 @@
     <ClCompile Include="..\lz4\lz4.c">
       <Filter>lz4</Filter>
     </ClCompile>
+    <ClCompile Include="..\ProcessAlpha_AVX2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -198,6 +199,7 @@
     <ClInclude Include="..\lz4\lz4.h">
       <Filter>lz4</Filter>
     </ClInclude>
+    <ClInclude Include="..\ProcessAlpha_AVX2.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">

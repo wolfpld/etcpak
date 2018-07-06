@@ -9,6 +9,7 @@
 #include "MipMap.hpp"
 #include "mmap.hpp"
 #include "ProcessAlpha.hpp"
+#include "ProcessAlpha_AVX2.hpp"
 #include "ProcessRGB.hpp"
 #include "ProcessRGB_AVX2.hpp"
 #include "Tables.hpp"
@@ -189,6 +190,18 @@ BlockData::~BlockData()
         delete[] m_data;
     }
 }
+
+static uint64_t _f_rgba( uint8_t* ptr )
+{
+    return ProcessAlpha( ptr );
+}
+
+#ifdef __SSE4_1__
+static uint64_t _f_rgba_avx2( uint8_t* ptr )
+{
+    return ProcessAlpha_AVX2( ptr );
+}
+#endif
 
 static uint64_t _f_rgb( uint8_t* ptr )
 {
@@ -398,6 +411,7 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
 
     uint64_t (*func)(uint8_t*);
+    uint64_t (*func_alpha)(uint8_t*);
 
 #ifdef __SSE4_1__
     if( can_use_intel_core_4th_gen_features() )
@@ -410,6 +424,8 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
         {
             func = _f_rgb_etc2_avx2;
         }
+
+        func_alpha = _f_rgba_avx2;
     }
     else
 #endif
@@ -422,6 +438,8 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
         {
             func = _f_rgb_etc2;
         }
+
+        func_alpha = _f_rgba;
     }
 
     do
@@ -453,7 +471,7 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
             w = 0;
         }
 
-        *dst++ = ProcessAlpha( buf8 );
+        *dst++ = func_alpha( buf8 );
         *dst++ = func( (uint8_t*)buf );
     }
     while( --blocks );
