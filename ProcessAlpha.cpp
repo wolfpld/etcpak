@@ -176,7 +176,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     };
 
     // find indices
-    int buf[16][16];
+    uint8_t buf[16][16];
     int err = std::numeric_limits<int>::max();
     int sel;
     for( int r=0; r<16; r++ )
@@ -248,7 +248,7 @@ uint64_t ProcessAlpha( const uint8_t* src )
     int srcRange = max - min;
     int srcMid = min + srcRange / 2;
 
-    int buf[16][16];
+    uint8_t buf[16][16];
     int err = std::numeric_limits<int>::max();
     int sel;
     int selmul;

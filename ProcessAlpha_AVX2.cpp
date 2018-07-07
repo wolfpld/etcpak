@@ -171,7 +171,7 @@ uint64_t ProcessAlpha_AVX2( const uint8_t* src )
     };
 
     // find indices
-    int buf[16][16];
+    uint8_t buf[16][16];
     int err = std::numeric_limits<int>::max();
     int sel;
     for( int r=0; r<16; r++ )
