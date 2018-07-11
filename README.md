@@ -9,9 +9,9 @@ etcpak is an extremely fast [Ericsson Texture Compression](http://en.wikipedia.o
 
 Benchmark performed on an Intel i7 8700K, using a real-life RGBA 16K × 16K atlas:
 
-ETC1: **113 ms** (only RGB part)  
-ETC2 RGB: **213 ms** (only RGB part)  
-ETC2 RGBA: **404 ms**
+ETC1: **113 ms** / *2.375 Gpx/s* (only RGB part)  
+ETC2 RGB: **213 ms** / *1.26 Gpx/s* (only RGB part)  
+ETC2 RGBA: **404 ms** / *664 Mpx/s*
 
 This is 100× - 1000× faster than any other ETC compression tool (there's no typo in the numbers).
 
