@@ -1,5 +1,5 @@
-# etcpak 0.6 #
-(Updated 2018-07-11)
+# etcpak 0.6.1 #
+(Updated 2019-06-15)
 
 ## The fastest ETC compressor on the planet ##
 
