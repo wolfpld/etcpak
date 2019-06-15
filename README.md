@@ -15,6 +15,12 @@ ETC2 RGBA: **404 ms** / *55.4 Mpx/s per core*
 
 This is 100× - 1000× faster than any other ETC compression tool (there's no typo in the numbers).
 
+ARM benchmark performed on Odroid C2, using the same atlas:
+
+ETC1: **3262 ms** / *20.6 Mpx/s per core* (only RGB part)  
+ETC2 RGB: **7127 ms** / *9.4 Mpx/s per core* (only RGB part)  
+ETC2 RGBA: **33878 ms** / *1.98 Mpx/s per core*
+
 [Why there's no image quality metrics? / Quality comparison.](http://i.imgur.com/FxlmUOF.png)  
 [Workload distribution.](https://i.imgur.com/9ZUy4KP.png)
 
