@@ -163,7 +163,9 @@ int main( int argc, char** argv )
         }
         TaskDispatch::Sync();
         end = GetTime();
-        printf( "Mean compression time for %i runs: %0.3f ms\n", NumTasks, ( end - start ) / ( NumTasks * 1000.f ) );
+        const auto mct = ( end - start ) / ( NumTasks * 1000.f );
+        printf( "Mean compression time for %i runs: %0.3f ms\n", NumTasks, mct );
+        printf( "Throughput: %0.3f Mpx/s per core\n", bmp->Size().x * bmp->Size().y / mct / 1000 / System::CPUCores() );
     }
     else if( viewMode )
     {
