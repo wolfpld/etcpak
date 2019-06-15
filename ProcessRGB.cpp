@@ -623,7 +623,7 @@ void FindBestFit( uint64_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uin
     }
 }
 
-#ifdef __SSE4_1__
+#if defined __SSE4_1__ || defined __ARM_NEON
 // Non-reference implementation, but faster. Produces same results as the AVX2 version
 void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
 {
@@ -642,6 +642,7 @@ void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uin
         int dg = a[bid][1] - g;
         int db = a[bid][2] - b;
 
+#ifdef __SSE4_1__
         // The scaling values are divided by two and rounded, to allow the differences to be in the range of signed int16
         // This produces slightly different results, but is significant faster
         __m128i pixel = _mm_set1_epi16(dr * 38 + dg * 76 + db * 14);
@@ -673,6 +674,33 @@ void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uin
         _mm_storeu_si128(((__m128i*)ter) + 1, squareErrorHigh);
 
         _mm_storeu_si128((__m128i*)sel, minIndex);
+#elif defined __ARM_NEON
+        int16x8_t pixel = vdupq_n_s16( dr * 38 + dg * 76 + db * 14 );
+        int16x8_t pix = vabsq_s16( pixel );
+
+        int16x8_t error0 = vabsq_s16( vsubq_s16( pix, g_table128_NEON[0] ) );
+        int16x8_t error1 = vabsq_s16( vsubq_s16( pix, g_table128_NEON[1] ) );
+
+        int16x8_t index = vandq_s16( vreinterpretq_s16_u16( vcltq_s16( error1, error0 ) ), vdupq_n_s16( 1 ) );
+        int16x8_t minError = vminq_s16( error0, error1 );
+
+        int16x8_t indexBit = vandq_s16( vmvnq_s16( vshrq_n_s16( pixel, 15 ) ), vdupq_n_s16( -1 ) );
+        int16x8_t minIndex = vorrq_s16( index, vaddq_s16( indexBit, indexBit ) );
+
+        int16x4_t minErrorLow = vget_low_s16( minError );
+        int16x4_t minErrorHigh = vget_high_s16( minError );
+
+        int32x4_t squareErrorLow = vmull_s16( minErrorLow, minErrorLow );
+        int32x4_t squareErrorHigh = vmull_s16( minErrorHigh, minErrorHigh );
+
+        int32x4_t squareErrorSumLow = vaddq_s32( squareErrorLow, vld1q_s32( (int32_t*)ter ) );
+        int32x4_t squareErrorSumHigh = vaddq_s32( squareErrorHigh, vld1q_s32( (int32_t*)ter + 4 ) );
+
+        vst1q_s32( (int32_t*)ter, squareErrorSumLow );
+        vst1q_s32( (int32_t*)ter + 4, squareErrorSumHigh );
+
+        vst1q_s16( (int16_t*)sel, minIndex );
+#endif
     }
 }
 #endif
@@ -867,7 +895,7 @@ uint64_t ProcessRGB( const uint8_t* src )
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
-#if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
+#if ( defined __SSE4_1__ || defined __ARM_NEON ) && !defined REFERENCE_IMPLEMENTATION
     uint32_t terr[2][8] = {};
 #else
     uint64_t terr[2][8] = {};
@@ -891,7 +919,7 @@ uint64_t ProcessRGB_ETC2( const uint8_t* src )
     size_t idx = GetLeastError( err, 4 );
     EncodeAverages( d, a, idx );
 
-#if defined __SSE4_1__ && !defined REFERENCE_IMPLEMENTATION
+#if ( defined __SSE4_1__ || defined __ARM_NEON ) && !defined REFERENCE_IMPLEMENTATION
     uint32_t terr[2][8] = {};
 #else
     uint64_t terr[2][8] = {};

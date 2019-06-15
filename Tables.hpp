@@ -33,6 +33,7 @@ extern const __m128i g_alphaRange_SIMD;
 #endif
 
 #ifdef __ARM_NEON
+extern const int16x8_t g_table128_NEON[2];
 extern const int32x4_t g_table256_NEON[4];
 #endif
 
