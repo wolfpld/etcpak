@@ -51,6 +51,7 @@ void Usage()
     fprintf( stderr, "  -debug      dissect ETC texture\n" );
     fprintf( stderr, "  -etc2       enable ETC2 mode\n" );
     fprintf( stderr, "  -rgba       enable ETC2 RGBA mode\n" );
+    fprintf( stderr, "  -j num      set number of job threads (default: number of cpu cores)\n" );
 }
 
 int main( int argc, char** argv )
@@ -67,6 +68,7 @@ int main( int argc, char** argv )
     bool debug = false;
     bool etc2 = false;
     bool rgba = false;
+    unsigned int cpus = System::CPUCores();
 
     if( argc < 2 )
     {
@@ -120,6 +122,11 @@ int main( int argc, char** argv )
             rgba = true;
             etc2 = true;
         }
+        else if( CSTR( "-j" ) )
+        {
+            i++;
+            cpus = atoi( argv[i] );
+        }
         else
         {
             Usage();
@@ -133,7 +140,7 @@ int main( int argc, char** argv )
         InitDither();
     }
 
-    TaskDispatch taskDispatch( System::CPUCores() );
+    TaskDispatch taskDispatch( cpus );
 
     if( benchmark )
     {
@@ -143,7 +150,7 @@ int main( int argc, char** argv )
         auto end = GetTime();
         printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
-        const int NumTasks = System::CPUCores() * 10;
+        const int NumTasks = cpus * 10;
         start = GetTime();
         for( int i=0; i<NumTasks; i++ )
         {
@@ -165,7 +172,7 @@ int main( int argc, char** argv )
         end = GetTime();
         const auto mct = ( end - start ) / ( NumTasks * 1000.f );
         printf( "Mean compression time for %i runs: %0.3f ms\n", NumTasks, mct );
-        printf( "Throughput: %0.3f Mpx/s per core\n", bmp->Size().x * bmp->Size().y / mct / 1000 / System::CPUCores() );
+        printf( "Throughput: %0.3f Mpx/s per core\n", bmp->Size().x * bmp->Size().y / mct / 1000 / cpus );
     }
     else if( viewMode )
     {
