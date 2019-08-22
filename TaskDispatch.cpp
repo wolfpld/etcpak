@@ -40,7 +40,9 @@ TaskDispatch::TaskDispatch( size_t workers )
 TaskDispatch::~TaskDispatch()
 {
     m_exit = true;
+    m_queueLock.lock();
     m_cvWork.notify_all();
+    m_queueLock.unlock();
 
     for( auto& worker : m_workers )
     {
