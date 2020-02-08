@@ -118,6 +118,12 @@
     <ClCompile Include="..\libpng\pngwutil.c">
       <Filter>libpng</Filter>
     </ClCompile>
+    <ClCompile Include="..\libpng\filter_sse2_intrinsics.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libpng\intel_init.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">

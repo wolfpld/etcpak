@@ -54,7 +54,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\zlib</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ASMINF;DEBUG;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PNG_INTEL_SSE;ASMINF;DEBUG;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ConformanceMode>
@@ -71,7 +71,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\zlib</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ASMINF;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PNG_INTEL_SSE;ASMINF;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointers>true</OmitFramePointers>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
@@ -96,6 +96,8 @@
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\Dither.cpp" />
     <ClCompile Include="..\Error.cpp" />
+    <ClCompile Include="..\libpng\filter_sse2_intrinsics.c" />
+    <ClCompile Include="..\libpng\intel_init.c" />
     <ClCompile Include="..\libpng\png.c" />
     <ClCompile Include="..\libpng\pngerror.c" />
     <ClCompile Include="..\libpng\pngget.c" />
