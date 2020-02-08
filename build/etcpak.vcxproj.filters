@@ -58,9 +58,6 @@
     <ClCompile Include="..\Tables.cpp" />
     <ClCompile Include="..\ProcessAlpha.cpp" />
     <ClCompile Include="..\ProcessRGB.cpp" />
-    <ClCompile Include="..\zlib\inffas8664.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
     <ClCompile Include="..\Timing.cpp" />
     <ClCompile Include="..\DataProvider.cpp" />
     <ClCompile Include="..\BitmapDownsampled.cpp" />
@@ -122,6 +119,15 @@
       <Filter>libpng</Filter>
     </ClCompile>
     <ClCompile Include="..\libpng\intel_init.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libpng\arm_init.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libpng\filter_neon_intrinsics.c">
+      <Filter>libpng</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libpng\palette_neon_intrinsics.c">
       <Filter>libpng</Filter>
     </ClCompile>
   </ItemGroup>
@@ -206,10 +212,5 @@
     <ClInclude Include="..\libpng\pngstruct.h">
       <Filter>libpng</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="..\zlib\inffasx64.obj">
-      <Filter>zlib</Filter>
-    </Object>
   </ItemGroup>
 </Project>
