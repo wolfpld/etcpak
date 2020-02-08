@@ -48,6 +48,31 @@
     <ClCompile Include="..\zlib\zutil.c">
       <Filter>zlib</Filter>
     </ClCompile>
+    <ClCompile Include="..\Bitmap.cpp" />
+    <ClCompile Include="..\Debug.cpp" />
+    <ClCompile Include="..\Application.cpp" />
+    <ClCompile Include="..\BlockData.cpp" />
+    <ClCompile Include="..\ColorSpace.cpp" />
+    <ClCompile Include="..\Error.cpp" />
+    <ClCompile Include="..\mmap.cpp" />
+    <ClCompile Include="..\Tables.cpp" />
+    <ClCompile Include="..\ProcessAlpha.cpp" />
+    <ClCompile Include="..\ProcessRGB.cpp" />
+    <ClCompile Include="..\zlib\inffas8664.c">
+      <Filter>zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Timing.cpp" />
+    <ClCompile Include="..\DataProvider.cpp" />
+    <ClCompile Include="..\BitmapDownsampled.cpp" />
+    <ClCompile Include="..\Dither.cpp" />
+    <ClCompile Include="..\CpuArch.cpp" />
+    <ClCompile Include="..\ProcessRGB_AVX2.cpp" />
+    <ClCompile Include="..\TaskDispatch.cpp" />
+    <ClCompile Include="..\System.cpp" />
+    <ClCompile Include="..\lz4\lz4.c">
+      <Filter>lz4</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ProcessAlpha_AVX2.cpp" />
     <ClCompile Include="..\libpng\png.c">
       <Filter>libpng</Filter>
     </ClCompile>
@@ -93,31 +118,6 @@
     <ClCompile Include="..\libpng\pngwutil.c">
       <Filter>libpng</Filter>
     </ClCompile>
-    <ClCompile Include="..\Bitmap.cpp" />
-    <ClCompile Include="..\Debug.cpp" />
-    <ClCompile Include="..\Application.cpp" />
-    <ClCompile Include="..\BlockData.cpp" />
-    <ClCompile Include="..\ColorSpace.cpp" />
-    <ClCompile Include="..\Error.cpp" />
-    <ClCompile Include="..\mmap.cpp" />
-    <ClCompile Include="..\Tables.cpp" />
-    <ClCompile Include="..\ProcessAlpha.cpp" />
-    <ClCompile Include="..\ProcessRGB.cpp" />
-    <ClCompile Include="..\zlib\inffas8664.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Timing.cpp" />
-    <ClCompile Include="..\DataProvider.cpp" />
-    <ClCompile Include="..\BitmapDownsampled.cpp" />
-    <ClCompile Include="..\Dither.cpp" />
-    <ClCompile Include="..\CpuArch.cpp" />
-    <ClCompile Include="..\ProcessRGB_AVX2.cpp" />
-    <ClCompile Include="..\TaskDispatch.cpp" />
-    <ClCompile Include="..\System.cpp" />
-    <ClCompile Include="..\lz4\lz4.c">
-      <Filter>lz4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\ProcessAlpha_AVX2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -153,27 +153,6 @@
     <ClInclude Include="..\zlib\zutil.h">
       <Filter>zlib</Filter>
     </ClInclude>
-    <ClInclude Include="..\libpng\png.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libpng\pngconf.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libpng\pngdebug.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libpng\pnginfo.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libpng\pnglibconf.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libpng\pngpriv.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
-    <ClInclude Include="..\libpng\pngstruct.h">
-      <Filter>libpng</Filter>
-    </ClInclude>
     <ClInclude Include="..\Math.hpp" />
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\Bitmap.hpp" />
@@ -200,6 +179,27 @@
       <Filter>lz4</Filter>
     </ClInclude>
     <ClInclude Include="..\ProcessAlpha_AVX2.hpp" />
+    <ClInclude Include="..\libpng\png.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libpng\pngconf.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libpng\pngdebug.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libpng\pnginfo.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libpng\pnglibconf.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libpng\pngpriv.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libpng\pngstruct.h">
+      <Filter>libpng</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\inffasx64.obj">
