@@ -577,7 +577,7 @@ png_push_read_IDAT(png_structrp png_ptr)
       else
          idat_size = (png_uint_32)save_size;
 
-      png_calculate_crc(png_ptr, png_ptr->save_buffer_ptr, save_size);
+      //png_calculate_crc(png_ptr, png_ptr->save_buffer_ptr, save_size);
 
       png_process_IDAT_data(png_ptr, png_ptr->save_buffer_ptr, save_size);
 
@@ -603,7 +603,7 @@ png_push_read_IDAT(png_structrp png_ptr)
       else
          idat_size = (png_uint_32)save_size;
 
-      png_calculate_crc(png_ptr, png_ptr->current_buffer_ptr, save_size);
+      //png_calculate_crc(png_ptr, png_ptr->current_buffer_ptr, save_size);
 
       png_process_IDAT_data(png_ptr, png_ptr->current_buffer_ptr, save_size);
 
