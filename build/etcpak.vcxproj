@@ -54,7 +54,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\zlib</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PNG_INTEL_SSE;DEBUG;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASMV;ASMINF;PNG_INTEL_SSE;DEBUG;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ConformanceMode>
@@ -71,7 +71,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\zlib</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PNG_INTEL_SSE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASMV;ASMINF;PNG_INTEL_SSE;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;WIN32_LEAN_AND_MEAN;NOMINMAX;_USE_MATH_DEFINES;__SSE4_1__;NO_GZIP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointers>true</OmitFramePointers>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
@@ -142,6 +142,7 @@
     <ClCompile Include="..\zlib\deflate.c" />
     <ClCompile Include="..\zlib\gzlib.c" />
     <ClCompile Include="..\zlib\infback.c" />
+    <ClCompile Include="..\zlib\inffas8664.c" />
     <ClCompile Include="..\zlib\inffast.c" />
     <ClCompile Include="..\zlib\inflate.c" />
     <ClCompile Include="..\zlib\inftrees.c" />
@@ -192,6 +193,10 @@
     <ClInclude Include="..\zlib\zconf.h" />
     <ClInclude Include="..\zlib\zlib.h" />
     <ClInclude Include="..\zlib\zutil.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="..\zlib\gvmat64.obj" />
+    <Object Include="..\zlib\inffasx64.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
