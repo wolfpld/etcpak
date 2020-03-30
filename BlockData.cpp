@@ -3,7 +3,6 @@
 
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
-#include "CpuArch.hpp"
 #include "Debug.hpp"
 #include "Dither.hpp"
 #include "MipMap.hpp"
@@ -267,29 +266,24 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     if( type == Channels::Alpha )
     {
 #ifdef __SSE4_1__
-        if( can_use_intel_core_4th_gen_features() )
+        if( m_type != Etc1 )
         {
-            if( m_type != Etc1 )
-            {
-                func = _f_rgb_etc2_avx2;
-            }
-            else
-            {
-                func = _f_rgb_avx2;
-            }
+            func = _f_rgb_etc2_avx2;
         }
         else
-#endif
         {
-            if( m_type != Etc1 )
-            {
-                func = _f_rgb_etc2;
-            }
-            else
-            {
-                func = _f_rgb;
-            }
+            func = _f_rgb_avx2;
         }
+#else
+        if( m_type != Etc1 )
+        {
+            func = _f_rgb_etc2;
+        }
+        else
+        {
+            func = _f_rgb;
+        }
+#endif
 
         do
         {
@@ -322,57 +316,52 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     else
     {
 #ifdef __SSE4_1__
-        if( can_use_intel_core_4th_gen_features() )
+        if( m_type != Etc1 )
         {
-            if( m_type != Etc1 )
+            if( dither )
             {
-                if( dither )
-                {
-                    func = _f_rgb_etc2_dither_avx2;
-                }
-                else
-                {
-                    func = _f_rgb_etc2_avx2;
-                }
+                func = _f_rgb_etc2_dither_avx2;
             }
             else
             {
-                if( dither )
-                {
-                    func = _f_rgb_dither_avx2;
-                }
-                else
-                {
-                    func = _f_rgb_avx2;
-                }
+                func = _f_rgb_etc2_avx2;
             }
         }
         else
-#endif
         {
-            if( m_type != Etc1 )
+            if( dither )
             {
-                if( dither )
-                {
-                    func = _f_rgb_etc2_dither;
-                }
-                else
-                {
-                    func = _f_rgb_etc2;
-                }
+                func = _f_rgb_dither_avx2;
             }
             else
             {
-                if( dither )
-                {
-                    func = _f_rgb_dither;
-                }
-                else
-                {
-                    func = _f_rgb;
-                }
+                func = _f_rgb_avx2;
             }
         }
+#else
+        if( m_type != Etc1 )
+        {
+            if( dither )
+            {
+                func = _f_rgb_etc2_dither;
+            }
+            else
+            {
+                func = _f_rgb_etc2;
+            }
+        }
+        else
+        {
+            if( dither )
+            {
+                func = _f_rgb_dither;
+            }
+            else
+            {
+                func = _f_rgb;
+            }
+        }
+#endif
 
         do
         {
@@ -414,33 +403,28 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
     uint64_t (*func_alpha)(uint8_t*);
 
 #ifdef __SSE4_1__
-    if( can_use_intel_core_4th_gen_features() )
+    if( dither )
     {
-        if( dither )
-        {
-            func = _f_rgb_etc2_dither_avx2;
-        }
-        else
-        {
-            func = _f_rgb_etc2_avx2;
-        }
-
-        func_alpha = _f_rgba_avx2;
+        func = _f_rgb_etc2_dither_avx2;
     }
     else
-#endif
     {
-        if( dither )
-        {
-            func = _f_rgb_etc2_dither;
-        }
-        else
-        {
-            func = _f_rgb_etc2;
-        }
-
-        func_alpha = _f_rgba;
+        func = _f_rgb_etc2_avx2;
     }
+
+    func_alpha = _f_rgba_avx2;
+#else
+    if( dither )
+    {
+        func = _f_rgb_etc2_dither;
+    }
+    else
+    {
+        func = _f_rgb_etc2;
+    }
+
+    func_alpha = _f_rgba;
+#endif
 
     do
     {

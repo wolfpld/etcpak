@@ -93,7 +93,6 @@
     <ClCompile Include="..\BitmapDownsampled.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
     <ClCompile Include="..\ColorSpace.cpp" />
-    <ClCompile Include="..\CpuArch.cpp" />
     <ClCompile Include="..\DataProvider.cpp" />
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\Dither.cpp" />
@@ -157,7 +156,6 @@
     <ClInclude Include="..\BitmapDownsampled.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
-    <ClInclude Include="..\CpuArch.hpp" />
     <ClInclude Include="..\DataProvider.hpp" />
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\Dither.hpp" />

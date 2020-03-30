@@ -7,7 +7,6 @@
 
 #include "Bitmap.hpp"
 #include "BlockData.hpp"
-#include "CpuArch.hpp"
 #include "DataProvider.hpp"
 #include "Debug.hpp"
 #include "Dither.hpp"
@@ -27,18 +26,6 @@ struct DebugCallback_t : public DebugLog::Callback
 void Usage()
 {
     fprintf( stderr, "Usage: etcpak input.png [options]\n" );
-#ifdef __SSE4_1__
-    if( can_use_intel_core_4th_gen_features() )
-    {
-        fprintf( stderr, "  Using AVX 2 instructions.\n" );
-    }
-    else
-    {
-        fprintf( stderr, "  Using SSE 4.1 instructions.\n" );
-    }
-#else
-    fprintf( stderr, "  SIMD not available.\n" );
-#endif
     fprintf( stderr, "  Options:\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
