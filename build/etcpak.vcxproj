@@ -97,6 +97,7 @@
     <ClCompile Include="..\Debug.cpp" />
     <ClCompile Include="..\Dither.cpp" />
     <ClCompile Include="..\Error.cpp" />
+    <ClCompile Include="..\getopt\getopt.c" />
     <ClCompile Include="..\libpng\arm_init.c" />
     <ClCompile Include="..\libpng\filter_neon_intrinsics.c" />
     <ClCompile Include="..\libpng\filter_sse2_intrinsics.c" />
@@ -160,6 +161,7 @@
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\Dither.hpp" />
     <ClInclude Include="..\Error.hpp" />
+    <ClInclude Include="..\getopt\getopt.h" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
     <ClInclude Include="..\libpng\pngdebug.h" />

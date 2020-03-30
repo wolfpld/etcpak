@@ -10,6 +10,9 @@
     <Filter Include="lz4">
       <UniqueIdentifier>{881b2f0b-26cb-4a37-b5a1-b2eabec8db59}</UniqueIdentifier>
     </Filter>
+    <Filter Include="getopt">
+      <UniqueIdentifier>{00ef59f4-cd8b-4578-9f3d-12e078e747e2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\zlib\adler32.c">
@@ -132,6 +135,9 @@
     <ClCompile Include="..\zlib\inffas8664.c">
       <Filter>zlib</Filter>
     </ClCompile>
+    <ClCompile Include="..\getopt\getopt.c">
+      <Filter>getopt</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -212,6 +218,9 @@
     </ClInclude>
     <ClInclude Include="..\libpng\pngstruct.h">
       <Filter>libpng</Filter>
+    </ClInclude>
+    <ClInclude Include="..\getopt\getopt.h">
+      <Filter>getopt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
