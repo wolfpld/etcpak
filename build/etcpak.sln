@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "etcpak", "etcpak.vcxproj", "{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}"
 EndProject
@@ -9,14 +9,20 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
+		Tracy|x64 = Tracy|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}.Debug|x64.ActiveCfg = Debug|x64
 		{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}.Debug|x64.Build.0 = Debug|x64
 		{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}.Release|x64.ActiveCfg = Release|x64
 		{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}.Release|x64.Build.0 = Release|x64
+		{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}.Tracy|x64.ActiveCfg = Tracy|x64
+		{AA60ADCD-E406-406B-BE3B-62DC0A4007F9}.Tracy|x64.Build.0 = Tracy|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {53609C2C-5DA5-42A6-853B-20334EEF35A6}
 	EndGlobalSection
 EndGlobal
