@@ -138,6 +138,7 @@
     <ClCompile Include="..\Tables.cpp" />
     <ClCompile Include="..\TaskDispatch.cpp" />
     <ClCompile Include="..\Timing.cpp" />
+    <ClCompile Include="..\tracy\TracyClient.cpp" />
     <ClCompile Include="..\zlib\adler32.c" />
     <ClCompile Include="..\zlib\compress.c" />
     <ClCompile Include="..\zlib\crc32.c" />
