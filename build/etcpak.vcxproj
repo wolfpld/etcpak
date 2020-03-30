@@ -59,6 +59,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ConformanceMode>
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ConformanceMode>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -78,6 +79,7 @@
       <BufferSecurityCheck Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</BufferSecurityCheck>
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ConformanceMode>
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ConformanceMode>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
