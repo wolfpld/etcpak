@@ -27,7 +27,7 @@ struct DebugCallback_t : public DebugLog::Callback
 
 void Usage()
 {
-    fprintf( stderr, "Usage: etcpak [options] input.png output.pvr\n" );
+    fprintf( stderr, "Usage: etcpak [options] input.png {output.pvr}\n" );
     fprintf( stderr, "  Options:\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
@@ -39,7 +39,8 @@ void Usage()
     fprintf( stderr, "  -d          enable dithering\n" );
     fprintf( stderr, "  --debug     dissect ETC texture\n" );
     fprintf( stderr, "  --etc2      enable ETC2 mode\n" );
-    fprintf( stderr, "  --rgba      enable ETC2 RGBA mode\n" );
+    fprintf( stderr, "  --rgba      enable ETC2 RGBA mode\n\n" );
+    fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
 int main( int argc, char** argv )
@@ -78,8 +79,6 @@ int main( int argc, char** argv )
         {}
     };
 
-    const char* input = nullptr;
-    const char* output = nullptr;
     int c;
     while( ( c = getopt_long( argc, argv, "vo:asbmd", longopts, nullptr ) ) != -1 )
     {
@@ -122,14 +121,29 @@ int main( int argc, char** argv )
         }
     }
 
-    if( argc - optind < 2 )
+    const char* input = nullptr;
+    const char* output = nullptr;
+    if( benchmark || viewMode || debug )
     {
-        Usage();
-        return 1;
-    }
+        if( argc - optind < 1 )
+        {
+            Usage();
+            return 1;
+        }
 
-    input = argv[optind];
-    output = argv[optind+1];
+        input = argv[optind];
+    }
+    else
+    {
+        if( argc - optind < 2 )
+        {
+            Usage();
+            return 1;
+        }
+
+        input = argv[optind];
+        output = argv[optind+1];
+    }
 
     if( dither )
     {
@@ -141,7 +155,7 @@ int main( int argc, char** argv )
     if( benchmark )
     {
         auto start = GetTime();
-        auto bmp = std::make_shared<Bitmap>( argv[1], std::numeric_limits<unsigned int>::max() );
+        auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max() );
         auto data = bmp->Data();
         auto end = GetTime();
         printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
@@ -172,18 +186,18 @@ int main( int argc, char** argv )
     }
     else if( viewMode )
     {
-        auto bd = std::make_shared<BlockData>( argv[1] );
+        auto bd = std::make_shared<BlockData>( input );
         auto out = bd->Decode();
-        out->Write( "out.png" );
+        out->Write( output );
     }
     else if( debug )
     {
-        auto bd = std::make_shared<BlockData>( argv[1] );
+        auto bd = std::make_shared<BlockData>( input );
         bd->Dissect();
     }
     else
     {
-        DataProvider dp( argv[1], mipmap );
+        DataProvider dp( input, mipmap );
         auto num = dp.NumberOfParts();
 
         BlockData::Type type;
@@ -203,49 +217,24 @@ int main( int argc, char** argv )
             type = BlockData::Etc1;
         }
 
-        auto bd = std::make_shared<BlockData>( "out.pvr", dp.Size(), mipmap, type );
-        BlockDataPtr bda;
-        if( alpha && dp.Alpha() && !rgba )
+        auto bd = std::make_shared<BlockData>( output, dp.Size(), mipmap, type );
+        for( int i=0; i<num; i++ )
         {
-            bda = std::make_shared<BlockData>( "outa.pvr", dp.Size(), mipmap, type );
-        }
+            auto part = dp.NextPart();
 
-        if( bda )
-        {
-            for( int i=0; i<num; i++ )
+            if( type == BlockData::Etc2_RGBA )
             {
-                auto part = dp.NextPart();
-
+                TaskDispatch::Queue( [part, i, &bd, &dither]()
+                {
+                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, dither );
+                } );
+            }
+            else
+            {
                 TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
                     bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
-                TaskDispatch::Queue( [part, i, &bda]()
-                {
-                    bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
-                } );
-            }
-        }
-        else
-        {
-            for( int i=0; i<num; i++ )
-            {
-                auto part = dp.NextPart();
-
-                if( type == BlockData::Etc2_RGBA )
-                {
-                    TaskDispatch::Queue( [part, i, &bd, &dither]()
-                    {
-                        bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, dither );
-                    } );
-                }
-                else
-                {
-                    TaskDispatch::Queue( [part, i, &bd, &dither]()
-                    {
-                        bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
-                    } );
-                }
             }
         }
 
@@ -258,29 +247,15 @@ int main( int argc, char** argv )
             printf( "RGB data\n" );
             printf( "  RMSE: %f\n", sqrt( mse ) );
             printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
-            if( bda )
-            {
-                auto out = bda->Decode();
-                float mse = CalcMSE1( dp.ImageData(), *out );
-                printf( "A data\n" );
-                printf( "  RMSE: %f\n", sqrt( mse ) );
-                printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
-            }
         }
 
         if( save & 0x2 )
         {
             auto out = bd->Decode();
-            out->Write( "out.png" );
-            if( bda )
-            {
-                auto outa = bda->Decode();
-                outa->Write( "outa.png" );
-            }
+            out->Write( output );
         }
 
         bd.reset();
-        bda.reset();
     }
 
     return 0;
