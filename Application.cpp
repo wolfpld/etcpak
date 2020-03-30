@@ -5,6 +5,8 @@
 #include <memory>
 #include <string.h>
 
+#include "getopt/getopt.h"
+
 #include "Bitmap.hpp"
 #include "BlockData.hpp"
 #include "DataProvider.hpp"
@@ -25,7 +27,7 @@ struct DebugCallback_t : public DebugLog::Callback
 
 void Usage()
 {
-    fprintf( stderr, "Usage: etcpak input.png [options]\n" );
+    fprintf( stderr, "Usage: etcpak [options] input.png output.pvr\n" );
     fprintf( stderr, "  Options:\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
@@ -35,10 +37,9 @@ void Usage()
     fprintf( stderr, "  -b          benchmark mode\n" );
     fprintf( stderr, "  -m          generate mipmaps\n" );
     fprintf( stderr, "  -d          enable dithering\n" );
-    fprintf( stderr, "  -debug      dissect ETC texture\n" );
-    fprintf( stderr, "  -etc2       enable ETC2 mode\n" );
-    fprintf( stderr, "  -rgba       enable ETC2 RGBA mode\n" );
-    fprintf( stderr, "  -j num      set number of job threads (default: number of cpu cores)\n" );
+    fprintf( stderr, "  --debug     dissect ETC texture\n" );
+    fprintf( stderr, "  --etc2      enable ETC2 mode\n" );
+    fprintf( stderr, "  --rgba      enable ETC2 RGBA mode\n" );
 }
 
 int main( int argc, char** argv )
@@ -57,70 +58,78 @@ int main( int argc, char** argv )
     bool rgba = false;
     unsigned int cpus = System::CPUCores();
 
-    if( argc < 2 )
+    if( argc < 3 )
     {
         Usage();
         return 1;
     }
 
-#define CSTR(x) strcmp( argv[i], x ) == 0
-    for( int i=2; i<argc; i++ )
+    enum Options
     {
-        if( CSTR( "-v" ) )
+        OptDebug,
+        OptEtc2,
+        OptRgba
+    };
+
+    struct option longopts[] = {
+        { "debug", no_argument, nullptr, OptDebug },
+        { "etc2", no_argument, nullptr, OptEtc2 },
+        { "rgba", no_argument, nullptr, OptRgba },
+        {}
+    };
+
+    const char* input = nullptr;
+    const char* output = nullptr;
+    int c;
+    while( ( c = getopt_long( argc, argv, "vo:asbmd", longopts, nullptr ) ) != -1 )
+    {
+        switch( c )
         {
+        case 'v':
             viewMode = true;
-        }
-        else if( CSTR( "-o" ) )
-        {
-            i++;
-            save = atoi( argv[i] );
+            break;
+        case 'o':
+            save = atoi( optarg );
             assert( ( save & 0x3 ) != 0 );
-        }
-        else if( CSTR( "-a" ) )
-        {
+            break;
+        case 'a':
             alpha = false;
-        }
-        else if( CSTR( "-s" ) )
-        {
+            break;
+        case 's':
             stats = true;
-        }
-        else if( CSTR( "-b" ) )
-        {
+            break;
+        case 'b':
             benchmark = true;
-        }
-        else if( CSTR( "-m" ) )
-        {
+            break;
+        case 'm':
             mipmap = true;
-        }
-        else if( CSTR( "-d" ) )
-        {
+            break;
+        case 'd':
             dither = true;
-        }
-        else if( CSTR( "-debug" ) )
-        {
+            break;
+        case OptDebug:
             debug = true;
-        }
-        else if( CSTR( "-etc2" ) )
-        {
+            break;
+        case OptEtc2:
             etc2 = true;
-        }
-        else if( CSTR( "-rgba" ) )
-        {
+            break;
+        case OptRgba:
             rgba = true;
             etc2 = true;
-        }
-        else if( CSTR( "-j" ) )
-        {
-            i++;
-            cpus = atoi( argv[i] );
-        }
-        else
-        {
-            Usage();
-            return 1;
+            break;
+        default:
+            break;
         }
     }
-#undef CSTR
+
+    if( argc - optind < 2 )
+    {
+        Usage();
+        return 1;
+    }
+
+    input = argv[optind];
+    output = argv[optind+1];
 
     if( dither )
     {
