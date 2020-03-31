@@ -9,4 +9,5 @@ pipelines:
   default:
     - step:
         script: # Modify the commands below to build your repository.
+          - git submodule update --init
           - make -C unix
