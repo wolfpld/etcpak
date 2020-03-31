@@ -23,7 +23,6 @@ extern const int32_t g_alpha[16][8];
 extern const int32_t g_alphaRange[16];
 
 #ifdef __SSE4_1__
-extern const uint8_t g_flags_AVX2[64];
 extern const __m128i g_table_SIMD[2];
 extern const __m128i g_table128_SIMD[2];
 extern const __m128i g_table256_SIMD[4];

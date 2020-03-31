@@ -771,14 +771,16 @@ Plane Planar_AVX2(const uint8_t* src)
 	uint64_t error = err0 + err1 + err2 + err3;
 	/**/
 
-    uint32_t rgbv = _pext_u32(rgbv0, 0x3F7F3F);
-    uint64_t rgbho0 = _pext_u64(rgbho, 0x3F7F3F003F7F3F);
+    uint32_t rgbv = ( rgbv0 & 0x3F ) | ( ( rgbv0 >> 2 ) & 0x1FC0 ) | ( ( rgbv0 >> 3 ) & 0x7E000 );
+    uint64_t rgbho0_ = ( rgbho & 0x3F0000003F ) | ( ( rgbho >> 2 ) & 0x1FC000001FC0 ) | ( ( rgbho >> 3 ) & 0x7E0000007E000 );
+    uint64_t rgbho0 = ( rgbho0_ & 0x7FFFF ) | ( ( rgbho0_ >> 13 ) & 0x3FFFF80000 );
 
     uint32_t hi = rgbv | ((rgbho0 & 0x1FFF) << 19);
-    uint32_t lo = _pdep_u32(rgbho0 >> 13, 0x7F7F1BFD);
+    rgbho0 >>= 13;
+    uint32_t lo = ( rgbho0 & 0x1 ) | ( ( rgbho0 & 0x1FE ) << 1 ) | ( ( rgbho0 & 0x600 ) << 2 ) | ( ( rgbho0 & 0x3F800 ) << 5 ) | ( ( rgbho0 & 0x1FC0000 ) << 6 );
 
-    uint32_t idx = _pext_u64(rgbho, 0x20201E00000000);
-    lo |= _pdep_u32(g_flags_AVX2[idx], 0x8080E402);
+    uint32_t idx = ( ( rgbho >> 33 ) & 0xF ) | ( ( rgbho >> 41 ) & 0x10 ) | ( ( rgbho >> 48 ) & 0x20 );
+    lo |= g_flags[idx];
     uint64_t result = static_cast<uint32_t>(_bswap(lo));
     result |= static_cast<uint64_t>(static_cast<uint32_t>(_bswap(hi))) << 32;
 
