@@ -150,8 +150,6 @@ int main( int argc, char** argv )
         InitDither();
     }
 
-    TaskDispatch taskDispatch( cpus );
-
     if( benchmark )
     {
         auto start = GetTime();
@@ -214,6 +212,8 @@ int main( int argc, char** argv )
         {
             type = BlockData::Etc1;
         }
+
+        TaskDispatch taskDispatch( cpus );
 
         auto bd = std::make_shared<BlockData>( output, dp.Size(), mipmap, type );
         for( int i=0; i<num; i++ )
