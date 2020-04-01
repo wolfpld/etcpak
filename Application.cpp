@@ -145,33 +145,53 @@ int main( int argc, char** argv )
 
     if( benchmark )
     {
-        auto start = GetTime();
-        auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max() );
-        auto data = bmp->Data();
-        auto end = GetTime();
-        printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
-
-        constexpr int NumTasks = 9;
-        uint64_t timeData[NumTasks];
-        for( int i=0; i<NumTasks; i++ )
+        if( viewMode )
         {
-            const auto localStart = GetTime();
-            const BlockData::Type type = rgba ? BlockData::Etc2_RGBA : ( etc2 ? BlockData::Etc2_RGB : BlockData::Etc1 );
-            auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
-            if( rgba )
+            auto bd = std::make_shared<BlockData>( input );
+
+            constexpr int NumTasks = 9;
+            uint64_t timeData[NumTasks];
+            for( int i=0; i<NumTasks; i++ )
             {
-                bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, dither );
+                const auto start = GetTime();
+                bd->Decode();
+                const auto end = GetTime();
+                timeData[i] = end - start;
             }
-            else
-            {
-                bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
-            }
-            const auto localEnd = GetTime();
-            timeData[i] = localEnd - localStart;
+            std::sort( timeData, timeData+NumTasks );
+            const auto median = timeData[NumTasks/2] / 1000.f;
+            printf( "Median decode time for %i runs: %0.3f ms (%0.3f Mpx/s)\n", NumTasks, median, bd->Size().x * bd->Size().y / ( median * 1000 ) );
         }
-        std::sort( timeData, timeData+NumTasks );
-        const auto median = timeData[NumTasks/2] / 1000.f;
-        printf( "Median compression time for %i runs: %0.3f ms (%0.3f Mpx/s)\n", NumTasks, median, bmp->Size().x * bmp->Size().y / ( median * 1000 ) );
+        else
+        {
+            auto start = GetTime();
+            auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max() );
+            auto data = bmp->Data();
+            auto end = GetTime();
+            printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
+
+            constexpr int NumTasks = 9;
+            uint64_t timeData[NumTasks];
+            for( int i=0; i<NumTasks; i++ )
+            {
+                const auto localStart = GetTime();
+                const BlockData::Type type = rgba ? BlockData::Etc2_RGBA : ( etc2 ? BlockData::Etc2_RGB : BlockData::Etc1 );
+                auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
+                if( rgba )
+                {
+                    bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, dither );
+                }
+                else
+                {
+                    bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
+                }
+                const auto localEnd = GetTime();
+                timeData[i] = localEnd - localStart;
+            }
+            std::sort( timeData, timeData+NumTasks );
+            const auto median = timeData[NumTasks/2] / 1000.f;
+            printf( "Median compression time for %i runs: %0.3f ms (%0.3f Mpx/s)\n", NumTasks, median, bmp->Size().x * bmp->Size().y / ( median * 1000 ) );
+        }
     }
     else if( viewMode )
     {

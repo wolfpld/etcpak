@@ -33,6 +33,8 @@ public:
     void Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither );
     void ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither );
 
+    const v2i& Size() const { return m_size; }
+
 private:
     BitmapPtr DecodeRGB();
     BitmapPtr DecodeRGBA();
