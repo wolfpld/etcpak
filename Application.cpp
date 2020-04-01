@@ -30,8 +30,6 @@ void Usage()
     fprintf( stderr, "Usage: etcpak [options] input.png {output.pvr}\n" );
     fprintf( stderr, "  Options:\n" );
     fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
-    fprintf( stderr, "  -o 1        output selection (sum of: 1 - save pvr file; 2 - save png file)\n" );
-    fprintf( stderr, "                note: pvr files are written regardless of this option\n" );
     fprintf( stderr, "  -a          disable alpha channel processing\n" );
     fprintf( stderr, "  -s          display image quality measurements\n" );
     fprintf( stderr, "  -b          benchmark mode\n" );
@@ -48,7 +46,6 @@ int main( int argc, char** argv )
     DebugLog::AddCallback( &DebugCallback );
 
     bool viewMode = false;
-    int save = 1;
     bool alpha = true;
     bool stats = false;
     bool benchmark = false;
@@ -86,10 +83,6 @@ int main( int argc, char** argv )
         {
         case 'v':
             viewMode = true;
-            break;
-        case 'o':
-            save = atoi( optarg );
-            assert( ( save & 0x3 ) != 0 );
             break;
         case 'a':
             alpha = false;
@@ -245,12 +238,6 @@ int main( int argc, char** argv )
             printf( "RGB data\n" );
             printf( "  RMSE: %f\n", sqrt( mse ) );
             printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
-        }
-
-        if( save & 0x2 )
-        {
-            auto out = bd->Decode();
-            out->Write( output );
         }
 
         bd.reset();
