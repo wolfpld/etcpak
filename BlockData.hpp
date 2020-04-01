@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "Bitmap.hpp"
+#include "ForceInline.hpp"
 #include "Vector.hpp"
 
 class BlockData
@@ -36,8 +37,8 @@ public:
     const v2i& Size() const { return m_size; }
 
 private:
-    BitmapPtr DecodeRGB();
-    BitmapPtr DecodeRGBA();
+    etcpak_no_inline BitmapPtr DecodeRGB();
+    etcpak_no_inline BitmapPtr DecodeRGBA();
 
     uint8_t* m_data;
     v2i m_size;

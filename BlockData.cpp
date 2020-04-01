@@ -476,7 +476,7 @@ enum class Etc2Mode
     planar
 };
 
-Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c )
+static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c )
 {
     if( d & 0x2 )
     {
@@ -545,17 +545,17 @@ Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c )
     return Etc2Mode::none;
 }
 
-inline int32_t expand6(uint32_t value)
+static etcpak_force_inline int32_t expand6(uint32_t value)
 {
     return (value << 2) | (value >> 4);
 }
 
-inline int32_t expand7(uint32_t value)
+static etcpak_force_inline int32_t expand7(uint32_t value)
 {
     return (value << 1) | (value >> 6);
 }
 
-void DecodePlanar(uint64_t block, uint32_t* l[4])
+static etcpak_force_inline void DecodePlanar(uint64_t block, uint32_t* l[4])
 {
     const auto bv = expand6((block >> ( 0 + 32)) & 0x3F);
     const auto gv = expand7((block >> ( 6 + 32)) & 0x7F);
@@ -604,7 +604,7 @@ BitmapPtr BlockData::Decode()
     }
 }
 
-static uint64_t ConvertByteOrder( uint64_t d )
+static etcpak_force_inline uint64_t ConvertByteOrder( uint64_t d )
 {
     return ( ( d & 0xFF000000FF000000 ) >> 24 ) |
            ( ( d & 0x000000FF000000FF ) << 24 ) |
@@ -612,7 +612,7 @@ static uint64_t ConvertByteOrder( uint64_t d )
            ( ( d & 0x0000FF000000FF00 ) << 8 );
 }
 
-static void DecodeRGBPart( uint32_t* l[4], uint64_t d )
+static etcpak_force_inline void DecodeRGBPart( uint32_t* l[4], uint64_t d )
 {
     d = ConvertByteOrder( d );
 
@@ -668,7 +668,7 @@ static void DecodeRGBPart( uint32_t* l[4], uint64_t d )
     }
 }
 
-static void DecodeAlphaPart( uint32_t* l[4], uint64_t d )
+static etcpak_force_inline void DecodeAlphaPart( uint32_t* l[4], uint64_t d )
 {
     d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
         ( ( d & 0x00FF000000000000 ) >> 40 ) |
