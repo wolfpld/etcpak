@@ -29,15 +29,15 @@ void Usage()
 {
     fprintf( stderr, "Usage: etcpak [options] input.png {output.pvr}\n" );
     fprintf( stderr, "  Options:\n" );
-    fprintf( stderr, "  -v          view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
-    fprintf( stderr, "  -a          disable alpha channel processing\n" );
-    fprintf( stderr, "  -s          display image quality measurements\n" );
-    fprintf( stderr, "  -b          benchmark mode\n" );
-    fprintf( stderr, "  -m          generate mipmaps\n" );
-    fprintf( stderr, "  -d          enable dithering\n" );
-    fprintf( stderr, "  --debug     dissect ETC texture\n" );
-    fprintf( stderr, "  --etc2      enable ETC2 mode\n" );
-    fprintf( stderr, "  --rgba      enable ETC2 RGBA mode\n\n" );
+    fprintf( stderr, "  -v              view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
+    fprintf( stderr, "  -s              display image quality measurements\n" );
+    fprintf( stderr, "  -b              benchmark mode\n" );
+    fprintf( stderr, "  -m              generate mipmaps\n" );
+    fprintf( stderr, "  -d              enable dithering\n" );
+    fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
+    fprintf( stderr, "  --debug         dissect ETC texture\n" );
+    fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
+    fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -46,7 +46,6 @@ int main( int argc, char** argv )
     DebugLog::AddCallback( &DebugCallback );
 
     bool viewMode = false;
-    bool alpha = true;
     bool stats = false;
     bool benchmark = false;
     bool mipmap = false;
@@ -54,6 +53,7 @@ int main( int argc, char** argv )
     bool debug = false;
     bool etc2 = false;
     bool rgba = false;
+    const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
     if( argc < 3 )
@@ -77,7 +77,7 @@ int main( int argc, char** argv )
     };
 
     int c;
-    while( ( c = getopt_long( argc, argv, "vo:asbmd", longopts, nullptr ) ) != -1 )
+    while( ( c = getopt_long( argc, argv, "vo:a:sbmd", longopts, nullptr ) ) != -1 )
     {
         switch( c )
         {
@@ -85,7 +85,7 @@ int main( int argc, char** argv )
             viewMode = true;
             break;
         case 'a':
-            alpha = false;
+            alpha = optarg;
             break;
         case 's':
             stats = true;
@@ -116,7 +116,7 @@ int main( int argc, char** argv )
 
     const char* input = nullptr;
     const char* output = nullptr;
-    if( benchmark || viewMode || debug )
+    if( benchmark || debug )
     {
         if( argc - optind < 1 )
         {
@@ -209,6 +209,11 @@ int main( int argc, char** argv )
         TaskDispatch taskDispatch( cpus );
 
         auto bd = std::make_shared<BlockData>( output, dp.Size(), mipmap, type );
+        BlockDataPtr bda;
+        if( alpha && dp.Alpha() && !rgba )
+        {
+            bda = std::make_shared<BlockData>( alpha, dp.Size(), mipmap, type );
+        }
         for( int i=0; i<num; i++ )
         {
             auto part = dp.NextPart();
@@ -226,6 +231,13 @@ int main( int argc, char** argv )
                 {
                     bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
                 } );
+                if( bda )
+                {
+                    TaskDispatch::Queue( [part, i, &bda]()
+                    {
+                        bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
+                    } );
+                }
             }
         }
 
@@ -239,8 +251,6 @@ int main( int argc, char** argv )
             printf( "  RMSE: %f\n", sqrt( mse ) );
             printf( "  PSNR: %f\n", 20 * log10( 255 ) - 10 * log10( mse ) );
         }
-
-        bd.reset();
     }
 
     return 0;
