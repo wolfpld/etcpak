@@ -154,7 +154,7 @@ int main( int argc, char** argv )
             for( int i=0; i<NumTasks; i++ )
             {
                 const auto start = GetTime();
-                bd->Decode();
+                auto res = bd->Decode();
                 const auto end = GetTime();
                 timeData[i] = end - start;
             }
