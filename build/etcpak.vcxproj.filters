@@ -228,6 +228,7 @@
     <ClInclude Include="..\getopt\getopt.h">
       <Filter>getopt</Filter>
     </ClInclude>
+    <ClInclude Include="..\ForceInline.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj">

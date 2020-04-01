@@ -206,6 +206,7 @@
     <ClInclude Include="..\Debug.hpp" />
     <ClInclude Include="..\Dither.hpp" />
     <ClInclude Include="..\Error.hpp" />
+    <ClInclude Include="..\ForceInline.hpp" />
     <ClInclude Include="..\getopt\getopt.h" />
     <ClInclude Include="..\libpng\png.h" />
     <ClInclude Include="..\libpng\pngconf.h" />
