@@ -71,7 +71,9 @@ inline T SmoothStep( T x )
 
 inline uint8_t clampu8( int32_t val )
 {
-    return std::min( std::max( 0, val ), 255 );
+    if( val < 0 ) return 0;
+    if( val > 255 ) return 255;
+    return val;
 }
 
 template<class T>
