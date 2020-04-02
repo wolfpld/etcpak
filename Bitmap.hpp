@@ -18,7 +18,7 @@ enum class Channels
 class Bitmap
 {
 public:
-    Bitmap( const char* fn, unsigned int lines );
+    Bitmap( const char* fn, unsigned int lines, bool bgr );
     Bitmap( const v2i& size );
     virtual ~Bitmap();
 

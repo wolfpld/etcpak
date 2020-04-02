@@ -18,7 +18,7 @@ struct DataPart
 class DataProvider
 {
 public:
-    DataProvider( const char* fn, bool mipmap );
+    DataProvider( const char* fn, bool mipmap, bool bgr );
     ~DataProvider();
 
     unsigned int NumberOfParts() const;

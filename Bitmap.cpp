@@ -9,7 +9,7 @@
 #include "Bitmap.hpp"
 #include "Debug.hpp"
 
-Bitmap::Bitmap( const char* fn, unsigned int lines )
+Bitmap::Bitmap( const char* fn, unsigned int lines, bool bgr )
     : m_block( nullptr )
     , m_lines( lines )
     , m_alpha( true )
@@ -90,7 +90,10 @@ Bitmap::Bitmap( const char* fn, unsigned int lines )
         {
             png_set_gray_to_rgb(png_ptr);
         }
-        png_set_bgr(png_ptr);
+        if( bgr )
+        {
+            png_set_bgr(png_ptr);
+        }
 
         switch( color_type )
         {

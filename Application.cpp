@@ -178,7 +178,7 @@ int main( int argc, char** argv )
         else
         {
             auto start = GetTime();
-            auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max() );
+            auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max(), !dxt1 );
             auto data = bmp->Data();
             auto end = GetTime();
             printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
@@ -223,7 +223,7 @@ int main( int argc, char** argv )
     }
     else
     {
-        DataProvider dp( input, mipmap );
+        DataProvider dp( input, mipmap, !dxt1 );
         auto num = dp.NumberOfParts();
 
         BlockData::Type type;
