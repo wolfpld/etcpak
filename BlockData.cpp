@@ -188,202 +188,154 @@ BlockData::~BlockData()
     }
 }
 
-static uint64_t _f_rgba( uint8_t* ptr )
-{
-    return ProcessAlpha( ptr );
-}
-
-#ifdef __SSE4_1__
-static uint64_t _f_rgba_avx2( uint8_t* ptr )
-{
-    return ProcessAlpha( ptr );
-}
-#endif
-
-static uint64_t _f_rgb( uint8_t* ptr )
-{
-    return ProcessRGB( ptr );
-}
-
-#ifdef __SSE4_1__
-static uint64_t _f_rgb_avx2( uint8_t* ptr )
-{
-    return ProcessRGB( ptr );
-}
-#endif
-
-static uint64_t _f_rgb_dither( uint8_t* ptr )
-{
-    Dither( ptr );
-    return ProcessRGB( ptr );
-}
-
-#ifdef __SSE4_1__
-static uint64_t _f_rgb_dither_avx2( uint8_t* ptr )
-{
-    Dither( ptr );
-    return ProcessRGB( ptr );
-}
-#endif
-
-static uint64_t _f_rgb_etc2( uint8_t* ptr )
-{
-    return ProcessRGB_ETC2( ptr );
-}
-
-#ifdef __SSE4_1__
-static uint64_t _f_rgb_etc2_avx2( uint8_t* ptr )
-{
-    return ProcessRGB_ETC2( ptr );
-}
-#endif
-
-static uint64_t _f_rgb_etc2_dither( uint8_t* ptr )
-{
-    Dither( ptr );
-    return ProcessRGB_ETC2( ptr );
-}
-
-#ifdef __SSE4_1__
-static uint64_t _f_rgb_etc2_dither_avx2( uint8_t* ptr )
-{
-    Dither( ptr );
-    return ProcessRGB_ETC2( ptr );
-}
-#endif
-
 void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither )
 {
     uint32_t buf[4*4];
     int w = 0;
-
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset;
-
-    uint64_t (*func)(uint8_t*);
 
     if( type == Channels::Alpha )
     {
-#ifdef __SSE4_1__
         if( m_type != Etc1 )
         {
-            func = _f_rgb_etc2_avx2;
+            do
+            {
+                auto ptr = buf;
+                for( int x=0; x<4; x++ )
+                {
+                    unsigned int a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src -= width * 3 - 1;
+                }
+                if( ++w == width/4 )
+                {
+                    src += width * 3;
+                    w = 0;
+                }
+                *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
+            }
+            while( --blocks );
         }
         else
         {
-            func = _f_rgb_avx2;
-        }
-#else
-        if( m_type != Etc1 )
-        {
-            func = _f_rgb_etc2;
-        }
-        else
-        {
-            func = _f_rgb;
-        }
-#endif
-
-        do
-        {
-            auto ptr = buf;
-            for( int x=0; x<4; x++ )
+            do
             {
-                unsigned int a = *src >> 24;
-                *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                src += width;
-                a = *src >> 24;
-                *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                src += width;
-                a = *src >> 24;
-                *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                src += width;
-                a = *src >> 24;
-                *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                src -= width * 3 - 1;
+                auto ptr = buf;
+                for( int x=0; x<4; x++ )
+                {
+                    unsigned int a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src += width;
+                    a = *src >> 24;
+                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
+                    src -= width * 3 - 1;
+                }
+                if( ++w == width/4 )
+                {
+                    src += width * 3;
+                    w = 0;
+                }
+                *dst++ = ProcessRGB( (uint8_t*)buf );
             }
-            if( ++w == width/4 )
-            {
-                src += width * 3;
-                w = 0;
-            }
-
-            *dst++ = func( (uint8_t*)buf );
+            while( --blocks );
         }
-        while( --blocks );
     }
     else
     {
-#ifdef __SSE4_1__
         if( m_type != Etc1 )
         {
-            if( dither )
+            do
             {
-                func = _f_rgb_etc2_dither_avx2;
+                auto ptr = buf;
+                for( int x=0; x<4; x++ )
+                {
+                    *ptr++ = *src;
+                    src += width;
+                    *ptr++ = *src;
+                    src += width;
+                    *ptr++ = *src;
+                    src += width;
+                    *ptr++ = *src;
+                    src -= width * 3 - 1;
+                }
+                if( ++w == width/4 )
+                {
+                    src += width * 3;
+                    w = 0;
+                }
+                *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
             }
-            else
-            {
-                func = _f_rgb_etc2_avx2;
-            }
+            while( --blocks );
         }
         else
         {
             if( dither )
             {
-                func = _f_rgb_dither_avx2;
+                do
+                {
+                    auto ptr = buf;
+                    for( int x=0; x<4; x++ )
+                    {
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src -= width * 3 - 1;
+                    }
+                    if( ++w == width/4 )
+                    {
+                        src += width * 3;
+                        w = 0;
+                    }
+                    Dither( (uint8_t*)buf );
+                    *dst++ = ProcessRGB( (uint8_t*)buf );
+                }
+                while( --blocks );
             }
             else
             {
-                func = _f_rgb_avx2;
+                do
+                {
+                    auto ptr = buf;
+                    for( int x=0; x<4; x++ )
+                    {
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src += width;
+                        *ptr++ = *src;
+                        src -= width * 3 - 1;
+                    }
+                    if( ++w == width/4 )
+                    {
+                        src += width * 3;
+                        w = 0;
+                    }
+                    *dst++ = ProcessRGB( (uint8_t*)buf );
+                }
+                while( --blocks );
             }
         }
-#else
-        if( m_type != Etc1 )
-        {
-            if( dither )
-            {
-                func = _f_rgb_etc2_dither;
-            }
-            else
-            {
-                func = _f_rgb_etc2;
-            }
-        }
-        else
-        {
-            if( dither )
-            {
-                func = _f_rgb_dither;
-            }
-            else
-            {
-                func = _f_rgb;
-            }
-        }
-#endif
-
-        do
-        {
-            auto ptr = buf;
-            for( int x=0; x<4; x++ )
-            {
-                *ptr++ = *src;
-                src += width;
-                *ptr++ = *src;
-                src += width;
-                *ptr++ = *src;
-                src += width;
-                *ptr++ = *src;
-                src -= width * 3 - 1;
-            }
-            if( ++w == width/4 )
-            {
-                src += width * 3;
-                w = 0;
-            }
-
-            *dst++ = func( (uint8_t*)buf );
-        }
-        while( --blocks );
     }
 }
 
@@ -394,35 +346,7 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
     uint32_t buf[4*4];
     uint8_t buf8[4*4];
     int w = 0;
-
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
-
-    uint64_t (*func)(uint8_t*);
-    uint64_t (*func_alpha)(uint8_t*);
-
-#ifdef __SSE4_1__
-    if( dither )
-    {
-        func = _f_rgb_etc2_dither_avx2;
-    }
-    else
-    {
-        func = _f_rgb_etc2_avx2;
-    }
-
-    func_alpha = _f_rgba_avx2;
-#else
-    if( dither )
-    {
-        func = _f_rgb_etc2_dither;
-    }
-    else
-    {
-        func = _f_rgb_etc2;
-    }
-
-    func_alpha = _f_rgba;
-#endif
 
     do
     {
@@ -453,8 +377,8 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
             w = 0;
         }
 
-        *dst++ = func_alpha( buf8 );
-        *dst++ = func( (uint8_t*)buf );
+        *dst++ = ProcessAlpha( buf8 );
+        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
     }
     while( --blocks );
 }

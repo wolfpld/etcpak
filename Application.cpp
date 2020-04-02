@@ -114,6 +114,12 @@ int main( int argc, char** argv )
         }
     }
 
+    if( etc2 && dither )
+    {
+        printf( "Dithering is disabled in ETC2 mode, as it degrades image quality.\n" );
+        dither = false;
+    }
+
     const char* input = nullptr;
     const char* output = nullptr;
     if( benchmark || debug )
