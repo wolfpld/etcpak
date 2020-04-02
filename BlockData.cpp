@@ -8,9 +8,7 @@
 #include "MipMap.hpp"
 #include "mmap.hpp"
 #include "ProcessAlpha.hpp"
-#include "ProcessAlpha_AVX2.hpp"
 #include "ProcessRGB.hpp"
-#include "ProcessRGB_AVX2.hpp"
 #include "Tables.hpp"
 #include "TaskDispatch.hpp"
 
@@ -198,7 +196,7 @@ static uint64_t _f_rgba( uint8_t* ptr )
 #ifdef __SSE4_1__
 static uint64_t _f_rgba_avx2( uint8_t* ptr )
 {
-    return ProcessAlpha_AVX2( ptr );
+    return ProcessAlpha( ptr );
 }
 #endif
 
@@ -210,7 +208,7 @@ static uint64_t _f_rgb( uint8_t* ptr )
 #ifdef __SSE4_1__
 static uint64_t _f_rgb_avx2( uint8_t* ptr )
 {
-    return ProcessRGB_AVX2( ptr );
+    return ProcessRGB( ptr );
 }
 #endif
 
@@ -224,7 +222,7 @@ static uint64_t _f_rgb_dither( uint8_t* ptr )
 static uint64_t _f_rgb_dither_avx2( uint8_t* ptr )
 {
     Dither( ptr );
-    return ProcessRGB_AVX2( ptr );
+    return ProcessRGB( ptr );
 }
 #endif
 
@@ -236,7 +234,7 @@ static uint64_t _f_rgb_etc2( uint8_t* ptr )
 #ifdef __SSE4_1__
 static uint64_t _f_rgb_etc2_avx2( uint8_t* ptr )
 {
-    return ProcessRGB_ETC2_AVX2( ptr );
+    return ProcessRGB_ETC2( ptr );
 }
 #endif
 
@@ -250,7 +248,7 @@ static uint64_t _f_rgb_etc2_dither( uint8_t* ptr )
 static uint64_t _f_rgb_etc2_dither_avx2( uint8_t* ptr )
 {
     Dither( ptr );
-    return ProcessRGB_ETC2_AVX2( ptr );
+    return ProcessRGB_ETC2( ptr );
 }
 #endif
 

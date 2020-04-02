@@ -68,13 +68,11 @@
     <ClCompile Include="..\DataProvider.cpp" />
     <ClCompile Include="..\BitmapDownsampled.cpp" />
     <ClCompile Include="..\Dither.cpp" />
-    <ClCompile Include="..\ProcessRGB_AVX2.cpp" />
     <ClCompile Include="..\TaskDispatch.cpp" />
     <ClCompile Include="..\System.cpp" />
     <ClCompile Include="..\lz4\lz4.c">
       <Filter>lz4</Filter>
     </ClCompile>
-    <ClCompile Include="..\ProcessAlpha_AVX2.cpp" />
     <ClCompile Include="..\libpng\png.c">
       <Filter>libpng</Filter>
     </ClCompile>
@@ -197,13 +195,11 @@
     <ClInclude Include="..\MipMap.hpp" />
     <ClInclude Include="..\BitmapDownsampled.hpp" />
     <ClInclude Include="..\Dither.hpp" />
-    <ClInclude Include="..\ProcessRGB_AVX2.hpp" />
     <ClInclude Include="..\TaskDispatch.hpp" />
     <ClInclude Include="..\System.hpp" />
     <ClInclude Include="..\lz4\lz4.h">
       <Filter>lz4</Filter>
     </ClInclude>
-    <ClInclude Include="..\ProcessAlpha_AVX2.hpp" />
     <ClInclude Include="..\libpng\png.h">
       <Filter>libpng</Filter>
     </ClInclude>
