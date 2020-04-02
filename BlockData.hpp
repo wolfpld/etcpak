@@ -21,6 +21,7 @@ public:
         Etc1,
         Etc2_RGB,
         Etc2_RGBA,
+        Dxt1
     };
 
     BlockData( const char* fn );

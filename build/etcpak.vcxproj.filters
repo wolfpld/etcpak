@@ -142,6 +142,7 @@
     <ClCompile Include="..\tracy\TracyClient.cpp">
       <Filter>tracy</Filter>
     </ClCompile>
+    <ClCompile Include="..\ProcessDxtc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -225,6 +226,7 @@
       <Filter>getopt</Filter>
     </ClInclude>
     <ClInclude Include="..\ForceInline.hpp" />
+    <ClInclude Include="..\ProcessDxtc.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj">

@@ -8,6 +8,7 @@
 #include "mmap.hpp"
 #include "ProcessAlpha.hpp"
 #include "ProcessRGB.hpp"
+#include "ProcessDxtc.hpp"
 #include "Tables.hpp"
 #include "TaskDispatch.hpp"
 
@@ -94,6 +95,9 @@ static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FIL
         break;
     case BlockData::Etc2_RGBA:
         *dst++ = 23;
+        break;
+    case BlockData::Dxt1:
+        *dst++ = 7;
         break;
     default:
         assert( false );
@@ -204,12 +208,9 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     }
     else
     {
-        if( m_type != Etc1 )
+        switch( m_type )
         {
-            CompressEtc2Rgb( src, dst, blocks, width );
-        }
-        else
-        {
+        case Etc1:
             if( dither )
             {
                 CompressEtc1RgbDither( src, dst, blocks, width );
@@ -218,6 +219,16 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             {
                 CompressEtc1Rgb( src, dst, blocks, width );
             }
+            break;
+        case Etc2_RGB:
+            CompressEtc2Rgb( src, dst, blocks, width );
+            break;
+        case Dxt1:
+            CompressDxt1( src, dst, blocks, width );
+            break;
+        default:
+            assert( false );
+            break;
         }
     }
 }

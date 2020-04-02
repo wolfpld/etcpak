@@ -161,6 +161,7 @@
     <ClCompile Include="..\lz4\lz4.c" />
     <ClCompile Include="..\mmap.cpp" />
     <ClCompile Include="..\ProcessAlpha.cpp" />
+    <ClCompile Include="..\ProcessDxtc.cpp" />
     <ClCompile Include="..\ProcessRGB.cpp" />
     <ClCompile Include="..\System.cpp" />
     <ClCompile Include="..\Tables.cpp" />
@@ -205,6 +206,7 @@
     <ClInclude Include="..\mmap.hpp" />
     <ClInclude Include="..\ProcessAlpha.hpp" />
     <ClInclude Include="..\ProcessCommon.hpp" />
+    <ClInclude Include="..\ProcessDxtc.hpp" />
     <ClInclude Include="..\ProcessRGB.hpp" />
     <ClInclude Include="..\Semaphore.hpp" />
     <ClInclude Include="..\System.hpp" />

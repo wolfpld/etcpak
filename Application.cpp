@@ -37,7 +37,8 @@ void Usage()
     fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
     fprintf( stderr, "  --debug         dissect ETC texture\n" );
     fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
-    fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n\n" );
+    fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
+    fprintf( stderr, "  --dxt1          use DXT1 compression\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -53,6 +54,7 @@ int main( int argc, char** argv )
     bool debug = false;
     bool etc2 = false;
     bool rgba = false;
+    bool dxt1 = false;
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
@@ -66,13 +68,15 @@ int main( int argc, char** argv )
     {
         OptDebug,
         OptEtc2,
-        OptRgba
+        OptRgba,
+        OptDxt1
     };
 
     struct option longopts[] = {
         { "debug", no_argument, nullptr, OptDebug },
         { "etc2", no_argument, nullptr, OptEtc2 },
         { "rgba", no_argument, nullptr, OptRgba },
+        { "dxt1", no_argument, nullptr, OptDxt1 },
         {}
     };
 
@@ -108,6 +112,9 @@ int main( int argc, char** argv )
         case OptRgba:
             rgba = true;
             etc2 = true;
+            break;
+        case OptDxt1:
+            dxt1 = true;
             break;
         default:
             break;
@@ -181,7 +188,11 @@ int main( int argc, char** argv )
             for( int i=0; i<NumTasks; i++ )
             {
                 const auto localStart = GetTime();
-                const BlockData::Type type = rgba ? BlockData::Etc2_RGBA : ( etc2 ? BlockData::Etc2_RGB : BlockData::Etc1 );
+                BlockData::Type type;
+                if( rgba ) type = BlockData::Etc2_RGBA;
+                else if( etc2 ) type = BlockData::Etc2_RGB;
+                else if( dxt1 ) type = BlockData::Dxt1;
+                else type = BlockData::Etc1;
                 auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
                 if( rgba )
                 {
@@ -226,6 +237,10 @@ int main( int argc, char** argv )
             {
                 type = BlockData::Etc2_RGB;
             }
+        }
+        else if( dxt1 )
+        {
+            type = BlockData::Dxt1;
         }
         else
         {
