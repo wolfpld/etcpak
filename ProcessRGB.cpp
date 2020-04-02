@@ -5,6 +5,7 @@
 #  include <arm_neon.h>
 #endif
 
+#include "ForceInline.hpp"
 #include "Math.hpp"
 #include "ProcessCommon.hpp"
 #include "ProcessRGB.hpp"
@@ -33,7 +34,7 @@ namespace
 {
 
 #ifdef _MSC_VER
-inline unsigned long _bit_scan_forward( unsigned long mask )
+static etcpak_force_inline unsigned long _bit_scan_forward( unsigned long mask )
 {
     unsigned long ret;
     _BitScanForward( &ret, mask );
@@ -44,7 +45,7 @@ inline unsigned long _bit_scan_forward( unsigned long mask )
 typedef std::array<uint16_t, 4> v4i;
 
 #ifdef __AVX2__
-__m256i Sum4_AVX2( const uint8_t* data) noexcept
+static etcpak_force_inline __m256i Sum4_AVX2( const uint8_t* data) noexcept
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)data) + 1);
@@ -77,14 +78,14 @@ __m256i Sum4_AVX2( const uint8_t* data) noexcept
     return _mm256_add_epi16(sum5, sum6);     // 3+2, 0+1, 3+1, 3+2
 }
 
-__m256i Average_AVX2( const __m256i data) noexcept
+static etcpak_force_inline __m256i Average_AVX2( const __m256i data) noexcept
 {
     __m256i a = _mm256_add_epi16(data, _mm256_set1_epi16(4));
 
     return _mm256_srli_epi16(a, 3);
 }
 
-__m128i CalcErrorBlock_AVX2( const __m256i data, const v4i a[8]) noexcept
+static etcpak_force_inline __m128i CalcErrorBlock_AVX2( const __m256i data, const v4i a[8]) noexcept
 {
     //
     __m256i a0 = _mm256_load_si256((__m256i*)a[0].data());
@@ -117,7 +118,7 @@ __m128i CalcErrorBlock_AVX2( const __m256i data, const v4i a[8]) noexcept
     return _mm256_castsi256_si128(b5);
 }
 
-void ProcessAverages_AVX2(const __m256i d, v4i a[8] ) noexcept
+static etcpak_force_inline void ProcessAverages_AVX2(const __m256i d, v4i a[8] ) noexcept
 {
     __m256i t = _mm256_add_epi16(_mm256_mullo_epi16(d, _mm256_set1_epi16(31)), _mm256_set1_epi16(128));
 
@@ -144,7 +145,7 @@ void ProcessAverages_AVX2(const __m256i d, v4i a[8] ) noexcept
     _mm256_store_si256((__m256i*)a[0].data(), t2);
 }
 
-uint64_t EncodeAverages_AVX2( const v4i a[8], size_t idx ) noexcept
+static etcpak_force_inline uint64_t EncodeAverages_AVX2( const v4i a[8], size_t idx ) noexcept
 {
     uint64_t d = ( idx << 24 );
     size_t base = idx << 1;
@@ -179,7 +180,7 @@ uint64_t EncodeAverages_AVX2( const v4i a[8], size_t idx ) noexcept
     return d;
 }
 
-uint64_t CheckSolid_AVX2( const uint8_t* src ) noexcept
+static etcpak_force_inline uint64_t CheckSolid_AVX2( const uint8_t* src ) noexcept
 {
     __m256i d0 = _mm256_loadu_si256(((__m256i*)src) + 0);
     __m256i d1 = _mm256_loadu_si256(((__m256i*)src) + 1);
@@ -202,7 +203,7 @@ uint64_t CheckSolid_AVX2( const uint8_t* src ) noexcept
         ( (unsigned int)( src[2] & 0xF8 ) );
 }
 
-__m128i PrepareAverages_AVX2( v4i a[8], const uint8_t* src) noexcept
+static etcpak_force_inline __m128i PrepareAverages_AVX2( v4i a[8], const uint8_t* src) noexcept
 {
     __m256i sum4 = Sum4_AVX2( src );
 
@@ -211,14 +212,14 @@ __m128i PrepareAverages_AVX2( v4i a[8], const uint8_t* src) noexcept
     return CalcErrorBlock_AVX2( sum4, a);
 }
 
-__m128i PrepareAverages_AVX2( v4i a[8], const __m256i sum4) noexcept
+static etcpak_force_inline __m128i PrepareAverages_AVX2( v4i a[8], const __m256i sum4) noexcept
 {
     ProcessAverages_AVX2(Average_AVX2( sum4 ), a );
 
     return CalcErrorBlock_AVX2( sum4, a);
 }
 
-void FindBestFit_4x2_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], const uint32_t offset, const uint8_t* data) noexcept
+static etcpak_force_inline void FindBestFit_4x2_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], const uint32_t offset, const uint8_t* data) noexcept
 {
     __m256i sel0 = _mm256_setzero_si256();
     __m256i sel1 = _mm256_setzero_si256();
@@ -345,7 +346,7 @@ void FindBestFit_4x2_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], cons
     _mm256_store_si256((__m256i*)tsel, sel);
 }
 
-void FindBestFit_2x4_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], const uint32_t offset, const uint8_t* data) noexcept
+static etcpak_force_inline void FindBestFit_2x4_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], const uint32_t offset, const uint8_t* data) noexcept
 {
     __m256i sel0 = _mm256_setzero_si256();
     __m256i sel1 = _mm256_setzero_si256();
@@ -470,7 +471,7 @@ void FindBestFit_2x4_AVX2( uint32_t terr[2][8], uint32_t tsel[8], v4i a[8], cons
     _mm256_store_si256((__m256i*)tsel, sel);
 }
 
-uint64_t EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate) noexcept
+static etcpak_force_inline uint64_t EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate) noexcept
 {
     size_t tidx[2];
 
@@ -524,7 +525,7 @@ uint64_t EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint
     return d | static_cast<uint64_t>(_bswap(t2)) << 32;
 }
 
-__m128i r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
+static etcpak_force_inline __m128i r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cvf) noexcept
 {
     __m128i co = _mm_cvttps_epi32(cof);
     __m128i ch = _mm_cvttps_epi32(chf);
@@ -570,7 +571,7 @@ struct Plane
     __m256i sum4;
 };
 
-Plane Planar_AVX2(const uint8_t* src)
+static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
 {
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
@@ -799,7 +800,7 @@ Plane Planar_AVX2(const uint8_t* src)
     return plane;
 }
 
-uint64_t EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error) noexcept
+static etcpak_force_inline uint64_t EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error) noexcept
 {
     size_t tidx[2];
 
@@ -860,7 +861,7 @@ uint64_t EncodeSelectors_AVX2( uint64_t d, const uint32_t terr[2][8], const uint
 
 #endif
 
-void Average( const uint8_t* data, v4i* a )
+static etcpak_force_inline void Average( const uint8_t* data, v4i* a )
 {
 #ifdef __SSE4_1__
     __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
@@ -969,7 +970,7 @@ void Average( const uint8_t* data, v4i* a )
 #endif
 }
 
-void CalcErrorBlock( const uint8_t* data, unsigned int err[4][4] )
+static etcpak_force_inline void CalcErrorBlock( const uint8_t* data, unsigned int err[4][4] )
 {
 #ifdef __SSE4_1__
     __m128i d0 = _mm_loadu_si128(((__m128i*)data) + 0);
@@ -1088,7 +1089,7 @@ void CalcErrorBlock( const uint8_t* data, unsigned int err[4][4] )
 #endif
 }
 
-unsigned int CalcError( const unsigned int block[4], const v4i& average )
+static etcpak_force_inline unsigned int CalcError( const unsigned int block[4], const v4i& average )
 {
     unsigned int err = 0x3FFFFFFF; // Big value to prevent negative values, but small enough to prevent overflow
     err -= block[0] * 2 * average[2];
@@ -1098,7 +1099,7 @@ unsigned int CalcError( const unsigned int block[4], const v4i& average )
     return err;
 }
 
-void ProcessAverages( v4i* a )
+static etcpak_force_inline void ProcessAverages( v4i* a )
 {
 #ifdef __SSE4_1__
     for( int i=0; i<2; i++ )
@@ -1194,7 +1195,7 @@ void ProcessAverages( v4i* a )
 #endif
 }
 
-void EncodeAverages( uint64_t& _d, const v4i* a, size_t idx )
+static etcpak_force_inline void EncodeAverages( uint64_t& _d, const v4i* a, size_t idx )
 {
     auto d = _d;
     d |= ( idx << 24 );
@@ -1221,7 +1222,7 @@ void EncodeAverages( uint64_t& _d, const v4i* a, size_t idx )
     _d = d;
 }
 
-uint64_t CheckSolid( const uint8_t* src )
+static etcpak_force_inline uint64_t CheckSolid( const uint8_t* src )
 {
 #ifdef __SSE4_1__
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
@@ -1282,7 +1283,7 @@ uint64_t CheckSolid( const uint8_t* src )
         ( (unsigned int)( src[2] & 0xF8 ) );
 }
 
-void PrepareAverages( v4i a[8], const uint8_t* src, unsigned int err[4] )
+static etcpak_force_inline void PrepareAverages( v4i a[8], const uint8_t* src, unsigned int err[4] )
 {
     Average( src, a );
     ProcessAverages( a );
@@ -1297,7 +1298,7 @@ void PrepareAverages( v4i a[8], const uint8_t* src, unsigned int err[4] )
     }
 }
 
-void FindBestFit( uint64_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
+static etcpak_force_inline void FindBestFit( uint64_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
 {
     for( size_t i=0; i<16; i++ )
     {
@@ -1451,7 +1452,7 @@ void FindBestFit( uint64_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uin
 
 #if defined __SSE4_1__ || defined __ARM_NEON
 // Non-reference implementation, but faster. Produces same results as the AVX2 version
-void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
+static etcpak_force_inline void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uint32_t* id, const uint8_t* data )
 {
     for( size_t i=0; i<16; i++ )
     {
@@ -1531,19 +1532,19 @@ void FindBestFit( uint32_t terr[2][8], uint16_t tsel[16][8], v4i a[8], const uin
 }
 #endif
 
-uint8_t convert6(float f)
+static etcpak_force_inline uint8_t convert6(float f)
 {
     int i = (std::min(std::max(static_cast<int>(f), 0), 1023) - 15) >> 1;
     return (i + 11 - ((i + 11) >> 7) - ((i + 4) >> 7)) >> 3;
 }
 
-uint8_t convert7(float f)
+static etcpak_force_inline uint8_t convert7(float f)
 {
     int i = (std::min(std::max(static_cast<int>(f), 0), 1023) - 15) >> 1;
     return (i + 9 - ((i + 9) >> 8) - ((i + 6) >> 8)) >> 2;
 }
 
-std::pair<uint64_t, uint64_t> Planar(const uint8_t* src)
+static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* src)
 {
     int32_t r = 0;
     int32_t g = 0;
@@ -1686,7 +1687,7 @@ std::pair<uint64_t, uint64_t> Planar(const uint8_t* src)
 }
 
 template<class T, class S>
-uint64_t EncodeSelectors( uint64_t d, const T terr[2][8], const S tsel[16][8], const uint32_t* id, const uint64_t value, const uint64_t error)
+static etcpak_force_inline uint64_t EncodeSelectors( uint64_t d, const T terr[2][8], const S tsel[16][8], const uint32_t* id, const uint64_t value, const uint64_t error)
 {
     size_t tidx[2];
     tidx[0] = GetLeastError( terr[0], 8 );
