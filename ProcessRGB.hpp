@@ -3,7 +3,10 @@
 
 #include <stdint.h>
 
-uint64_t ProcessRGB( const uint8_t* src );
-uint64_t ProcessRGB_ETC2( const uint8_t* src );
+void CompressEtc1Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
+void CompressEtc2Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
+void CompressEtc1Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
+void CompressEtc1RgbDither( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
+void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
 
 #endif

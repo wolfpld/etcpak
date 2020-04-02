@@ -4,7 +4,6 @@
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
 #include "Debug.hpp"
-#include "Dither.hpp"
 #include "MipMap.hpp"
 #include "mmap.hpp"
 #include "ProcessAlpha.hpp"
@@ -190,150 +189,34 @@ BlockData::~BlockData()
 
 void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither )
 {
-    uint32_t buf[4*4];
-    int w = 0;
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset;
 
     if( type == Channels::Alpha )
     {
         if( m_type != Etc1 )
         {
-            do
-            {
-                auto ptr = buf;
-                for( int x=0; x<4; x++ )
-                {
-                    unsigned int a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src -= width * 3 - 1;
-                }
-                if( ++w == width/4 )
-                {
-                    src += width * 3;
-                    w = 0;
-                }
-                *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
-            }
-            while( --blocks );
+            CompressEtc2Alpha( src, dst, blocks, width );
         }
         else
         {
-            do
-            {
-                auto ptr = buf;
-                for( int x=0; x<4; x++ )
-                {
-                    unsigned int a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src += width;
-                    a = *src >> 24;
-                    *ptr++ = a | ( a << 8 ) | ( a << 16 );
-                    src -= width * 3 - 1;
-                }
-                if( ++w == width/4 )
-                {
-                    src += width * 3;
-                    w = 0;
-                }
-                *dst++ = ProcessRGB( (uint8_t*)buf );
-            }
-            while( --blocks );
+            CompressEtc1Alpha( src, dst, blocks, width );
         }
     }
     else
     {
         if( m_type != Etc1 )
         {
-            do
-            {
-                auto ptr = buf;
-                for( int x=0; x<4; x++ )
-                {
-                    *ptr++ = *src;
-                    src += width;
-                    *ptr++ = *src;
-                    src += width;
-                    *ptr++ = *src;
-                    src += width;
-                    *ptr++ = *src;
-                    src -= width * 3 - 1;
-                }
-                if( ++w == width/4 )
-                {
-                    src += width * 3;
-                    w = 0;
-                }
-                *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
-            }
-            while( --blocks );
+            CompressEtc2Rgb( src, dst, blocks, width );
         }
         else
         {
             if( dither )
             {
-                do
-                {
-                    auto ptr = buf;
-                    for( int x=0; x<4; x++ )
-                    {
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src -= width * 3 - 1;
-                    }
-                    if( ++w == width/4 )
-                    {
-                        src += width * 3;
-                        w = 0;
-                    }
-                    Dither( (uint8_t*)buf );
-                    *dst++ = ProcessRGB( (uint8_t*)buf );
-                }
-                while( --blocks );
+                CompressEtc1RgbDither( src, dst, blocks, width );
             }
             else
             {
-                do
-                {
-                    auto ptr = buf;
-                    for( int x=0; x<4; x++ )
-                    {
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src += width;
-                        *ptr++ = *src;
-                        src -= width * 3 - 1;
-                    }
-                    if( ++w == width/4 )
-                    {
-                        src += width * 3;
-                        w = 0;
-                    }
-                    *dst++ = ProcessRGB( (uint8_t*)buf );
-                }
-                while( --blocks );
+                CompressEtc1Rgb( src, dst, blocks, width );
             }
         }
     }
@@ -378,7 +261,7 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
         }
 
         *dst++ = ProcessAlpha( buf8 );
-        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
+        //*dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
     }
     while( --blocks );
 }

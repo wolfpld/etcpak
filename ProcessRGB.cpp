@@ -5,6 +5,7 @@
 #  include <arm_neon.h>
 #endif
 
+#include "Dither.hpp"
 #include "ForceInline.hpp"
 #include "Math.hpp"
 #include "ProcessCommon.hpp"
@@ -1712,7 +1713,7 @@ static etcpak_force_inline uint64_t EncodeSelectors( uint64_t d, const T terr[2]
 
 }
 
-uint64_t ProcessRGB( const uint8_t* src )
+static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 {
 #ifdef __AVX2__
     uint64_t d = CheckSolid_AVX2( src );
@@ -1773,7 +1774,7 @@ uint64_t ProcessRGB( const uint8_t* src )
 #endif
 }
 
-uint64_t ProcessRGB_ETC2( const uint8_t* src )
+static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 {
 #ifdef __AVX2__
     auto plane = Planar_AVX2( src );
@@ -1832,4 +1833,153 @@ uint64_t ProcessRGB_ETC2( const uint8_t* src )
 
     return EncodeSelectors( d, terr, tsel, id, result.first, result.second );
 #endif
+}
+
+void CompressEtc1Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+{
+    int w = 0;
+    uint32_t buf[4*4];
+    do
+    {
+        auto ptr = buf;
+        for( int x=0; x<4; x++ )
+        {
+            unsigned int a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src += width;
+            a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src += width;
+            a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src += width;
+            a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src -= width * 3 - 1;
+        }
+        if( ++w == width/4 )
+        {
+            src += width * 3;
+            w = 0;
+        }
+        *dst++ = ProcessRGB( (uint8_t*)buf );
+    }
+    while( --blocks );
+}
+
+void CompressEtc2Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+{
+    int w = 0;
+    uint32_t buf[4*4];
+    do
+    {
+        auto ptr = buf;
+        for( int x=0; x<4; x++ )
+        {
+            unsigned int a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src += width;
+            a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src += width;
+            a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src += width;
+            a = *src >> 24;
+            *ptr++ = a | ( a << 8 ) | ( a << 16 );
+            src -= width * 3 - 1;
+        }
+        if( ++w == width/4 )
+        {
+            src += width * 3;
+            w = 0;
+        }
+        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
+    }
+    while( --blocks );
+}
+
+void CompressEtc1Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+{
+    int w = 0;
+    uint32_t buf[4*4];
+    do
+    {
+        auto ptr = buf;
+        for( int x=0; x<4; x++ )
+        {
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src -= width * 3 - 1;
+        }
+        if( ++w == width/4 )
+        {
+            src += width * 3;
+            w = 0;
+        }
+        *dst++ = ProcessRGB( (uint8_t*)buf );
+    }
+    while( --blocks );
+}
+
+void CompressEtc1RgbDither( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+{
+    int w = 0;
+    uint32_t buf[4*4];
+    do
+    {
+        auto ptr = buf;
+        for( int x=0; x<4; x++ )
+        {
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src -= width * 3 - 1;
+        }
+        if( ++w == width/4 )
+        {
+            src += width * 3;
+            w = 0;
+        }
+        Dither( (uint8_t*)buf );
+        *dst++ = ProcessRGB( (uint8_t*)buf );
+    }
+    while( --blocks );
+}
+
+void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+{
+    int w = 0;
+    uint32_t buf[4*4];
+    do
+    {
+        auto ptr = buf;
+        for( int x=0; x<4; x++ )
+        {
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src -= width * 3 - 1;
+        }
+        if( ++w == width/4 )
+        {
+            src += width * 3;
+            w = 0;
+        }
+        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
+    }
+    while( --blocks );
 }
