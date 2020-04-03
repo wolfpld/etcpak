@@ -496,8 +496,8 @@ static etcpak_force_inline void ProcessRGB_AVX( const uint8_t* src, char*& dst )
     __m256i sm1 = _mm256_and_si256(sc2, sc3);
     __m256i sm = _mm256_and_si256(sm0, sm1);
 
-    int solid = _mm_testc_si128( _mm256_castsi256_si128( sm ), _mm_set1_epi32( -1 ) );
-    solid |= _mm_testc_si128( _mm256_extracti128_si256( sm, 1 ), _mm_set1_epi32( -1 ) ) << 1;
+    const int64_t solid0 = 1 - _mm_testc_si128( _mm256_castsi256_si128( sm ), _mm_set1_epi32( -1 ) );
+    const int64_t solid1 = 1 - _mm_testc_si128( _mm256_extracti128_si256( sm, 1 ), _mm_set1_epi32( -1 ) );
 
     __m256i min0 = _mm256_min_epu8( px0, px1 );
     __m256i min1 = _mm256_min_epu8( px2, px3 );
@@ -567,28 +567,9 @@ static etcpak_force_inline void ProcessRGB_AVX( const uint8_t* src, char*& dst )
     __m256i d1 = _mm256_permute4x64_epi64( d0, _MM_SHUFFLE( 3, 2, 2, 0 ) );
     __m128i d2 = _mm256_castsi256_si128( d1 );
 
-    if( solid != 0 )
-    {
-        __m128i mask;
-        switch( solid )
-        {
-        case 1:
-            mask = _mm_set_epi64x( -1, 0xFFFF0000 );
-            break;
-        case 2:
-            mask = _mm_set_epi64x( 0xFFFF0000, -1 );
-            break;
-        case 3:
-            mask = _mm_set_epi64x( 0xFFFF0000, 0xFFFF0000 );
-            break;
-        default:
-            assert( false );
-            break;
-        }
-        d2 = _mm_and_si128( d2, mask );
-    }
-
-    _mm_storeu_si128( (__m128i*)dst, d2 );
+    __m128i mask = _mm_set_epi64x( 0xFFFF0000 | -solid1, 0xFFFF0000 | -solid0 );
+    __m128i d3 = _mm_and_si128( d2, mask );
+    _mm_storeu_si128( (__m128i*)dst, d3 );
 
     for( int j=4; j<8; j++ ) dst[j] = (char)DxtcIndexTable[(uint8_t)dst[j]];
     for( int j=12; j<16; j++ ) dst[j] = (char)DxtcIndexTable[(uint8_t)dst[j]];
