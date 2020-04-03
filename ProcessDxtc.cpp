@@ -499,6 +499,16 @@ static etcpak_force_inline void ProcessRGB_AVX( const uint8_t* src, char*& dst )
     const int64_t solid0 = 1 - _mm_testc_si128( _mm256_castsi256_si128( sm ), _mm_set1_epi32( -1 ) );
     const int64_t solid1 = 1 - _mm_testc_si128( _mm256_extracti128_si256( sm, 1 ), _mm_set1_epi32( -1 ) );
 
+    if( !solid0 && !solid1 )
+    {
+        const auto c0 = uint64_t( to565( src[0], src[1], src[2] ) );
+        const auto c1 = uint64_t( to565( src[4], src[5], src[6] ) );
+        memcpy( dst, &c0, 8 );
+        memcpy( dst+8, &c1, 8 );
+        dst += 16;
+        return;
+    }
+
     __m256i min0 = _mm256_min_epu8( px0, px1 );
     __m256i min1 = _mm256_min_epu8( px2, px3 );
     __m256i min2 = _mm256_min_epu8( min0, min1 );
