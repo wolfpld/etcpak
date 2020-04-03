@@ -186,7 +186,9 @@ static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 
     if( _mm_testc_si128(sm, _mm_set1_epi32(-1)) )
     {
-        return uint64_t( to565( src[0], src[1], src[2] ) ) << 16;
+        uint32_t c;
+        memcpy( &c, src, 4 );
+        return uint64_t( to565( c ) ) << 16;
     }
 
     __m128i min0 = _mm_min_epu8( px0, px1 );
