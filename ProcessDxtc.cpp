@@ -504,7 +504,7 @@ static etcpak_force_inline void ProcessRGB_AVX( const uint8_t* src, char*& dst )
     if( !solid0 && !solid1 )
     {
         const auto c0 = uint64_t( to565( src[0], src[1], src[2] ) );
-        const auto c1 = uint64_t( to565( src[4], src[5], src[6] ) );
+        const auto c1 = uint64_t( to565( src[16], src[17], src[18] ) );
         memcpy( dst, &c0, 8 );
         memcpy( dst+8, &c1, 8 );
         dst += 16;
