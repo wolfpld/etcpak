@@ -12,6 +12,29 @@
 #include "Tables.hpp"
 #include "TaskDispatch.hpp"
 
+#ifdef __SSE4_1__
+#  ifdef _MSC_VER
+#    include <intrin.h>
+#    include <Windows.h>
+#    define _bswap(x) _byteswap_ulong(x)
+#    define _bswap64(x) _byteswap_uint64(x)
+#  else
+#    include <x86intrin.h>
+#  endif
+#else
+#  ifndef _MSC_VER
+#    include <byteswap.h>
+#    define _bswap(x) bswap_32(x)
+#    define _bswap64(x) bswap_64(x)
+#  endif
+#endif
+
+#ifndef _bswap
+#  define _bswap(x) __builtin_bswap32(x)
+#  define _bswap64(x) __builtin_bswap64(x)
+#endif
+
+
 BlockData::BlockData( const char* fn )
     : m_file( fopen( fn, "rb" ) )
 {
@@ -422,10 +445,12 @@ BitmapPtr BlockData::Decode()
 
 static etcpak_force_inline uint64_t ConvertByteOrder( uint64_t d )
 {
-    return ( ( d & 0xFF000000FF000000 ) >> 24 ) |
-           ( ( d & 0x000000FF000000FF ) << 24 ) |
-           ( ( d & 0x00FF000000FF0000 ) >> 8 ) |
-           ( ( d & 0x0000FF000000FF00 ) << 8 );
+    uint32_t word[2];
+    memcpy( word, &d, 8 );
+    word[0] = _bswap( word[0] );
+    word[1] = _bswap( word[1] );
+    memcpy( &d, word, 8 );
+    return d;
 }
 
 static etcpak_force_inline void DecodeRGBPart( uint32_t* l[4], uint64_t d )
