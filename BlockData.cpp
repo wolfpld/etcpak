@@ -394,7 +394,7 @@ static etcpak_force_inline int32_t expand7(uint32_t value)
     return (value << 1) | (value >> 6);
 }
 
-static etcpak_force_inline void DecodePlanar(uint64_t block, uint32_t* l[4])
+static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uint32_t w )
 {
     const auto bv = expand6((block >> ( 0 + 32)) & 0x3F);
     const auto gv = expand7((block >> ( 6 + 32)) & 0x7F);
@@ -424,7 +424,7 @@ static etcpak_force_inline void DecodePlanar(uint64_t block, uint32_t* l[4])
             uint32_t g = clampu8((i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2);
             uint32_t b = clampu8((i * (bh - bo) + j * (bv - bo) + 4 * bo + 2) >> 2);
 
-            *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+            dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
         }
     }
 }
@@ -453,7 +453,7 @@ static etcpak_force_inline uint64_t ConvertByteOrder( uint64_t d )
     return d;
 }
 
-static etcpak_force_inline void DecodeRGBPart( uint32_t* l[4], uint64_t d )
+static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32_t w )
 {
     d = ConvertByteOrder( d );
 
@@ -462,7 +462,7 @@ static etcpak_force_inline void DecodeRGBPart( uint32_t* l[4], uint64_t d )
 
     if (mode == Etc2Mode::planar)
     {
-        DecodePlanar(d, l);
+        DecodePlanar( d, dst, w );
         return;
     }
 
@@ -481,7 +481,7 @@ static etcpak_force_inline void DecodeRGBPart( uint32_t* l[4], uint64_t d )
                 const auto r = clampu8( c.r[j/2] + mod );
                 const auto g = clampu8( c.g[j/2] + mod );
                 const auto b = clampu8( c.b[j/2] + mod );
-                *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
             }
             o += 4;
         }
@@ -502,7 +502,7 @@ static etcpak_force_inline void DecodeRGBPart( uint32_t* l[4], uint64_t d )
                 const auto r = clampu8( cr + mod );
                 const auto g = clampu8( cg + mod );
                 const auto b = clampu8( cb + mod );
-                *l[j]++ = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
             }
             o += 4;
         }
@@ -544,26 +544,18 @@ BitmapPtr BlockData::DecodeRGB()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
-    uint32_t* l[4];
-    l[0] = ret->Data();
-    l[1] = l[0] + m_size.x;
-    l[2] = l[1] + m_size.x;
-    l[3] = l[2] + m_size.x;
-
     const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
 
     for( int y=0; y<m_size.y/4; y++ )
     {
         for( int x=0; x<m_size.x/4; x++ )
         {
             uint64_t d = *src++;
-            DecodeRGBPart( l, d );
+            DecodeRGBPart( d, dst, m_size.x );
+            dst += 4;
         }
-
-        for( int i=0; i<4; i++ )
-        {
-            l[i] += m_size.x * 3;
-        }
+        dst += m_size.x*3;
     }
 
     return ret;
@@ -573,6 +565,7 @@ BitmapPtr BlockData::DecodeRGBA()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
+#if 0
     uint32_t* l[4];
     l[0] = ret->Data();
     l[1] = l[0] + m_size.x;
@@ -602,6 +595,7 @@ BitmapPtr BlockData::DecodeRGBA()
             l[i] += m_size.x * 3;
         }
     }
+#endif
 
     return ret;
 }
