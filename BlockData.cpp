@@ -321,17 +321,17 @@ static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c 
     {
         int32_t dr, dg, db;
 
-        c.r[0] = ( d & 0xF8000000 ) >> 27;
-        c.g[0] = ( d & 0x00F80000 ) >> 19;
-        c.b[0] = ( d & 0x0000F800 ) >> 11;
+        uint32_t r0 = ( d & 0xF8000000 ) >> 27;
+        uint32_t g0 = ( d & 0x00F80000 ) >> 19;
+        uint32_t b0 = ( d & 0x0000F800 ) >> 11;
 
         dr = ( int32_t(d) << 5 ) >> 29;
         dg = ( int32_t(d) << 13 ) >> 29;
         db = ( int32_t(d) << 21 ) >> 29;
 
-        int32_t r = static_cast<int32_t>(c.r[0]) + dr;
-        int32_t g = static_cast<int32_t>(c.g[0]) + dg;
-        int32_t b = static_cast<int32_t>(c.b[0]) + db;
+        int32_t r = int32_t(r0) + dr;
+        int32_t g = int32_t(g0) + dg;
+        int32_t b = int32_t(b0) + db;
 
         /*
         if ((r < 0) || (r > 31))
@@ -350,16 +350,16 @@ static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c 
             return Etc2Mode::planar;
         }
 
-        c.r[1] = c.r[0] + dr;
-        c.g[1] = c.g[0] + dg;
-        c.b[1] = c.b[0] + db;
+        int32_t r1 = r0 + dr;
+        int32_t g1 = g0 + dg;
+        int32_t b1 = b0 + db;
 
-        for( int i=0; i<2; i++ )
-        {
-            c.r[i] = ( c.r[i] << 3 ) | ( c.r[i] >> 2 );
-            c.g[i] = ( c.g[i] << 3 ) | ( c.g[i] >> 2 );
-            c.b[i] = ( c.b[i] << 3 ) | ( c.b[i] >> 2 );
-        }
+        c.r[0] = ( r0 << 3 ) | ( r0 >> 2 );
+        c.r[1] = ( r1 << 3 ) | ( r1 >> 2 );
+        c.g[0] = ( g0 << 3 ) | ( g0 >> 2 );
+        c.g[1] = ( g1 << 3 ) | ( g1 >> 2 );
+        c.b[0] = ( b0 << 3 ) | ( b0 >> 2 );
+        c.b[1] = ( b1 << 3 ) | ( b1 >> 2 );
     }
     else
     {
