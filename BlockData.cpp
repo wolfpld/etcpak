@@ -333,6 +333,7 @@ static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c 
         int32_t g = static_cast<int32_t>(c.g[0]) + dg;
         int32_t b = static_cast<int32_t>(c.b[0]) + db;
 
+        /*
         if ((r < 0) || (r > 31))
         {
             return Etc2Mode::t;
@@ -342,6 +343,7 @@ static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c 
         {
             return Etc2Mode::h;
         }
+        */
 
         if ((b < 0) || (b > 31))
         {
