@@ -325,13 +325,9 @@ static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c 
         c.g[0] = ( d & 0x00F80000 ) >> 19;
         c.b[0] = ( d & 0x0000F800 ) >> 11;
 
-        dr = ( d & 0x07000000 ) >> 24;
-        dg = ( d & 0x00070000 ) >> 16;
-        db = ( d & 0x00000700 ) >> 8;
-
-        dr = ( ( dr << 29 ) >> 29 );
-        dg = ( ( dg << 29 ) >> 29 );
-        db = ( ( db << 29 ) >> 29 );
+        dr = ( int32_t(d) << 5 ) >> 29;
+        dg = ( int32_t(d) << 13 ) >> 29;
+        db = ( int32_t(d) << 21 ) >> 29;
 
         int32_t r = static_cast<int32_t>(c.r[0]) + dr;
         int32_t g = static_cast<int32_t>(c.g[0]) + dg;
