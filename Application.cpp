@@ -35,7 +35,6 @@ void Usage()
     fprintf( stderr, "  -m              generate mipmaps\n" );
     fprintf( stderr, "  -d              enable dithering\n" );
     fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
-    fprintf( stderr, "  --debug         dissect ETC texture\n" );
     fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
     fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
     fprintf( stderr, "  --dxt1          use DXT1 compression\n\n" );
@@ -51,7 +50,6 @@ int main( int argc, char** argv )
     bool benchmark = false;
     bool mipmap = false;
     bool dither = false;
-    bool debug = false;
     bool etc2 = false;
     bool rgba = false;
     bool dxt1 = false;
@@ -66,14 +64,12 @@ int main( int argc, char** argv )
 
     enum Options
     {
-        OptDebug,
         OptEtc2,
         OptRgba,
         OptDxt1
     };
 
     struct option longopts[] = {
-        { "debug", no_argument, nullptr, OptDebug },
         { "etc2", no_argument, nullptr, OptEtc2 },
         { "rgba", no_argument, nullptr, OptRgba },
         { "dxt1", no_argument, nullptr, OptDxt1 },
@@ -103,9 +99,6 @@ int main( int argc, char** argv )
         case 'd':
             dither = true;
             break;
-        case OptDebug:
-            debug = true;
-            break;
         case OptEtc2:
             etc2 = true;
             break;
@@ -129,7 +122,7 @@ int main( int argc, char** argv )
 
     const char* input = nullptr;
     const char* output = nullptr;
-    if( benchmark || debug )
+    if( benchmark )
     {
         if( argc - optind < 1 )
         {
@@ -215,11 +208,6 @@ int main( int argc, char** argv )
         auto bd = std::make_shared<BlockData>( input );
         auto out = bd->Decode();
         out->Write( output );
-    }
-    else if( debug )
-    {
-        auto bd = std::make_shared<BlockData>( input );
-        bd->Dissect();
     }
     else
     {

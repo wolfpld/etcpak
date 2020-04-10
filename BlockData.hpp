@@ -30,7 +30,6 @@ public:
     ~BlockData();
 
     BitmapPtr Decode();
-    void Dissect();
 
     void Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither );
     void ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither );
