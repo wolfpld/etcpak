@@ -422,25 +422,26 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
     tcw[0] = ( d & 0xE0 ) >> 5;
     tcw[1] = ( d & 0x1C ) >> 2;
 
+    uint64_t b1 = d >> 32;
+    uint64_t b2 = d >> 47;
     if( d & 0x1 )
     {
-        int o = 0;
         for( int i=0; i<4; i++ )
         {
             for( int j=0; j<4; j++ )
             {
-                const auto mod = g_table[tcw[j/2]][ ( ( d >> ( o + 32 + j ) ) & 0x1 ) | ( ( d >> ( o + 47 + j ) ) & 0x2 ) ];
+                const auto mod = g_table[tcw[j/2]][ ( b1 & 0x1 ) | ( b2 & 0x2 ) ];
                 const auto r = clampu8( br[j/2] + mod );
                 const auto g = clampu8( bg[j/2] + mod );
                 const auto b = clampu8( bb[j/2] + mod );
                 dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                b1 >>= 1;
+                b2 >>= 1;
             }
-            o += 4;
         }
     }
     else
     {
-        int o = 0;
         for( int i=0; i<4; i++ )
         {
             const auto tbl = g_table[tcw[i/2]];
@@ -450,13 +451,14 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
 
             for( int j=0; j<4; j++ )
             {
-                const auto mod = tbl[ ( ( d >> ( o + 32 + j ) ) & 0x1 ) | ( ( d >> ( o + 47 + j ) ) & 0x2 ) ];
+                const auto mod = tbl[ ( b1 & 0x1 ) | ( b2 & 0x2 ) ];
                 const auto r = clampu8( cr + mod );
                 const auto g = clampu8( cg + mod );
                 const auto b = clampu8( cb + mod );
                 dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                b1 >>= 1;
+                b2 >>= 1;
             }
-            o += 4;
         }
     }
 }
