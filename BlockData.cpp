@@ -302,72 +302,6 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
 
 namespace
 {
-struct BlockColor
-{
-    uint32_t r[2], g[2], b[2];
-};
-
-enum class Etc2Mode
-{
-    none,
-    t,
-    h,
-    planar
-};
-
-static etcpak_force_inline Etc2Mode DecodeBlockColor( uint64_t d, BlockColor& c )
-{
-    if( d & 0x2 )
-    {
-        int32_t dr, dg, db;
-
-        uint32_t r0 = ( d & 0xF8000000 ) >> 27;
-        uint32_t g0 = ( d & 0x00F80000 ) >> 19;
-        uint32_t b0 = ( d & 0x0000F800 ) >> 11;
-
-        dr = ( int32_t(d) << 5 ) >> 29;
-        dg = ( int32_t(d) << 13 ) >> 29;
-        db = ( int32_t(d) << 21 ) >> 29;
-
-        int32_t r1 = int32_t(r0) + dr;
-        int32_t g1 = int32_t(g0) + dg;
-        int32_t b1 = int32_t(b0) + db;
-
-        /*
-        if ((r1 < 0) || (r1 > 31))
-        {
-            return Etc2Mode::t;
-        }
-
-        if ((g1 < 0) || (g1 > 31))
-        {
-            return Etc2Mode::h;
-        }
-        */
-
-        if ((b1 < 0) || (b1 > 31))
-        {
-            return Etc2Mode::planar;
-        }
-
-        c.r[0] = ( r0 << 3 ) | ( r0 >> 2 );
-        c.r[1] = ( r1 << 3 ) | ( r1 >> 2 );
-        c.g[0] = ( g0 << 3 ) | ( g0 >> 2 );
-        c.g[1] = ( g1 << 3 ) | ( g1 >> 2 );
-        c.b[0] = ( b0 << 3 ) | ( b0 >> 2 );
-        c.b[1] = ( b1 << 3 ) | ( b1 >> 2 );
-    }
-    else
-    {
-        c.r[0] = ( ( d & 0xF0000000 ) >> 24 ) | ( ( d & 0xF0000000 ) >> 28 );
-        c.r[1] = ( ( d & 0x0F000000 ) >> 20 ) | ( ( d & 0x0F000000 ) >> 24 );
-        c.g[0] = ( ( d & 0x00F00000 ) >> 16 ) | ( ( d & 0x00F00000 ) >> 20 );
-        c.g[1] = ( ( d & 0x000F0000 ) >> 12 ) | ( ( d & 0x000F0000 ) >> 16 );
-        c.b[0] = ( ( d & 0x0000F000 ) >> 8  ) | ( ( d & 0x0000F000 ) >> 12 );
-        c.b[1] = ( ( d & 0x00000F00 ) >> 4  ) | ( ( d & 0x00000F00 ) >> 8  );
-    }
-    return Etc2Mode::none;
-}
 
 static etcpak_force_inline int32_t expand6(uint32_t value)
 {
@@ -442,13 +376,46 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
 {
     d = ConvertByteOrder( d );
 
-    BlockColor c;
-    const auto mode = DecodeBlockColor( d, c );
+    uint32_t br[2], bg[2], bb[2];
 
-    if (mode == Etc2Mode::planar)
+    if( d & 0x2 )
     {
-        DecodePlanar( d, dst, w );
-        return;
+        int32_t dr, dg, db;
+
+        uint32_t r0 = ( d & 0xF8000000 ) >> 27;
+        uint32_t g0 = ( d & 0x00F80000 ) >> 19;
+        uint32_t b0 = ( d & 0x0000F800 ) >> 11;
+
+        dr = ( int32_t(d) << 5 ) >> 29;
+        dg = ( int32_t(d) << 13 ) >> 29;
+        db = ( int32_t(d) << 21 ) >> 29;
+
+        int32_t r1 = int32_t(r0) + dr;
+        int32_t g1 = int32_t(g0) + dg;
+        int32_t b1 = int32_t(b0) + db;
+
+        // T and H modes are not handled
+        if( (b1 < 0) || (b1 > 31) )
+        {
+            DecodePlanar( d, dst, w );
+            return;
+        }
+
+        br[0] = ( r0 << 3 ) | ( r0 >> 2 );
+        br[1] = ( r1 << 3 ) | ( r1 >> 2 );
+        bg[0] = ( g0 << 3 ) | ( g0 >> 2 );
+        bg[1] = ( g1 << 3 ) | ( g1 >> 2 );
+        bb[0] = ( b0 << 3 ) | ( b0 >> 2 );
+        bb[1] = ( b1 << 3 ) | ( b1 >> 2 );
+    }
+    else
+    {
+        br[0] = ( ( d & 0xF0000000 ) >> 24 ) | ( ( d & 0xF0000000 ) >> 28 );
+        br[1] = ( ( d & 0x0F000000 ) >> 20 ) | ( ( d & 0x0F000000 ) >> 24 );
+        bg[0] = ( ( d & 0x00F00000 ) >> 16 ) | ( ( d & 0x00F00000 ) >> 20 );
+        bg[1] = ( ( d & 0x000F0000 ) >> 12 ) | ( ( d & 0x000F0000 ) >> 16 );
+        bb[0] = ( ( d & 0x0000F000 ) >> 8  ) | ( ( d & 0x0000F000 ) >> 12 );
+        bb[1] = ( ( d & 0x00000F00 ) >> 4  ) | ( ( d & 0x00000F00 ) >> 8  );
     }
 
     unsigned int tcw[2];
@@ -463,9 +430,9 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
             for( int j=0; j<4; j++ )
             {
                 const auto mod = g_table[tcw[j/2]][ ( ( d >> ( o + 32 + j ) ) & 0x1 ) | ( ( d >> ( o + 47 + j ) ) & 0x2 ) ];
-                const auto r = clampu8( c.r[j/2] + mod );
-                const auto g = clampu8( c.g[j/2] + mod );
-                const auto b = clampu8( c.b[j/2] + mod );
+                const auto r = clampu8( br[j/2] + mod );
+                const auto g = clampu8( bg[j/2] + mod );
+                const auto b = clampu8( bb[j/2] + mod );
                 dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
             }
             o += 4;
@@ -477,9 +444,9 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
         for( int i=0; i<4; i++ )
         {
             const auto tbl = g_table[tcw[i/2]];
-            const auto cr = c.r[i/2];
-            const auto cg = c.g[i/2];
-            const auto cb = c.b[i/2];
+            const auto cr = br[i/2];
+            const auto cg = bg[i/2];
+            const auto cb = bb[i/2];
 
             for( int j=0; j<4; j++ )
             {
