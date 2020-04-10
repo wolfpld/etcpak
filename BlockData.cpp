@@ -431,10 +431,20 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
             for( int j=0; j<4; j++ )
             {
                 const auto mod = g_table[tcw[j/2]][ ( b1 & 0x1 ) | ( b2 & 0x2 ) ];
-                const auto r = clampu8( br[j/2] + mod );
-                const auto g = clampu8( bg[j/2] + mod );
-                const auto b = clampu8( bb[j/2] + mod );
-                dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                const auto r = br[j/2] + mod;
+                const auto g = bg[j/2] + mod;
+                const auto b = bb[j/2] + mod;
+                if( ( ( r | g | b ) & ~0xFF ) == 0 )
+                {
+                    dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                }
+                else
+                {
+                    const auto rc = clampu8( r );
+                    const auto gc = clampu8( g );
+                    const auto bc = clampu8( b );
+                    dst[j*w+i] = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
+                }
                 b1 >>= 1;
                 b2 >>= 1;
             }
@@ -452,10 +462,20 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
             for( int j=0; j<4; j++ )
             {
                 const auto mod = tbl[ ( b1 & 0x1 ) | ( b2 & 0x2 ) ];
-                const auto r = clampu8( cr + mod );
-                const auto g = clampu8( cg + mod );
-                const auto b = clampu8( cb + mod );
-                dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                const auto r = cr + mod;
+                const auto g = cg + mod;
+                const auto b = cb + mod;
+                if( ( ( r | g | b ) & ~0xFF ) == 0 )
+                {
+                    dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+                }
+                else
+                {
+                    const auto rc = clampu8( r );
+                    const auto gc = clampu8( g );
+                    const auto bc = clampu8( b );
+                    dst[j*w+i] = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
+                }
                 b1 >>= 1;
                 b2 >>= 1;
             }
