@@ -73,8 +73,8 @@ static etcpak_force_inline T SmoothStep( T x )
 
 static etcpak_force_inline uint8_t clampu8( int32_t val )
 {
-    if( (uint32_t)val <= 255 ) return val;
-    return val < 0 ? 0 : 255;
+    if( ( val & ~0xFF ) == 0 ) return val;
+    return ( ( ~val ) >> 31 ) & 0xFF;
 }
 
 template<class T>
