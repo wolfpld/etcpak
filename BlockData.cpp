@@ -422,15 +422,28 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
     tcw[0] = ( d & 0xE0 ) >> 5;
     tcw[1] = ( d & 0x1C ) >> 2;
 
-    uint64_t b1 = d >> 32;
-    uint64_t b2 = d >> 47;
+    uint32_t b1 = ( d >> 32 ) & 0xFFFF;
+    uint32_t b2 = ( d >> 48 );
+
+    b1 = ( b1 | ( b1 << 8 ) ) & 0x00FF00FF;
+    b1 = ( b1 | ( b1 << 4 ) ) & 0x0F0F0F0F;
+    b1 = ( b1 | ( b1 << 2 ) ) & 0x33333333;
+    b1 = ( b1 | ( b1 << 1 ) ) & 0x55555555;
+
+    b2 = ( b2 | ( b2 << 8 ) ) & 0x00FF00FF;
+    b2 = ( b2 | ( b2 << 4 ) ) & 0x0F0F0F0F;
+    b2 = ( b2 | ( b2 << 2 ) ) & 0x33333333;
+    b2 = ( b2 | ( b2 << 1 ) ) & 0x55555555;
+
+    uint32_t idx = b1 | ( b2 << 1 );
+
     if( d & 0x1 )
     {
         for( int i=0; i<4; i++ )
         {
             for( int j=0; j<4; j++ )
             {
-                const auto mod = g_table[tcw[j/2]][ ( b1 & 0x1 ) | ( b2 & 0x2 ) ];
+                const auto mod = g_table[tcw[j/2]][idx & 0x3];
                 const auto r = br[j/2] + mod;
                 const auto g = bg[j/2] + mod;
                 const auto b = bb[j/2] + mod;
@@ -445,8 +458,7 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
                     const auto bc = clampu8( b );
                     dst[j*w+i] = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
                 }
-                b1 >>= 1;
-                b2 >>= 1;
+                idx >>= 2;
             }
         }
     }
@@ -461,7 +473,7 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
 
             for( int j=0; j<4; j++ )
             {
-                const auto mod = tbl[ ( b1 & 0x1 ) | ( b2 & 0x2 ) ];
+                const auto mod = tbl[idx & 0x3];
                 const auto r = cr + mod;
                 const auto g = cg + mod;
                 const auto b = cb + mod;
@@ -476,8 +488,7 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
                     const auto bc = clampu8( b );
                     dst[j*w+i] = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
                 }
-                b1 >>= 1;
-                b2 >>= 1;
+                idx >>= 2;
             }
         }
     }
