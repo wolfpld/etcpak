@@ -144,11 +144,6 @@ int main( int argc, char** argv )
         output = argv[optind+1];
     }
 
-    if( dither )
-    {
-        InitDither();
-    }
-
     if( benchmark )
     {
         if( viewMode )
