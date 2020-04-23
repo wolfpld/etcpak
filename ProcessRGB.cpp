@@ -1949,6 +1949,27 @@ void CompressEtc1RgbDither( const uint32_t* src, uint64_t* dst, uint32_t blocks,
     uint32_t buf[4*4];
     do
     {
+#ifdef __SSE4_1__
+        __m128 px0 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 0 ) ) );
+        __m128 px1 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 1 ) ) );
+        __m128 px2 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 2 ) ) );
+        __m128 px3 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 3 ) ) );
+
+        _MM_TRANSPOSE4_PS( px0, px1, px2, px3 );
+
+#  ifdef __AVX2__
+        DitherAvx2( (uint8_t*)buf, _mm_castps_si128( px0 ), _mm_castps_si128( px1 ), _mm_castps_si128( px2 ), _mm_castps_si128( px3 ) );
+#  else
+        _mm_store_si128( (__m128i*)(buf + 0),  _mm_castps_si128( px0 ) );
+        _mm_store_si128( (__m128i*)(buf + 4),  _mm_castps_si128( px1 ) );
+        _mm_store_si128( (__m128i*)(buf + 8),  _mm_castps_si128( px2 ) );
+        _mm_store_si128( (__m128i*)(buf + 12), _mm_castps_si128( px3 ) );
+
+        Dither( (uint8_t*)buf );
+#  endif
+
+        src += 4;
+#else
         auto ptr = buf;
         for( int x=0; x<4; x++ )
         {
@@ -1961,12 +1982,12 @@ void CompressEtc1RgbDither( const uint32_t* src, uint64_t* dst, uint32_t blocks,
             *ptr++ = *src;
             src -= width * 3 - 1;
         }
+#endif
         if( ++w == width/4 )
         {
             src += width * 3;
             w = 0;
         }
-        Dither( (uint8_t*)buf );
         *dst++ = ProcessRGB( (uint8_t*)buf );
     }
     while( --blocks );
