@@ -34,7 +34,7 @@
 namespace
 {
 
-#ifdef _MSC_VER
+#if defined _MSC_VER && !defined __clang__
 static etcpak_force_inline unsigned long _bit_scan_forward( unsigned long mask )
 {
     unsigned long ret;
