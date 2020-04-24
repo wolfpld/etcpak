@@ -81,6 +81,9 @@ int main( int argc, char** argv )
     {
         switch( c )
         {
+        case '?':
+            Usage();
+            return 1;
         case 'v':
             viewMode = true;
             break;
