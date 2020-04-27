@@ -179,6 +179,9 @@ int main( int argc, char** argv )
             for( int i=0; i<NumTasks; i++ )
             {
                 BlockData::Type type;
+                Channels channel;
+                if( alpha ) channel = Channels::Alpha;
+                else channel = Channels::RGB;
                 if( rgba ) type = BlockData::Etc2_RGBA;
                 else if( etc2 ) type = BlockData::Etc2_RGB;
                 else if( dxt1 ) type = BlockData::Dxt1;
@@ -191,7 +194,7 @@ int main( int argc, char** argv )
                 }
                 else
                 {
-                    bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, Channels::RGB, dither );
+                    bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, channel, dither );
                 }
                 const auto localEnd = GetTime();
                 timeData[i] = localEnd - localStart;
