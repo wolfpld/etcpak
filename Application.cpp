@@ -178,13 +178,13 @@ int main( int argc, char** argv )
             uint64_t timeData[NumTasks];
             for( int i=0; i<NumTasks; i++ )
             {
-                const auto localStart = GetTime();
                 BlockData::Type type;
                 if( rgba ) type = BlockData::Etc2_RGBA;
                 else if( etc2 ) type = BlockData::Etc2_RGB;
                 else if( dxt1 ) type = BlockData::Dxt1;
                 else type = BlockData::Etc1;
                 auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
+                const auto localStart = GetTime();
                 if( rgba )
                 {
                     bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, dither );
