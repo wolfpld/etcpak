@@ -1841,6 +1841,32 @@ void CompressEtc1Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, siz
     uint32_t buf[4*4];
     do
     {
+#ifdef __SSE4_1__
+        __m128 px0 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 0 ) ) );
+        __m128 px1 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 1 ) ) );
+        __m128 px2 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 2 ) ) );
+        __m128 px3 = _mm_castsi128_ps( _mm_loadu_si128( (__m128i*)( src + width * 3 ) ) );
+
+        _MM_TRANSPOSE4_PS( px0, px1, px2, px3 );
+
+        __m128i c0 = _mm_castps_si128( px0 );
+        __m128i c1 = _mm_castps_si128( px1 );
+        __m128i c2 = _mm_castps_si128( px2 );
+        __m128i c3 = _mm_castps_si128( px3 );
+
+        __m128i mask = _mm_setr_epi32( 0x03030303, 0x07070707, 0x0b0b0b0b, 0x0f0f0f0f );
+        __m128i p0 = _mm_shuffle_epi8( c0, mask );
+        __m128i p1 = _mm_shuffle_epi8( c1, mask );
+        __m128i p2 = _mm_shuffle_epi8( c2, mask );
+        __m128i p3 = _mm_shuffle_epi8( c3, mask );
+
+        _mm_store_si128( (__m128i*)(buf + 0),  p0 );
+        _mm_store_si128( (__m128i*)(buf + 4),  p1 );
+        _mm_store_si128( (__m128i*)(buf + 8),  p2 );
+        _mm_store_si128( (__m128i*)(buf + 12), p3 );
+
+        src += 4;
+#else
         auto ptr = buf;
         for( int x=0; x<4; x++ )
         {
@@ -1857,6 +1883,7 @@ void CompressEtc1Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, siz
             *ptr++ = a | ( a << 8 ) | ( a << 16 );
             src -= width * 3 - 1;
         }
+#endif
         if( ++w == width/4 )
         {
             src += width * 3;
