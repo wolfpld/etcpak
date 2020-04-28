@@ -190,7 +190,7 @@ int main( int argc, char** argv )
                 const auto localStart = GetTime();
                 if( rgba )
                 {
-                    bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, dither );
+                    bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x );
                 }
                 else
                 {
@@ -252,7 +252,7 @@ int main( int argc, char** argv )
             {
                 TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {
-                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, dither );
+                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width );
                 } );
             }
             else

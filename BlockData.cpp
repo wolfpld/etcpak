@@ -6,7 +6,6 @@
 #include "Debug.hpp"
 #include "MipMap.hpp"
 #include "mmap.hpp"
-#include "ProcessAlpha.hpp"
 #include "ProcessRGB.hpp"
 #include "ProcessDxtc.hpp"
 #include "Tables.hpp"
@@ -256,48 +255,11 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     }
 }
 
-void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither )
+void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width )
 {
     assert( m_type == Etc2_RGBA );
-
-    uint32_t buf[4*4];
-    uint8_t buf8[4*4];
-    int w = 0;
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
-
-    do
-    {
-        auto ptr = buf;
-        auto ptr8 = buf8;
-        for( int x=0; x<4; x++ )
-        {
-            auto v = *src;
-            *ptr++ = v;
-            *ptr8++ = v >> 24;
-            src += width;
-            v = *src;
-            *ptr++ = v;
-            *ptr8++ = v >> 24;
-            src += width;
-            v = *src;
-            *ptr++ = v;
-            *ptr8++ = v >> 24;
-            src += width;
-            v = *src;
-            *ptr++ = v;
-            *ptr8++ = v >> 24;
-            src -= width * 3 - 1;
-        }
-        if( ++w == width/4 )
-        {
-            src += width * 3;
-            w = 0;
-        }
-
-        *dst++ = ProcessAlpha( buf8 );
-        //*dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
-    }
-    while( --blocks );
+    CompressEtc2Rgba( src, dst, blocks, width );
 }
 
 namespace
