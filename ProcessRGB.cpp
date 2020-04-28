@@ -1840,7 +1840,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 
 #ifdef __SSE4_1__
 template<int K>
-static inline __m128i Widen( const __m128i src )
+static etcpak_force_inline __m128i Widen( const __m128i src )
 {
     static_assert( K >= 0 && K <= 7, "Index out of range" );
 
@@ -1874,7 +1874,7 @@ static inline __m128i Widen( const __m128i src )
     }
 }
 
-static inline int GetMulSel( int sel )
+static etcpak_force_inline int GetMulSel( int sel )
 {
     switch( sel )
     {
@@ -1904,7 +1904,7 @@ static inline int GetMulSel( int sel )
 }
 #endif
 
-uint64_t ProcessAlpha_ETC2( const uint8_t* src )
+static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
 {
 #if defined __SSE4_1__
     // Check solid
