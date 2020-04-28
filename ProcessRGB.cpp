@@ -2407,10 +2407,12 @@ void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size
         _mm_store_si128( (__m128i*)(rgba + 8),  c2 );
         _mm_store_si128( (__m128i*)(rgba + 12), c3 );
 
-        __m128i a0 = _mm_shuffle_epi8( c0, _mm_setr_epi32( 0x0f0b0703, -1, -1, -1 ) );
-        __m128i a1 = _mm_shuffle_epi8( c1, _mm_setr_epi32( -1, 0x0f0b0703, -1, -1 ) );
-        __m128i a2 = _mm_shuffle_epi8( c2, _mm_setr_epi32( -1, -1, 0x0f0b0703, -1 ) );
-        __m128i a3 = _mm_shuffle_epi8( c3, _mm_setr_epi32( -1, -1, -1, 0x0f0b0703 ) );
+        __m128i mask = _mm_setr_epi32( 0x0f0b0703, -1, -1, -1 );
+
+        __m128i a0 = _mm_shuffle_epi8( c0, mask );
+        __m128i a1 = _mm_shuffle_epi8( c1, _mm_shuffle_epi32( mask, _MM_SHUFFLE( 3, 3, 0, 3 ) ) );
+        __m128i a2 = _mm_shuffle_epi8( c2, _mm_shuffle_epi32( mask, _MM_SHUFFLE( 3, 0, 3, 3 ) ) );
+        __m128i a3 = _mm_shuffle_epi8( c3, _mm_shuffle_epi32( mask, _MM_SHUFFLE( 0, 3, 3, 3 ) ) );
 
         __m128i s0 = _mm_or_si128( a0, a1 );
         __m128i s1 = _mm_or_si128( a2, a3 );
