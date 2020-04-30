@@ -1988,23 +1988,93 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
     };
 
     // find indices
-    uint8_t buf[16][16];
     int err = std::numeric_limits<int>::max();
     int sel;
     for( int r=0; r<16; r++ )
     {
+        __m128i err1, err2, minerr;
         __m128i recVal16 = rangeMul[r];
+        int rangeErr;
 
-        int rangeErr = 0;
-        for( int i=0; i<16; i++ )
-        {
-            __m128i err1 = _mm_sub_epi16( sr[i], recVal16 );
-            __m128i err = _mm_mullo_epi16( err1, err1 );
-            __m128i minerr = _mm_minpos_epu16( err );
-            uint64_t tmp = _mm_cvtsi128_si64( minerr );
-            buf[r][i] = tmp >> 16;
-            rangeErr += tmp & 0xFFFF;
-        }
+        err1 = _mm_sub_epi16( sr[0], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr = _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[1], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[2], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[3], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[4], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[5], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[6], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[7], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[8], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[9], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[10], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[11], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[12], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[13], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[14], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
+
+        err1 = _mm_sub_epi16( sr[15], recVal16 );
+        err2 = _mm_mullo_epi16( err1, err1 );
+        minerr = _mm_minpos_epu16( err2 );
+        rangeErr += _mm_cvtsi128_si64( minerr ) & 0xFFFF;
 
         if( rangeErr < err )
         {
@@ -2014,21 +2084,114 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
         }
     }
 
+    __m128i err1, err2, minerr;
+    uint64_t idx = 0, tmp;
+    __m128i recVal16 = rangeMul[sel];
+
+    err1 = _mm_sub_epi16( sr[0], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 15*3;
+
+    err1 = _mm_sub_epi16( sr[1], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 14*3;
+
+    err1 = _mm_sub_epi16( sr[2], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 13*3;
+
+    err1 = _mm_sub_epi16( sr[3], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 12*3;
+
+    err1 = _mm_sub_epi16( sr[4], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 11*3;
+
+    err1 = _mm_sub_epi16( sr[5], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 10*3;
+
+    err1 = _mm_sub_epi16( sr[6], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 9*3;
+
+    err1 = _mm_sub_epi16( sr[7], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 8*3;
+
+    err1 = _mm_sub_epi16( sr[8], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 7*3;
+
+    err1 = _mm_sub_epi16( sr[9], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 6*3;
+
+    err1 = _mm_sub_epi16( sr[10], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 5*3;
+
+    err1 = _mm_sub_epi16( sr[11], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 4*3;
+
+    err1 = _mm_sub_epi16( sr[12], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 3*3;
+
+    err1 = _mm_sub_epi16( sr[13], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 2*3;
+
+    err1 = _mm_sub_epi16( sr[14], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 1*3;
+
+    err1 = _mm_sub_epi16( sr[15], recVal16 );
+    err2 = _mm_mullo_epi16( err1, err1 );
+    minerr = _mm_minpos_epu16( err2 );
+    tmp = _mm_cvtsi128_si64( minerr );
+    idx |= ( tmp >> 16 ) << 0*3;
+
     uint16_t rm[8];
     _mm_storeu_si128( (__m128i*)rm, mul );
     uint16_t sm = _mm_cvtsi128_si64( srcMid );
 
     uint64_t d = ( uint64_t( sm ) << 56 ) |
         ( uint64_t( rm[GetMulSel( sel )] ) << 52 ) |
-        ( uint64_t( sel ) << 48 );
-
-    int offset = 45;
-    auto ptr = buf[sel];
-    for( int i=0; i<16; i++ )
-    {
-        d |= uint64_t( *ptr++ ) << offset;
-        offset -= 3;
-    }
+        ( uint64_t( sel ) << 48 ) |
+        idx;
 
     return _bswap64( d );
 #else
