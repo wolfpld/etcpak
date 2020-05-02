@@ -647,9 +647,10 @@ png_do_bgr(png_row_infop row_info, png_bytep row)
 
             for (i = 0, rp = row; i < row_width; i++, rp += 4)
             {
-               png_byte save = *rp;
-               *rp = *(rp + 2);
-               *(rp + 2) = save;
+               png_uint_32 tmp;
+               memcpy (&tmp, rp, 4);
+               tmp = (tmp & 0xFF00FF00) | ((tmp & 0xFF) << 16) | ((tmp & 0xFF0000) >> 16);
+               memcpy (rp, &tmp, 4);
             }
          }
       }
