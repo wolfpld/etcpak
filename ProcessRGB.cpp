@@ -1989,14 +1989,40 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
     __m256i mulErr = _mm256_setzero_si256();
     for( int j=0; j<16; j++ )
     {
-        __m256i localErr = _mm256_set1_epi8( -1 );
         __m256i s16Wide = _mm256_broadcastsi128_si256( sr[j] );
-        for( int i=0; i<8; i++ )
-        {
-            __m256i err1 = _mm256_sub_epi16( s16Wide, modMul[i] );
-            __m256i err2 = _mm256_mullo_epi16( err1, err1 );
-            localErr = _mm256_min_epu16( localErr, err2 );
-        }
+        __m256i err1, err2;
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[0] );
+        __m256i localErr = _mm256_mullo_epi16( err1, err1 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[1] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[2] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[3] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[4] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[5] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[6] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
+        err1 = _mm256_sub_epi16( s16Wide, modMul[7] );
+        err2 = _mm256_mullo_epi16( err1, err1 );
+        localErr = _mm256_min_epu16( localErr, err2 );
+
         // note that this can overflow, but since we're looking for the smallest error, it shouldn't matter
         mulErr = _mm256_adds_epu16( mulErr, localErr );
     }
