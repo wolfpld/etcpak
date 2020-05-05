@@ -12,7 +12,7 @@
 #include "ProcessRGB.hpp"
 #include "Tables.hpp"
 #include "Vector.hpp"
-#ifdef __SSE4_1__
+#if defined __SSE4_1__ || defined __AVX2__
 #  ifdef _MSC_VER
 #    include <intrin.h>
 #    include <Windows.h>
@@ -1944,26 +1944,6 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
     __m128i mul1 = _mm_mulhi_epi16( srcRange, g_alphaRange_SIMD );
     __m128i mul = _mm_add_epi16( mul1, _mm_set1_epi16( 1 ) );
 
-    // wide multiplier
-    __m128i rangeMul[16] = {
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ) ), _mm_setzero_si128() ),
-        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ) ), _mm_setzero_si128() )
-    };
-
     // wide source
     __m128i s16_1 = _mm_shuffle_epi32( s, _MM_SHUFFLE( 3, 2, 3, 2 ) );
     __m128i s16[2] = { _mm_unpacklo_epi8( s, _mm_setzero_si128() ), _mm_unpacklo_epi8( s16_1, _mm_setzero_si128() ) };
@@ -1987,7 +1967,120 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
         Widen<7>( s16[1] )
     };
 
-    // find indices
+#ifdef __AVX2__
+    __m256i srcRangeWide = _mm256_broadcastsi128_si256( srcRange );
+    __m256i srcMidWide = _mm256_broadcastsi128_si256( srcMid );
+
+    __m256i mulWide1 = _mm256_mulhi_epi16( srcRangeWide, g_alphaRange_AVX );
+    __m256i mulWide = _mm256_add_epi16( mulWide1, _mm256_set1_epi16( 1 ) );
+
+    __m256i modMul[8] = {
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[0] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[0] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[1] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[1] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[2] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[2] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[3] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[3] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[4] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[4] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[5] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[5] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[6] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[6] ) ) ), _mm256_setzero_si256() ),
+        _mm256_unpacklo_epi8( _mm256_packus_epi16( _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[7] ) ), _mm256_add_epi16( srcMidWide, _mm256_mullo_epi16( mulWide, g_alpha_AVX[7] ) ) ), _mm256_setzero_si256() ),
+    };
+
+    // find selector
+    __m256i mulErr = _mm256_setzero_si256();
+    for( int j=0; j<16; j++ )
+    {
+        __m256i localErr = _mm256_set1_epi8( -1 );
+        __m256i s16Wide = _mm256_broadcastsi128_si256( sr[j] );
+        for( int i=0; i<8; i++ )
+        {
+            __m256i err1 = _mm256_sub_epi16( s16Wide, modMul[i] );
+            __m256i err2 = _mm256_mullo_epi16( err1, err1 );
+            localErr = _mm256_min_epu16( localErr, err2 );
+        }
+        // note that this can overflow, but since we're looking for the smallest error, it shouldn't matter
+        mulErr = _mm256_adds_epu16( mulErr, localErr );
+    }
+    uint64_t minPos1 = _mm_cvtsi128_si64( _mm_minpos_epu16( _mm256_castsi256_si128( mulErr ) ) );
+    uint64_t minPos2 = _mm_cvtsi128_si64( _mm_minpos_epu16( _mm256_extracti128_si256( mulErr, 1 ) ) );
+    int sel = ( ( minPos1 & 0xFFFF ) < ( minPos2 & 0xFFFF ) ) ? ( minPos1 >> 16 ) : ( 8 + ( minPos2 >> 16 ) );
+
+    __m128i recVal16;
+    switch( sel )
+    {
+    case 0:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ) ), _mm_setzero_si128() );
+        break;
+    case 1:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ) ), _mm_setzero_si128() );
+        break;
+    case 2:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ) ), _mm_setzero_si128() );
+        break;
+    case 3:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ) ), _mm_setzero_si128() );
+        break;
+    case 4:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ) ), _mm_setzero_si128() );
+        break;
+    case 5:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ) ), _mm_setzero_si128() );
+        break;
+    case 6:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ) ), _mm_setzero_si128() );
+        break;
+    case 7:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ) ), _mm_setzero_si128() );
+        break;
+    case 8:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ) ), _mm_setzero_si128() );
+        break;
+    case 9:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ) ), _mm_setzero_si128() );
+        break;
+    case 10:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ) ), _mm_setzero_si128() );
+        break;
+    case 11:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ) ), _mm_setzero_si128() );
+        break;
+    case 12:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ) ), _mm_setzero_si128() );
+        break;
+    case 13:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ) ), _mm_setzero_si128() );
+        break;
+    case 14:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ) ), _mm_setzero_si128() );
+        break;
+    case 15:
+        recVal16 = _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ) ), _mm_setzero_si128() );
+        break;
+    default:
+        assert( false );
+        break;
+    }
+#else
+    // wide multiplier
+    __m128i rangeMul[16] = {
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<0>( mul ), g_alpha_SIMD[0] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[1] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[2] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<1>( mul ), g_alpha_SIMD[3] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<2>( mul ), g_alpha_SIMD[4] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[5] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[6] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<3>( mul ), g_alpha_SIMD[7] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[8] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[9] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[10] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[11] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[12] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<4>( mul ), g_alpha_SIMD[13] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[14] ) ) ), _mm_setzero_si128() ),
+        _mm_unpacklo_epi8( _mm_packus_epi16( _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ), _mm_add_epi16( srcMid, _mm_mullo_epi16( Widen<5>( mul ), g_alpha_SIMD[15] ) ) ), _mm_setzero_si128() )
+    };
+
+    // find selector
     int err = std::numeric_limits<int>::max();
     int sel;
     for( int r=0; r<16; r++ )
@@ -2084,9 +2177,12 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
         }
     }
 
+    __m128i recVal16 = rangeMul[sel];
+#endif
+
+    // find indices
     __m128i err1, err2, minerr;
     uint64_t idx = 0, tmp;
-    __m128i recVal16 = rangeMul[sel];
 
     err1 = _mm_sub_epi16( sr[0], recVal16 );
     err2 = _mm_mullo_epi16( err1, err1 );
