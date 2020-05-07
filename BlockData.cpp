@@ -456,7 +456,7 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
     }
 }
 
-static etcpak_force_inline void DecodeAlphaPart( uint32_t* l[4], uint64_t d )
+static etcpak_force_inline void DecodeAlphaPart( uint64_t d, uint32_t* dst, uint32_t w )
 {
     d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
         ( ( d & 0x00FF000000000000 ) >> 40 ) |
@@ -480,8 +480,7 @@ static etcpak_force_inline void DecodeAlphaPart( uint32_t* l[4], uint64_t d )
         {
             const auto mod = tbl[ ( d >> o ) & 0x7 ];
             const auto a = clampu8( base + mod * mul );
-            *l[j] = ( *l[j] & 0x00FFFFFF ) | ( a << 24 );
-            l[j]++;
+            dst[j*w+i] = ( dst[j*w+i] & 0x00FFFFFF ) | ( a << 24 );
             o -= 3;
         }
     }
@@ -512,14 +511,8 @@ BitmapPtr BlockData::DecodeRGBA()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
-#if 0
-    uint32_t* l[4];
-    l[0] = ret->Data();
-    l[1] = l[0] + m_size.x;
-    l[2] = l[1] + m_size.x;
-    l[3] = l[2] + m_size.x;
-
     const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
 
     for( int y=0; y<m_size.y/4; y++ )
     {
@@ -527,22 +520,12 @@ BitmapPtr BlockData::DecodeRGBA()
         {
             uint64_t a = *src++;
             uint64_t d = *src++;
-            DecodeRGBPart( l, d );
-
-            for( int i=0; i<4; i++ )
-            {
-                l[i] -= 4;
-            }
-
-            DecodeAlphaPart( l, a );
+            DecodeRGBPart( d, dst, m_size.x );
+            DecodeAlphaPart( a, dst, m_size.x );
+            dst += 4;
         }
-
-        for( int i=0; i<4; i++ )
-        {
-            l[i] += m_size.x * 3;
-        }
+        dst += m_size.x*3;
     }
-#endif
 
     return ret;
 }
