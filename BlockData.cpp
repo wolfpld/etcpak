@@ -458,14 +458,7 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
 
 static etcpak_force_inline void DecodeAlphaPart( uint64_t d, uint32_t* dst, uint32_t w )
 {
-    d = ( ( d & 0xFF00000000000000 ) >> 56 ) |
-        ( ( d & 0x00FF000000000000 ) >> 40 ) |
-        ( ( d & 0x0000FF0000000000 ) >> 24 ) |
-        ( ( d & 0x000000FF00000000 ) >> 8 ) |
-        ( ( d & 0x00000000FF000000 ) << 8 ) |
-        ( ( d & 0x0000000000FF0000 ) << 24 ) |
-        ( ( d & 0x000000000000FF00 ) << 40 ) |
-        ( ( d & 0x00000000000000FF ) << 56 );
+    d = _bswap64( d );
 
     unsigned int base = d >> 56;
     unsigned int mul = ( d >> 52 ) & 0xF;
