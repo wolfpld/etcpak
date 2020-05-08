@@ -306,10 +306,10 @@ static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uin
     {
         for( int i=0; i<4; i++ )
         {
-            col = _mm_add_epi16( col, chco );
             __m128i c = _mm_srai_epi16( col, 2 );
             __m128i s = _mm_packus_epi16( c, c );
             dst[j*w+i] = _mm_cvtsi128_si32( s );
+            col = _mm_add_epi16( col, chco );
         }
         col = _mm_add_epi16( col, cvco );
     }
