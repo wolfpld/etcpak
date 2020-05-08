@@ -301,11 +301,20 @@ static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uin
     {
         for (auto i = 0; i < 4; i++)
         {
-            uint32_t r = clampu8((i * (rh - ro) + j * (rv - ro) + 4 * ro + 2) >> 2);
-            uint32_t g = clampu8((i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2);
-            uint32_t b = clampu8((i * (bh - bo) + j * (bv - bo) + 4 * bo + 2) >> 2);
-
-            dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+            const uint32_t r = (i * (rh - ro) + j * (rv - ro) + 4 * ro + 2) >> 2;
+            const uint32_t g = (i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2;
+            const uint32_t b = (i * (bh - bo) + j * (bv - bo) + 4 * bo + 2) >> 2;
+            if( ( ( r | g | b ) & ~0xFF ) == 0 )
+            {
+                dst[j*w+i] = r | ( g << 8 ) | ( b << 16 ) | 0xFF000000;
+            }
+            else
+            {
+                const auto rc = clampu8( r );
+                const auto gc = clampu8( g );
+                const auto bc = clampu8( b );
+                dst[j*w+i] = rc | ( gc << 8 ) | ( bc << 16 ) | 0xFF000000;
+            }
         }
     }
 }
