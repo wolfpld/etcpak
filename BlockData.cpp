@@ -297,7 +297,25 @@ static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uin
     const auto go = expand7(go0 | go1);
     const auto ro = expand6((block >> (57 - 32)) & 0x3F);
 
-#ifdef __SSE4_1__
+#ifdef __AVX2__
+    const auto R0 = 4*ro+2;
+    const auto G0 = 4*go+2;
+    const auto B0 = 4*bo+2;
+    const auto RHO = rh-ro;
+    const auto GHO = gh-go;
+    const auto BHO = bh-bo;
+
+    __m256i cvco = _mm256_setr_epi16( rv - ro, gv - go, bv - bo, 0, rv - ro, gv - go, bv - bo, 0, rv - ro, gv - go, bv - bo, 0, rv - ro, gv - go, bv - bo, 0 );
+    __m256i col = _mm256_setr_epi16( R0, G0, B0, 0xFFF, R0+RHO, G0+GHO, B0+BHO, 0xFFF, R0+2*RHO, G0+2*GHO, B0+2*BHO, 0xFFF, R0+3*RHO, G0+3*GHO, B0+3*BHO, 0xFFF );
+
+    for( int j=0; j<4; j++ )
+    {
+        __m256i c = _mm256_srai_epi16( col, 2 );
+        __m128i s = _mm_packus_epi16( _mm256_castsi256_si128( c ), _mm256_extracti128_si256( c, 1 ) );
+        _mm_storeu_si128( (__m128i*)(dst+j*w), s );
+        col = _mm256_add_epi16( col, cvco );
+    }
+#elif defined __SSE4_1__
     __m128i chco = _mm_setr_epi16( rh - ro, gh - go, bh - bo, 0, 0, 0, 0, 0 );
     __m128i cvco = _mm_setr_epi16( (rv - ro) - 4 * (rh - ro), (gv - go) - 4 * (gh - go), (bv - bo) - 4 * (bh - bo), 0, 0, 0, 0, 0 );
     __m128i col = _mm_setr_epi16( 4*ro+2, 4*go+2, 4*bo+2, 0xFFF, 0, 0, 0, 0 );
