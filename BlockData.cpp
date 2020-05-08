@@ -297,9 +297,26 @@ static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uin
     const auto go = expand7(go0 | go1);
     const auto ro = expand6((block >> (57 - 32)) & 0x3F);
 
-    for (auto j = 0; j < 4; j++)
+#ifdef __SSE4_1__
+    __m128i chco = _mm_setr_epi16( rh - ro, gh - go, bh - bo, 0, 0, 0, 0, 0 );
+    __m128i cvco = _mm_setr_epi16( (rv - ro) - 4 * (rh - ro), (gv - go) - 4 * (gh - go), (bv - bo) - 4 * (bh - bo), 0, 0, 0, 0, 0 );
+    __m128i col = _mm_setr_epi16( 4*ro+2, 4*go+2, 4*bo+2, 0xFFF, 0, 0, 0, 0 );
+
+    for( int j=0; j<4; j++ )
     {
-        for (auto i = 0; i < 4; i++)
+        for( int i=0; i<4; i++ )
+        {
+            col = _mm_add_epi16( col, chco );
+            __m128i c = _mm_srai_epi16( col, 2 );
+            __m128i s = _mm_packus_epi16( c, c );
+            dst[j*w+i] = _mm_cvtsi128_si32( s );
+        }
+        col = _mm_add_epi16( col, cvco );
+    }
+#else
+    for( int j=0; j<4; j++ )
+    {
+        for( int i=0; i<4; i++ )
         {
             const uint32_t r = (i * (rh - ro) + j * (rv - ro) + 4 * ro + 2) >> 2;
             const uint32_t g = (i * (gh - go) + j * (gv - go) + 4 * go + 2) >> 2;
@@ -317,6 +334,7 @@ static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uin
             }
         }
     }
+#endif
 }
 
 static etcpak_force_inline void DecodePlanarAlpha( uint64_t block, uint64_t alpha, uint32_t* dst, uint32_t w )
