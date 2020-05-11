@@ -403,7 +403,27 @@ static etcpak_force_inline void DecodePlanarAlpha( uint64_t block, uint64_t alph
     const int32_t mul = ( alpha >> 52 ) & 0xF;
     const auto tbl = g_alpha[( alpha >> 48 ) & 0xF];
 
-#if defined __SSE4_1__
+#ifdef __ARM_NEON
+    uint64_t init = uint64_t(uint16_t(rh-ro)) | ( uint64_t(uint16_t(gh-go)) << 16 ) | ( uint64_t(uint16_t(bh-bo)) << 32 );
+    int16x8_t chco = vreinterpretq_s16_u64( vdupq_n_u64( init ) );
+    init = uint64_t(uint16_t( (rv-ro) - 4 * (rh-ro) )) | ( uint64_t(uint16_t( (gv-go) - 4 * (gh-go) )) << 16 ) | ( uint64_t(uint16_t( (bv-bo) - 4 * (bh-bo) )) << 32 );
+    int16x8_t cvco = vreinterpretq_s16_u64( vdupq_n_u64( init ) );
+    init = uint64_t(4*ro+2) | ( uint64_t(4*go+2) << 16 ) | ( uint64_t(4*bo+2) << 32 );
+    int16x8_t col = vreinterpretq_s16_u64( vdupq_n_u64( init ) );
+
+    for( int j=0; j<4; j++ )
+    {
+        for( int i=0; i<4; i++ )
+        {
+            const auto amod = tbl[(alpha >> ( 45 - j*3 - i*12 )) & 0x7];
+            const uint32_t a = clampu8( base + amod * mul );
+            uint8x8_t c = vqshrun_n_s16( col, 2 );
+            dst[j*w+i] = vget_lane_u32( vreinterpret_u32_u8( c ), 0 ) | ( a << 24 );
+            col = vaddq_s16( col, chco );
+        }
+        col = vaddq_s16( col, cvco );
+    }
+#elif defined __SSE4_1__
     __m128i chco = _mm_setr_epi16( rh - ro, gh - go, bh - bo, 0, 0, 0, 0, 0 );
     __m128i cvco = _mm_setr_epi16( (rv - ro) - 4 * (rh - ro), (gv - go) - 4 * (gh - go), (bv - bo) - 4 * (bh - bo), 0, 0, 0, 0, 0 );
     __m128i col = _mm_setr_epi16( 4*ro+2, 4*go+2, 4*bo+2, 0, 0, 0, 0, 0 );
