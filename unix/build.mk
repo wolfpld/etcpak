@@ -5,8 +5,14 @@ INCLUDES :=
 LIBS := -lpthread
 IMAGE := etcpak
 
-SRC := $(shell egrep 'ClCompile.*cpp"' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
-SRC2 := $(shell egrep 'ClCompile.*c"' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
+FILTER := ../getopt/getopt.c
+
+BASE := $(shell egrep 'ClCompile.*cpp"' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
+BASE2 := $(shell egrep 'ClCompile.*c"' ../build/etcpak.vcxproj | sed -e 's/.*\"\(.*\)\".*/\1/' | sed -e 's@\\@/@g')
+
+SRC := $(filter-out $(FILTER),$(BASE))
+SRC2 := $(filter-out $(FILTER),$(BASE2))
+
 OBJ := $(SRC:%.cpp=%.o)
 OBJ2 := $(SRC2:%.c=%.o)
 
