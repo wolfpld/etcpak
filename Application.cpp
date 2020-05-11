@@ -5,7 +5,12 @@
 #include <memory>
 #include <string.h>
 
-#include "getopt/getopt.h"
+#ifdef _MSC_VER
+#  include "getopt/getopt.h"
+#else
+#  include <unistd.h>
+#  include <getopt.h>
+#endif
 
 #include "Bitmap.hpp"
 #include "BlockData.hpp"
