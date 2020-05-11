@@ -11,6 +11,10 @@
 #include "Tables.hpp"
 #include "TaskDispatch.hpp"
 
+#ifdef __ARM_NEON
+#  include <arm_neon.h>
+#endif
+
 #ifdef __SSE4_1__
 #  ifdef _MSC_VER
 #    include <intrin.h>
@@ -297,7 +301,25 @@ static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uin
     const auto go = expand7(go0 | go1);
     const auto ro = expand6((block >> (57 - 32)) & 0x3F);
 
-#ifdef __AVX2__
+#ifdef __ARM_NEON
+    uint64_t init = uint64_t(uint16_t(rh-ro)) | ( uint64_t(uint16_t(gh-go)) << 16 ) | ( uint64_t(uint16_t(bh-bo)) << 32 );
+    int16x8_t chco = vreinterpretq_s16_u64( vdupq_n_u64( init ) );
+    init = uint64_t(uint16_t( (rv-ro) - 4 * (rh-ro) )) | ( uint64_t(uint16_t( (gv-go) - 4 * (gh-go) )) << 16 ) | ( uint64_t(uint16_t( (bv-bo) - 4 * (bh-bo) )) << 32 );
+    int16x8_t cvco = vreinterpretq_s16_u64( vdupq_n_u64( init ) );
+    init = uint64_t(4*ro+2) | ( uint64_t(4*go+2) << 16 ) | ( uint64_t(4*bo+2) << 32 ) | ( uint64_t(0xFFF) << 48 );
+    int16x8_t col = vreinterpretq_s16_u64( vdupq_n_u64( init ) );
+
+    for( int j=0; j<4; j++ )
+    {
+        for( int i=0; i<4; i++ )
+        {
+            uint8x8_t c = vqshrun_n_s16( col, 2 );
+            vst1_lane_u32( dst+j*w+i, vreinterpret_u32_u8( c ), 0 );
+            col = vaddq_s16( col, chco );
+        }
+        col = vaddq_s16( col, cvco );
+    }
+#elif defined __AVX2__
     const auto R0 = 4*ro+2;
     const auto G0 = 4*go+2;
     const auto B0 = 4*bo+2;
