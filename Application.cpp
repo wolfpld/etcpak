@@ -42,7 +42,7 @@ void Usage()
     fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
     fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
     fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
-    fprintf( stderr, "  --dxt1          use DXT1 compression\n\n" );
+    fprintf( stderr, "  --dxtc          use DXT1 compression\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -57,7 +57,7 @@ int main( int argc, char** argv )
     bool dither = false;
     bool etc2 = false;
     bool rgba = false;
-    bool dxt1 = false;
+    bool dxtc = false;
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
@@ -71,13 +71,13 @@ int main( int argc, char** argv )
     {
         OptEtc2,
         OptRgba,
-        OptDxt1
+        OptDxtc
     };
 
     struct option longopts[] = {
         { "etc2", no_argument, nullptr, OptEtc2 },
         { "rgba", no_argument, nullptr, OptRgba },
-        { "dxt1", no_argument, nullptr, OptDxt1 },
+        { "dxtc", no_argument, nullptr, OptDxtc },
         {}
     };
 
@@ -114,8 +114,8 @@ int main( int argc, char** argv )
             rgba = true;
             etc2 = true;
             break;
-        case OptDxt1:
-            dxt1 = true;
+        case OptDxtc:
+            dxtc = true;
             break;
         default:
             break;
@@ -174,7 +174,7 @@ int main( int argc, char** argv )
         else
         {
             auto start = GetTime();
-            auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max(), !dxt1 );
+            auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max(), !dxtc );
             auto data = bmp->Data();
             auto end = GetTime();
             printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
@@ -189,11 +189,11 @@ int main( int argc, char** argv )
                 else channel = Channels::RGB;
                 if( rgba ) type = BlockData::Etc2_RGBA;
                 else if( etc2 ) type = BlockData::Etc2_RGB;
-                else if( dxt1 ) type = BlockData::Dxt1;
+                else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
                 else type = BlockData::Etc1;
                 auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
                 const auto localStart = GetTime();
-                if( rgba )
+                if( rgba || type == BlockData::Dxt5 )
                 {
                     bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x );
                 }
@@ -217,7 +217,7 @@ int main( int argc, char** argv )
     }
     else
     {
-        DataProvider dp( input, mipmap, !dxt1 );
+        DataProvider dp( input, mipmap, !dxtc );
         auto num = dp.NumberOfParts();
 
         BlockData::Type type;
@@ -232,9 +232,16 @@ int main( int argc, char** argv )
                 type = BlockData::Etc2_RGB;
             }
         }
-        else if( dxt1 )
+        else if( dxtc )
         {
-            type = BlockData::Dxt1;
+            if( dp.Alpha() )
+            {
+                type = BlockData::Dxt5;
+            }
+            else
+            {
+                type = BlockData::Dxt1;
+            }
         }
         else
         {
@@ -253,7 +260,7 @@ int main( int argc, char** argv )
         {
             auto part = dp.NextPart();
 
-            if( type == BlockData::Etc2_RGBA )
+            if( type == BlockData::Etc2_RGBA || type == BlockData::Dxt5 )
             {
                 TaskDispatch::Queue( [part, i, &bd, &dither]()
                 {

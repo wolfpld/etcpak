@@ -56,6 +56,12 @@ BlockData::BlockData( const char* fn )
         case 6:
             m_type = Etc1;
             break;
+        case 7:
+            m_type = Dxt1;
+            break;
+        case 11:
+            m_type = Dxt5;
+            break;
         case 22:
             m_type = Etc2_RGB;
             break;
@@ -125,6 +131,9 @@ static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FIL
     case BlockData::Dxt1:
         *dst++ = 7;
         break;
+    case BlockData::Dxt5:
+        *dst++ = 11;
+        break;
     default:
         assert( false );
         break;
@@ -178,7 +187,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Dxt5 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
@@ -198,7 +207,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Dxt5 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = new uint8_t[m_maplen];
@@ -261,9 +270,20 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
 
 void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width )
 {
-    assert( m_type == Etc2_RGBA );
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
-    CompressEtc2Rgba( src, dst, blocks, width );
+
+    switch( m_type )
+    {
+    case Etc2_RGBA:
+        CompressEtc2Rgba( src, dst, blocks, width );
+        break;
+    case Dxt5:
+        CompressDxt5( src, dst, blocks, width );
+        break;
+    default:
+        assert( false );
+        break;
+    }
 }
 
 namespace
@@ -471,13 +491,18 @@ static etcpak_force_inline void DecodePlanarAlpha( uint64_t block, uint64_t alph
 
 BitmapPtr BlockData::Decode()
 {
-    if( m_type == Etc2_RGBA )
+    switch( m_type )
     {
-        return DecodeRGBA();
-    }
-    else
-    {
+    case Etc1:
+    case Etc2_RGB:
         return DecodeRGB();
+    case Etc2_RGBA:
+        return DecodeRGBA();
+    case Dxt1:
+    case Dxt5:
+    default:
+        assert( false );
+        return nullptr;
     }
 }
 
