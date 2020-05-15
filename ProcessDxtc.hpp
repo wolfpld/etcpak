@@ -5,5 +5,6 @@
 #include <stdint.h>
 
 void CompressDxt1( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
+void CompressDxt5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
 
 #endif
