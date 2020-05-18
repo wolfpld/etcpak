@@ -499,6 +499,7 @@ BitmapPtr BlockData::Decode()
     case Etc2_RGBA:
         return DecodeRGBA();
     case Dxt1:
+        return DecodeDxt1();
     case Dxt5:
     default:
         assert( false );
@@ -804,6 +805,117 @@ BitmapPtr BlockData::DecodeRGBA()
             uint64_t a = *src++;
             uint64_t d = *src++;
             DecodeRGBAPart( d, a, dst, m_size.x );
+            dst += 4;
+        }
+        dst += m_size.x*3;
+    }
+
+    return ret;
+}
+
+static etcpak_force_inline void DecodeDxt1Part( uint64_t d, uint32_t* dst, uint32_t w )
+{
+    uint8_t* in = (uint8_t*)&d;
+    uint16_t c0, c1;
+    uint32_t idx;
+    memcpy( &c0, in, 2 );
+    memcpy( &c1, in+2, 2 );
+    memcpy( &idx, in+4, 4 );
+
+    uint8_t r0 = ( ( c0 & 0xF800 ) >> 8 ) | ( ( c0 & 0xF800 ) >> 13 );
+    uint8_t g0 = ( ( c0 & 0x07E0 ) >> 3 ) | ( ( c0 & 0x07E0 ) >> 9 );
+    uint8_t b0 = ( ( c0 & 0x001F ) << 3 ) | ( ( c0 & 0x001F ) >> 2 );
+
+    uint8_t r1 = ( ( c1 & 0xF800 ) >> 8 ) | ( ( c1 & 0xF800 ) >> 13 );
+    uint8_t g1 = ( ( c1 & 0x07E0 ) >> 3 ) | ( ( c1 & 0x07E0 ) >> 9 );
+    uint8_t b1 = ( ( c1 & 0x001F ) << 3 ) | ( ( c1 & 0x001F ) >> 2 );
+
+    uint32_t r, g, b;
+    if( c0 > c1 )
+    {
+        for( int k=0; k<4; k++ )
+        {
+            for( int l=0; l<4; l++ )
+            {
+                int code = ( idx >> (2*(4*k+l)) ) & 0x3;
+                switch( code )
+                {
+                case 0:
+                    r = r0;
+                    g = g0;
+                    b = b0;
+                    break;
+                case 1:
+                    r = r1;
+                    g = g1;
+                    b = b1;
+                    break;
+                case 2:
+                    r = (2*r0+r1)/3;
+                    g = (2*g0+g1)/3;
+                    b = (2*b0+b1)/3;
+                    break;
+                case 3:
+                    r = (2*r1+r0)/3;
+                    g = (2*g1+g0)/3;
+                    b = (2*b1+b0)/3;
+                    break;
+                }
+                uint32_t col = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
+                memcpy( dst+l+w*k, &col, 4 );
+            }
+        }
+    }
+    else
+    {
+        for( int k=0; k<4; k++ )
+        {
+            for( int l=0; l<4; l++ )
+            {
+                int code = ( idx >> (2*(4*k+l)) ) & 0x3;
+                switch( code )
+                {
+                case 0:
+                    r = r0;
+                    g = g0;
+                    b = b0;
+                    break;
+                case 1:
+                    r = r1;
+                    g = g1;
+                    b = b1;
+                    break;
+                case 2:
+                    r = (int(r0)+r1)/2;
+                    g = (int(g0)+g1)/2;
+                    b = (int(b0)+b1)/2;
+                    break;
+                case 3:
+                    r = 0;
+                    g = 0;
+                    b = 0;
+                    break;
+                }
+                uint32_t col = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
+                memcpy( dst+l+w*k, &col, 4 );
+            }
+        }
+    }
+}
+
+BitmapPtr BlockData::DecodeDxt1()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
+
+    for( int y=0; y<m_size.y/4; y++ )
+    {
+        for( int x=0; x<m_size.x/4; x++ )
+        {
+            uint64_t d = *src++;
+            DecodeDxt1Part( d, dst, m_size.x );
             dst += 4;
         }
         dst += m_size.x*3;
