@@ -830,77 +830,69 @@ static etcpak_force_inline void DecodeDxt1Part( uint64_t d, uint32_t* dst, uint3
     uint8_t g1 = ( ( c1 & 0x07E0 ) >> 3 ) | ( ( c1 & 0x07E0 ) >> 9 );
     uint8_t b1 = ( ( c1 & 0x001F ) << 3 ) | ( ( c1 & 0x001F ) >> 2 );
 
+    uint32_t dict[4];
+
+    dict[0] = 0xFF000000 | ( b0 << 16 ) | ( g0 << 8 ) | r0;
+    dict[1] = 0xFF000000 | ( b1 << 16 ) | ( g1 << 8 ) | r1;
+
     uint32_t r, g, b;
     if( c0 > c1 )
     {
-        for( int k=0; k<4; k++ )
-        {
-            for( int l=0; l<4; l++ )
-            {
-                int code = ( idx >> (2*(4*k+l)) ) & 0x3;
-                switch( code )
-                {
-                case 0:
-                    r = r0;
-                    g = g0;
-                    b = b0;
-                    break;
-                case 1:
-                    r = r1;
-                    g = g1;
-                    b = b1;
-                    break;
-                case 2:
-                    r = (2*r0+r1)/3;
-                    g = (2*g0+g1)/3;
-                    b = (2*b0+b1)/3;
-                    break;
-                case 3:
-                    r = (2*r1+r0)/3;
-                    g = (2*g1+g0)/3;
-                    b = (2*b1+b0)/3;
-                    break;
-                }
-                uint32_t col = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
-                memcpy( dst+l+w*k, &col, 4 );
-            }
-        }
+        r = (2*r0+r1)/3;
+        g = (2*g0+g1)/3;
+        b = (2*b0+b1)/3;
+        dict[2] = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
+        r = (2*r1+r0)/3;
+        g = (2*g1+g0)/3;
+        b = (2*b1+b0)/3;
+        dict[3] = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
     }
     else
     {
-        for( int k=0; k<4; k++ )
-        {
-            for( int l=0; l<4; l++ )
-            {
-                int code = ( idx >> (2*(4*k+l)) ) & 0x3;
-                switch( code )
-                {
-                case 0:
-                    r = r0;
-                    g = g0;
-                    b = b0;
-                    break;
-                case 1:
-                    r = r1;
-                    g = g1;
-                    b = b1;
-                    break;
-                case 2:
-                    r = (int(r0)+r1)/2;
-                    g = (int(g0)+g1)/2;
-                    b = (int(b0)+b1)/2;
-                    break;
-                case 3:
-                    r = 0;
-                    g = 0;
-                    b = 0;
-                    break;
-                }
-                uint32_t col = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
-                memcpy( dst+l+w*k, &col, 4 );
-            }
-        }
+        r = (int(r0)+r1)/2;
+        g = (int(g0)+g1)/2;
+        b = (int(b0)+b1)/2;
+        dict[2] = 0xFF000000 | ( b << 16 ) | ( g << 8 ) | r;
+        dict[3] = 0xFF000000;
     }
+
+    memcpy( dst+0, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+1, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+2, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+3, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    dst += w;
+
+    memcpy( dst+0, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+1, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+2, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+3, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    dst += w;
+
+    memcpy( dst+0, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+1, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+2, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+3, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    dst += w;
+
+    memcpy( dst+0, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+1, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+2, dict + (idx & 0x3), 4 );
+    idx >>= 2;
+    memcpy( dst+3, dict + (idx & 0x3), 4 );
 }
 
 BitmapPtr BlockData::DecodeDxt1()
