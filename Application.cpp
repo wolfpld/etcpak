@@ -16,7 +16,6 @@
 #include "BlockData.hpp"
 #include "DataProvider.hpp"
 #include "Debug.hpp"
-#include "Dither.hpp"
 #include "Error.hpp"
 #include "System.hpp"
 #include "TaskDispatch.hpp"

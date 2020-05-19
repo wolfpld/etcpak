@@ -1,3 +1,4 @@
+#include "Dither.hpp"
 #include "ForceInline.hpp"
 #include "ProcessDxtc.hpp"
 
@@ -648,6 +649,38 @@ void CompressDxt1( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t w
         }
         while( --blocks );
     }
+}
+
+void CompressDxt1Dither( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+{
+    uint32_t buf[4*4];
+    int i = 0;
+
+    auto ptr = dst;
+    do
+    {
+        auto tmp = (char*)buf;
+        memcpy( tmp,        src + width * 0, 4*4 );
+        memcpy( tmp + 4*4,  src + width * 1, 4*4 );
+        memcpy( tmp + 8*4,  src + width * 2, 4*4 );
+        memcpy( tmp + 12*4, src + width * 3, 4*4 );
+        src += 4;
+        if( ++i == width/4 )
+        {
+            src += width * 3;
+            i = 0;
+        }
+
+        Dither( (uint8_t*)buf );
+
+        const auto c = ProcessRGB( (uint8_t*)buf );
+        uint8_t fix[8];
+        memcpy( fix, &c, 8 );
+        for( int j=4; j<8; j++ ) fix[j] = DxtcIndexTable[fix[j]];
+        memcpy( ptr, fix, sizeof( uint64_t ) );
+        ptr++;
+    }
+    while( --blocks );
 }
 
 void CompressDxt5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )

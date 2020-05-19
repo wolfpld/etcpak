@@ -259,7 +259,14 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             CompressEtc2Rgb( src, dst, blocks, width );
             break;
         case Dxt1:
-            CompressDxt1( src, dst, blocks, width );
+            if( dither )
+            {
+                CompressDxt1Dither( src, dst, blocks, width );
+            }
+            else
+            {
+                CompressDxt1( src, dst, blocks, width );
+            }
             break;
         default:
             assert( false );
