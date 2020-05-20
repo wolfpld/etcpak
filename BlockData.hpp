@@ -41,6 +41,7 @@ private:
     etcpak_no_inline BitmapPtr DecodeRGB();
     etcpak_no_inline BitmapPtr DecodeRGBA();
     etcpak_no_inline BitmapPtr DecodeDxt1();
+    etcpak_no_inline BitmapPtr DecodeDxt5();
 
     uint8_t* m_data;
     v2i m_size;
