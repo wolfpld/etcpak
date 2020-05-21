@@ -742,6 +742,7 @@ void CompressDxt5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t w
         for( int i=0; i<16; i++ )
         {
             alpha[i] = rgba[i] >> 24;
+            rgba[i] &= 0xFFFFFF;
         }
         *ptr++ = ProcessAlpha( alpha );
 
