@@ -591,6 +591,40 @@ static etcpak_force_inline void ProcessRGB_AVX( const uint8_t* src, char*& dst )
 }
 #endif
 
+static const uint8_t AlphaIndexTable[8] = { 1, 7, 6, 5, 4, 3, 2, 0 };
+
+static etcpak_force_inline uint64_t ProcessAlpha( const uint8_t* src )
+{
+    uint8_t solid8 = *src;
+    uint16_t solid16 = uint16_t( solid8 ) | ( uint16_t( solid8 ) << 8 );
+    uint32_t solid32 = uint32_t( solid16 ) | ( uint32_t( solid16 ) << 16 );
+    uint64_t solid64 = uint64_t( solid32 ) | ( uint64_t( solid32 ) << 32 );
+    if( memcmp( src, &solid64, 8 ) == 0 && memcmp( src+8, &solid64, 8 ) == 0 )
+    {
+        return solid8;
+    }
+
+    uint8_t min = src[0];
+    uint8_t max = min;
+    for( int i=1; i<16; i++ )
+    {
+        const auto v = src[i];
+        if( v > max ) max = v;
+        else if( v < min ) min = v;
+    }
+
+    uint32_t range = ( 8 << 13 ) / ( 1 + max - min );
+    uint64_t data = 0;
+    for( int i=0; i<16; i++ )
+    {
+        uint8_t a = src[i] - min;
+        uint64_t idx = AlphaIndexTable[( a * range ) >> 13];
+        data |= idx << (i*3);
+    }
+
+    return max | ( min << 8 ) | ( data << 16 );
+}
+
 void CompressDxt1( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
 {
 #ifdef __AVX2__
@@ -705,7 +739,11 @@ void CompressDxt5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t w
             i = 0;
         }
 
-        *ptr++ = 0; // alpha
+        for( int i=0; i<16; i++ )
+        {
+            alpha[i] = rgba[i] >> 24;
+        }
+        *ptr++ = ProcessAlpha( alpha );
 
         const auto c = ProcessRGB( (uint8_t*)rgba );
         uint8_t fix[8];
