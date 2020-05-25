@@ -58,6 +58,13 @@ static const uint8_t DxtcIndexTable[256] = {
     5,      7,      6,      4,      13,     15,     14,     12,     9,      11,     10,     8,      1,      3,      2,      0
 };
 
+static const uint8_t AlphaIndexTable_SSE[64] = {
+    9,      15,     14,     13,     12,     11,     10,     8,      57,     63,     62,     61,     60,     59,     58,     56,
+    49,     55,     54,     53,     52,     51,     50,     48,     41,     47,     46,     45,     44,     43,     42,     40,
+    33,     39,     38,     37,     36,     35,     34,     32,     25,     31,     30,     29,     28,     27,     26,     24,
+    17,     23,     22,     21,     20,     19,     18,     16,     1,      7,      6,      5,      4,      3,      2,      0,
+};
+
 static const uint16_t DivTable[255*3+1] = {
     0xffff, 0xffff, 0xffff, 0xffff, 0xcccc, 0xaaaa, 0x9249, 0x8000, 0x71c7, 0x6666, 0x5d17, 0x5555, 0x4ec4, 0x4924, 0x4444, 0x4000,
     0x3c3c, 0x38e3, 0x35e5, 0x3333, 0x30c3, 0x2e8b, 0x2c85, 0x2aaa, 0x28f5, 0x2762, 0x25ed, 0x2492, 0x234f, 0x2222, 0x2108, 0x2000,
@@ -159,6 +166,24 @@ static const uint16_t DivTableNEON[255*3+1] = {
     0x00ae, 0x00ad, 0x00ad, 0x00ad, 0x00ad, 0x00ac, 0x00ac, 0x00ac, 0x00ac, 0x00ac, 0x00ab, 0x00ab, 0x00ab, 0x00ab,
 };
 
+static const uint16_t DivTableAlpha[256] = {
+    0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xe38e, 0xcccc, 0xba2e, 0xaaaa, 0x9d89, 0x9249, 0x8888, 0x8000,
+    0x7878, 0x71c7, 0x6bca, 0x6666, 0x6186, 0x5d17, 0x590b, 0x5555, 0x51eb, 0x4ec4, 0x4bda, 0x4924, 0x469e, 0x4444, 0x4210, 0x4000,
+    0x3e0f, 0x3c3c, 0x3a83, 0x38e3, 0x3759, 0x35e5, 0x3483, 0x3333, 0x31f3, 0x30c3, 0x2fa0, 0x2e8b, 0x2d82, 0x2c85, 0x2b93, 0x2aaa,
+    0x29cb, 0x28f5, 0x2828, 0x2762, 0x26a4, 0x25ed, 0x253c, 0x2492, 0x23ee, 0x234f, 0x22b6, 0x2222, 0x2192, 0x2108, 0x2082, 0x2000,
+    0x1f81, 0x1f07, 0x1e91, 0x1e1e, 0x1dae, 0x1d41, 0x1cd8, 0x1c71, 0x1c0e, 0x1bac, 0x1b4e, 0x1af2, 0x1a98, 0x1a41, 0x19ec, 0x1999,
+    0x1948, 0x18f9, 0x18ac, 0x1861, 0x1818, 0x17d0, 0x178a, 0x1745, 0x1702, 0x16c1, 0x1681, 0x1642, 0x1605, 0x15c9, 0x158e, 0x1555,
+    0x151d, 0x14e5, 0x14af, 0x147a, 0x1446, 0x1414, 0x13e2, 0x13b1, 0x1381, 0x1352, 0x1323, 0x12f6, 0x12c9, 0x129e, 0x1273, 0x1249,
+    0x121f, 0x11f7, 0x11cf, 0x11a7, 0x1181, 0x115b, 0x1135, 0x1111, 0x10ec, 0x10c9, 0x10a6, 0x1084, 0x1062, 0x1041, 0x1020, 0x1000,
+    0x0fe0, 0x0fc0, 0x0fa2, 0x0f83, 0x0f66, 0x0f48, 0x0f2b, 0x0f0f, 0x0ef2, 0x0ed7, 0x0ebb, 0x0ea0, 0x0e86, 0x0e6c, 0x0e52, 0x0e38,
+    0x0e1f, 0x0e07, 0x0dee, 0x0dd6, 0x0dbe, 0x0da7, 0x0d90, 0x0d79, 0x0d62, 0x0d4c, 0x0d36, 0x0d20, 0x0d0b, 0x0cf6, 0x0ce1, 0x0ccc,
+    0x0cb8, 0x0ca4, 0x0c90, 0x0c7c, 0x0c69, 0x0c56, 0x0c43, 0x0c30, 0x0c1e, 0x0c0c, 0x0bfa, 0x0be8, 0x0bd6, 0x0bc5, 0x0bb3, 0x0ba2,
+    0x0b92, 0x0b81, 0x0b70, 0x0b60, 0x0b50, 0x0b40, 0x0b30, 0x0b21, 0x0b11, 0x0b02, 0x0af3, 0x0ae4, 0x0ad6, 0x0ac7, 0x0ab8, 0x0aaa,
+    0x0a9c, 0x0a8e, 0x0a80, 0x0a72, 0x0a65, 0x0a57, 0x0a4a, 0x0a3d, 0x0a30, 0x0a23, 0x0a16, 0x0a0a, 0x09fd, 0x09f1, 0x09e4, 0x09d8,
+    0x09cc, 0x09c0, 0x09b4, 0x09a9, 0x099d, 0x0991, 0x0986, 0x097b, 0x0970, 0x0964, 0x095a, 0x094f, 0x0944, 0x0939, 0x092f, 0x0924,
+    0x091a, 0x090f, 0x0905, 0x08fb, 0x08f1, 0x08e7, 0x08dd, 0x08d3, 0x08ca, 0x08c0, 0x08b7, 0x08ad, 0x08a4, 0x089a, 0x0891, 0x0888,
+    0x087f, 0x0876, 0x086d, 0x0864, 0x085b, 0x0853, 0x084a, 0x0842, 0x0839, 0x0831, 0x0828, 0x0820, 0x0818, 0x0810, 0x0808, 0x0800,
+};
 
 static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 {
@@ -625,6 +650,156 @@ static etcpak_force_inline uint64_t ProcessAlpha( const uint8_t* src )
     return max | ( min << 8 ) | ( data << 16 );
 }
 
+static etcpak_force_inline uint64_t ProcessRGB_SSE( __m128i px0, __m128i px1, __m128i px2, __m128i px3 )
+{
+    __m128i smask = _mm_set1_epi32( 0xF8FCF8 );
+    __m128i sd0 = _mm_and_si128( px0, smask );
+    __m128i sd1 = _mm_and_si128( px1, smask );
+    __m128i sd2 = _mm_and_si128( px2, smask );
+    __m128i sd3 = _mm_and_si128( px3, smask );
+
+    __m128i sc = _mm_shuffle_epi32(sd0, _MM_SHUFFLE(0, 0, 0, 0));
+
+    __m128i sc0 = _mm_cmpeq_epi8(sd0, sc);
+    __m128i sc1 = _mm_cmpeq_epi8(sd1, sc);
+    __m128i sc2 = _mm_cmpeq_epi8(sd2, sc);
+    __m128i sc3 = _mm_cmpeq_epi8(sd3, sc);
+
+    __m128i sm0 = _mm_and_si128(sc0, sc1);
+    __m128i sm1 = _mm_and_si128(sc2, sc3);
+    __m128i sm = _mm_and_si128(sm0, sm1);
+
+    if( _mm_testc_si128(sm, _mm_set1_epi32(-1)) )
+    {
+        return uint64_t( to565( _mm_cvtsi128_si32( px0 ) ) ) << 16;
+    }
+
+    px0 = _mm_and_si128( px0, _mm_set1_epi32( 0xFFFFFF ) );
+    px1 = _mm_and_si128( px1, _mm_set1_epi32( 0xFFFFFF ) );
+    px2 = _mm_and_si128( px2, _mm_set1_epi32( 0xFFFFFF ) );
+    px3 = _mm_and_si128( px3, _mm_set1_epi32( 0xFFFFFF ) );
+
+    __m128i min0 = _mm_min_epu8( px0, px1 );
+    __m128i min1 = _mm_min_epu8( px2, px3 );
+    __m128i min2 = _mm_min_epu8( min0, min1 );
+
+    __m128i max0 = _mm_max_epu8( px0, px1 );
+    __m128i max1 = _mm_max_epu8( px2, px3 );
+    __m128i max2 = _mm_max_epu8( max0, max1 );
+
+    __m128i min3 = _mm_shuffle_epi32( min2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+    __m128i max3 = _mm_shuffle_epi32( max2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+    __m128i min4 = _mm_min_epu8( min2, min3 );
+    __m128i max4 = _mm_max_epu8( max2, max3 );
+
+    __m128i min5 = _mm_shuffle_epi32( min4, _MM_SHUFFLE( 0, 0, 2, 2 ) );
+    __m128i max5 = _mm_shuffle_epi32( max4, _MM_SHUFFLE( 0, 0, 2, 2 ) );
+    __m128i rmin = _mm_min_epu8( min4, min5 );
+    __m128i rmax = _mm_max_epu8( max4, max5 );
+
+    __m128i range1 = _mm_subs_epu8( rmax, rmin );
+    __m128i range2 = _mm_sad_epu8( rmax, rmin );
+
+    uint32_t vrange = _mm_cvtsi128_si32( range2 ) >> 1;
+    __m128i range = _mm_set1_epi16( DivTable[vrange] );
+
+    __m128i inset1 = _mm_srli_epi16( range1, 4 );
+    __m128i inset = _mm_and_si128( inset1, _mm_set1_epi8( 0xF ) );
+    __m128i min = _mm_adds_epu8( rmin, inset );
+    __m128i max = _mm_subs_epu8( rmax, inset );
+
+    __m128i c0 = _mm_subs_epu8( px0, rmin );
+    __m128i c1 = _mm_subs_epu8( px1, rmin );
+    __m128i c2 = _mm_subs_epu8( px2, rmin );
+    __m128i c3 = _mm_subs_epu8( px3, rmin );
+
+    __m128i is0 = _mm_maddubs_epi16( c0, _mm_set1_epi8( 1 ) );
+    __m128i is1 = _mm_maddubs_epi16( c1, _mm_set1_epi8( 1 ) );
+    __m128i is2 = _mm_maddubs_epi16( c2, _mm_set1_epi8( 1 ) );
+    __m128i is3 = _mm_maddubs_epi16( c3, _mm_set1_epi8( 1 ) );
+
+    __m128i s0 = _mm_hadd_epi16( is0, is1 );
+    __m128i s1 = _mm_hadd_epi16( is2, is3 );
+
+    __m128i m0 = _mm_mulhi_epu16( s0, range );
+    __m128i m1 = _mm_mulhi_epu16( s1, range );
+
+    __m128i p0 = _mm_packus_epi16( m0, m1 );
+
+    __m128i p1 = _mm_or_si128( _mm_srai_epi32( p0, 6 ), _mm_srai_epi32( p0, 12 ) );
+    __m128i p2 = _mm_or_si128( _mm_srai_epi32( p0, 18 ), p0 );
+    __m128i p3 = _mm_or_si128( p1, p2 );
+    __m128i p =_mm_shuffle_epi8( p3, _mm_set1_epi32( 0x0C080400 ) );
+
+    uint32_t vmin = _mm_cvtsi128_si32( min );
+    uint32_t vmax = _mm_cvtsi128_si32( max );
+    uint32_t vp = _mm_cvtsi128_si32( p );
+
+    return uint64_t( ( uint64_t( to565( vmin ) ) << 16 ) | to565( vmax ) | ( uint64_t( vp ) << 32 ) );
+}
+
+static etcpak_force_inline uint64_t ProcessAlpha_SSE( __m128i px0, __m128i px1, __m128i px2, __m128i px3 )
+{
+    __m128i mask = _mm_setr_epi32( 0x0f0b0703, -1, -1, -1 );
+
+    __m128i m0 = _mm_shuffle_epi8( px0, mask );
+    __m128i m1 = _mm_shuffle_epi8( px1, _mm_shuffle_epi32( mask, _MM_SHUFFLE( 3, 3, 0, 3 ) ) );
+    __m128i m2 = _mm_shuffle_epi8( px2, _mm_shuffle_epi32( mask, _MM_SHUFFLE( 3, 0, 3, 3 ) ) );
+    __m128i m3 = _mm_shuffle_epi8( px3, _mm_shuffle_epi32( mask, _MM_SHUFFLE( 0, 3, 3, 3 ) ) );
+    __m128i m4 = _mm_or_si128( m0, m1 );
+    __m128i m5 = _mm_or_si128( m2, m3 );
+    __m128i a = _mm_or_si128( m4, m5 );
+
+    __m128i solidCmp = _mm_broadcastb_epi8( a );
+    __m128i cmpRes = _mm_cmpeq_epi8( a, solidCmp );
+    if( _mm_testc_si128( cmpRes, _mm_set1_epi32( -1 ) ) )
+    {
+        return _mm_cvtsi128_si32( a ) & 0xFF;
+    }
+
+    __m128i a1 = _mm_shuffle_epi32( a, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+    __m128i max1 = _mm_max_epu8( a, a1 );
+    __m128i min1 = _mm_min_epu8( a, a1 );
+    __m128i amax2 = _mm_shuffle_epi32( max1, _MM_SHUFFLE( 0, 0, 2, 2 ) );
+    __m128i amin2 = _mm_shuffle_epi32( min1, _MM_SHUFFLE( 0, 0, 2, 2 ) );
+    __m128i max2 = _mm_max_epu8( max1, amax2 );
+    __m128i min2 = _mm_min_epu8( min1, amin2 );
+    __m128i amax3 = _mm_alignr_epi8( max2, max2, 2 );
+    __m128i amin3 = _mm_alignr_epi8( min2, min2, 2 );
+    __m128i max3 = _mm_max_epu8( max2, amax3 );
+    __m128i min3 = _mm_min_epu8( min2, amin3 );
+    __m128i amax4 = _mm_alignr_epi8( max3, max3, 1 );
+    __m128i amin4 = _mm_alignr_epi8( min3, min3, 1 );
+    __m128i max = _mm_max_epu8( max3, amax4 );
+    __m128i min = _mm_min_epu8( min3, amin4 );
+    __m128i minmax = _mm_unpacklo_epi8( max, min );
+
+    __m128i r = _mm_sub_epi8( max, min );
+    int range = _mm_cvtsi128_si32( r ) & 0xFF;
+    __m128i rv = _mm_set1_epi16( DivTableAlpha[range] );
+
+    __m128i v = _mm_sub_epi8( a, min );
+
+    __m128i lo16 = _mm_unpacklo_epi8( v, _mm_setzero_si128() );
+    __m128i hi16 = _mm_unpackhi_epi8( v, _mm_setzero_si128() );
+
+    __m128i lomul = _mm_mulhi_epu16( lo16, rv );
+    __m128i himul = _mm_mulhi_epu16( hi16, rv );
+
+    __m128i p0 = _mm_packus_epi16( lomul, himul );
+    __m128i p1 = _mm_or_si128( _mm_and_si128( p0, _mm_set1_epi16( 0x3F ) ), _mm_srai_epi16( _mm_and_si128( p0, _mm_set1_epi16( 0x3F00 ) ), 5 ) );
+    __m128i p2 = _mm_packus_epi16( p1, p1 );
+
+    uint64_t pi = _mm_cvtsi128_si64( p2 );
+    uint64_t data = 0;
+    for( int i=0; i<8; i++ )
+    {
+        uint64_t idx = AlphaIndexTable_SSE[(pi>>(i*8)) & 0x3F];
+        data |= idx << (i*6);
+    }
+    return (uint64_t)(uint16_t)_mm_cvtsi128_si32( minmax ) | ( data << 16 );
+}
+
 void CompressDxt1( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
 {
 #ifdef __AVX2__
@@ -719,14 +894,35 @@ void CompressDxt1Dither( const uint32_t* src, uint64_t* dst, uint32_t blocks, si
 
 void CompressDxt5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
 {
-    uint32_t rgba[4*4];
-    uint8_t alpha[4*4];
     int i = 0;
-
     auto ptr = dst;
-    auto ptr8 = alpha;
     do
     {
+#ifdef __SSE4_1__
+        __m128i px0 = _mm_loadu_si128( (__m128i*)( src + width * 0 ) );
+        __m128i px1 = _mm_loadu_si128( (__m128i*)( src + width * 1 ) );
+        __m128i px2 = _mm_loadu_si128( (__m128i*)( src + width * 2 ) );
+        __m128i px3 = _mm_loadu_si128( (__m128i*)( src + width * 3 ) );
+
+        src += 4;
+        if( ++i == width/4 )
+        {
+            src += width * 3;
+            i = 0;
+        }
+
+        *ptr++ = ProcessAlpha_SSE( px0, px1, px2, px3 );
+
+        const auto c = ProcessRGB_SSE( px0, px1, px2, px3 );
+        uint8_t fix[8];
+        memcpy( fix, &c, 8 );
+        for( int j=4; j<8; j++ ) fix[j] = DxtcIndexTable[fix[j]];
+        memcpy( ptr, fix, sizeof( uint64_t ) );
+        ptr++;
+#else
+        uint32_t rgba[4*4];
+        uint8_t alpha[4*4];
+
         auto tmp = (char*)rgba;
         memcpy( tmp,        src + width * 0, 4*4 );
         memcpy( tmp + 4*4,  src + width * 1, 4*4 );
@@ -752,6 +948,7 @@ void CompressDxt5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t w
         for( int j=4; j<8; j++ ) fix[j] = DxtcIndexTable[fix[j]];
         memcpy( ptr, fix, sizeof( uint64_t ) );
         ptr++;
+#endif
     }
     while( --blocks );
 }
