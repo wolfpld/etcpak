@@ -650,6 +650,7 @@ static etcpak_force_inline uint64_t ProcessAlpha( const uint8_t* src )
     return max | ( min << 8 ) | ( data << 16 );
 }
 
+#ifdef __SSE4_1__
 static etcpak_force_inline uint64_t ProcessRGB_SSE( __m128i px0, __m128i px1, __m128i px2, __m128i px3 )
 {
     __m128i smask = _mm_set1_epi32( 0xF8FCF8 );
@@ -799,6 +800,7 @@ static etcpak_force_inline uint64_t ProcessAlpha_SSE( __m128i px0, __m128i px1, 
     }
     return (uint64_t)(uint16_t)_mm_cvtsi128_si32( minmax ) | ( data << 16 );
 }
+#endif
 
 void CompressDxt1( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
 {
