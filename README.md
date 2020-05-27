@@ -1,28 +1,53 @@
-# etcpak 0.6.2 #
-(Updated 2020-02-09)
+# etcpak 0.7 #
+(Updated 2020-05-27)
 
 ## The fastest ETC compressor on the planet ##
 
-etcpak is an extremely fast [Ericsson Texture Compression](http://en.wikipedia.org/wiki/Ericsson_Texture_Compression) utility. Currently it's best suited for rapid assets preparation during development, when graphics quality is not a concern, but it's also used in production builds of applications used by millions of people.
+etcpak is an extremely fast [Ericsson Texture Compression](http://en.wikipedia.org/wiki/Ericsson_Texture_Compression) and S3 Texture Compression (DXT1/DXT5) utility. Currently it's best suited for rapid assets preparation during development, when graphics quality is not a concern, but it's also used in production builds of applications used by millions of people.
 
 ## Compression times ##
 
-Benchmark performed on an Intel i7 8700K, using a real-life RGBA 16K × 16K atlas:
+Benchmark performed on an AMD Ryzen 9 3900X, using a real-life RGBA 16K × 16K atlas. Tests were performed using a single CPU core.
 
-ETC1: **112 ms** / *198.8 Mpx/s per core* (only RGB part)  
-ETC2 RGB: **215 ms** / *103.9 Mpx/s per core* (only RGB part)  
-ETC2 RGBA: **404 ms** / *55.4 Mpx/s per core*
-
-This is 100× - 1000× faster than any other ETC compression tool (there's no typo in the numbers).
+ETC1: **370.3 Mpx/s**  
+ETC1 + dithering: **278.8 Mpx/s**  
+ETC1 alpha: **568.1 Mpx/s**  
+ETC2 RGB: **188.6 Mpx/s**  
+ETC2 RGBA: **140.8 Mpx/s**  
+DXT1: **2372 Mpx/s**  
+DXT5: **1167 Mps/s**
 
 ARM benchmark performed on Odroid C2, using the same atlas:
 
-ETC1: **3262 ms** / *20.6 Mpx/s per core* (only RGB part)  
-ETC2 RGB: **7127 ms** / *9.4 Mpx/s per core* (only RGB part)  
-ETC2 RGBA: **33878 ms** / *1.98 Mpx/s per core*
+ETC1: **23.6 Mpx/s**  
+ETC1 + dithering: **23.4 Mpx/s**  
+ETC1 alpha: **36.6 Mpx/s**  
+ETC2 RGB: **12.1 Mpx/s**  
+ETC2 RGBA: **2.83 Mpx/s**  
+DXT1: **120.2 Mpx/s**  
+DXT5: **83.3 Mps/s**
 
-[Why there's no image quality metrics? / Quality comparison.](http://i.imgur.com/FxlmUOF.png)  
-[Workload distribution.](https://i.imgur.com/9ZUy4KP.png)
+[Why there's no image quality metrics? / Quality comparison.](http://i.imgur.com/FxlmUOF.png)
+
+## Decompression times ##
+
+etcpak can also decompress ETC1, ETC2 (no T or H blocks), DXT1 and DXT5 textures. Timings on Ryzen:
+
+ETC1: **332.5 Mpx/s**  
+ETC2 RGB: **470.1 Mpx/s**  
+ETC2 RGBA: **340.8 Mpx/s**  
+DXT1: **682.7 Mpx/s**  
+DXT5: **518.9 Mpx/s**
+
+ARM timings:
+
+ETC1: **60 Mpx/s**  
+ETC2 RGB: **88.5 Mpx/s**  
+ETC2 RGBA: **64.2 Mpx/s**  
+DXT1: **120.2 Mpx/s**  
+DXT5: **83.3 Mpx/s**
+
+To give some perspective here, Nvidia in-driver ETC2 decoder can do only 42.5 Mpx/s.
 
 ## Quality comparison ##
 
