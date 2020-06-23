@@ -1902,6 +1902,112 @@ static etcpak_force_inline int GetMulSel( int sel )
         return 5;
     }
 }
+
+#endif
+
+#ifdef __ARM_NEON
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++14-extensions"
+#pragma clang diagnostic ignored "-Wc++17-extensions"
+#endif
+
+static constexpr etcpak_force_inline int GetMulSel(int sel)
+{
+    switch (sel)
+    {
+    case 0:
+        return 0;
+    case 1:
+    case 2:
+    case 3:
+        return 1;
+    case 4:
+        return 2;
+    case 5:
+    case 6:
+    case 7:
+        return 3;
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+        return 4;
+    case 14:
+    case 15:
+        return 5;
+    }
+
+#ifdef __GNUC__
+    __builtin_unreachable();
+#endif
+}
+
+template <int Index>
+etcpak_force_inline static uint16x8_t ErrorProbe_EAC_NEON(uint8x8_t recVal, uint8x16_t alphaBlock)
+{
+    uint8x8_t srcValWide;
+#if __ARM_ARCH < 8
+    if constexpr (Index < 8)
+        srcValWide = vdup_lane_u8(vget_low_u8(alphaBlock), Index);
+    else
+        srcValWide = vdup_lane_u8(vget_high_u8(alphaBlock), Index - 8);
+#else
+    srcValWide = vdup_laneq_u8(alphaBlock, Index);
+#endif
+
+    uint8x8_t deltaVal = vabd_u8(srcValWide, recVal);
+    return vmull_u8(deltaVal, deltaVal);
+}
+
+etcpak_force_inline static uint16_t MinError_EAC_NEON(uint16x8_t errProbe)
+{
+#if __ARCH_ARCH < 8
+    uint16x4_t tmpErr = vpmin_u16(vget_low_u16(errProbe), vget_high_u16(errProbe));
+    tmpErr = vpmin_u16(tmpErr, tmpErr);
+    return vpmin_u16(tmpErr, tmpErr)[0];
+#else
+    return vminvq_u16(errProbe);
+#endif
+}
+
+template <int Index>
+etcpak_force_inline static uint64_t MinErrorIndex_EAC_NEON(uint8x8_t recVal, uint8x16_t alphaBlock)
+{
+    uint16x8_t errProbe = ErrorProbe_EAC_NEON<Index>(recVal, alphaBlock);
+    uint16x8_t minErrMask = vceqq_u16(errProbe, vdupq_n_u16(MinError_EAC_NEON(errProbe)));
+    uint64_t idx = __builtin_ctzll(vreinterpret_u64_u8(vqmovn_u16(minErrMask))[0]);
+
+    const int shift = 45 - Index * 3 - 3;
+    if constexpr (shift >= 0)
+        idx <<= shift;
+    else
+        idx >>= -shift;
+
+    return idx;
+}
+
+template <int Index>
+etcpak_force_inline static int16x8_t WidenMultiplier_EAC_NEON(int16x8_t multipliers)
+{
+    constexpr int Lane = GetMulSel(Index);
+#if __ARM_ARCH < 8
+    if constexpr (Lane < 4)
+        return vdupq_lane_s16(vget_low_s16(multipliers), Lane);
+    else
+        return vdupq_lane_s16(vget_high_s16(multipliers), Lane - 4);
+#else
+    return vdupq_laneq_s16(multipliers, Lane);
+#endif
+}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
 #endif
 
 static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
@@ -2316,6 +2422,85 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
         idx;
 
     return _bswap64( d );
+#elif defined __ARM_NEON
+
+    int srcRange, srcMid;
+    uint8x16_t srcAlphaBlock = vld1q_u8(src);
+    {
+        uint8_t ref = src[0];
+        uint8x16_t a0 = vdupq_n_u8(ref);
+        uint8x16_t r = vceqq_u8(srcAlphaBlock, a0);
+        int64x2_t m = vreinterpretq_s64_u8(r);
+        if (m[0] == -1 && m[1] == -1)
+            return ref;
+
+        // srcRange
+#if __ARM_ARCH >= 8
+        uint8_t min = vminvq_u8(srcAlphaBlock);
+        uint8_t max = vmaxvq_u8(srcAlphaBlock);
+#else
+        uint8_t min = src[0];
+        uint8_t max = src[0];
+        for (int i = 1; i < 16; i++)
+        {
+            if (min > src[i]) min = src[i];
+            else if (max < src[i]) max = src[i];
+        }
+#endif
+
+        srcRange = max - min;
+        srcMid = min + srcRange / 2;
+    }
+
+    // calculate reconstructed values
+#if 0 // __ARM_FEATURE_QRDMX // untested
+    int16x8_t multipliers = vqrdmlahq_s16(g_alphaRange_NEON, vdupq_n_s16(srcRange), vdupq_n_s16(2));
+#else
+    int16x8_t multipliers = vqaddq_s16(vshrq_n_s16(vqdmulhq_n_s16(g_alphaRange_NEON, srcRange), 1), vdupq_n_s16(1));
+#endif
+
+#define EAC_APPLY_16X(m) m(0) m(1) m(2) m(3) m(4) m(5) m(6) m(7) m(8) m(9) m(10) m(11) m(12) m(13) m(14) m(15)
+
+    int16x8_t srcMidWide = vdupq_n_s16(srcMid);
+#define EAC_RECONSTRUCT_VALUE(n) vqmovun_s16(vmlaq_s16(srcMidWide, g_alpha_NEON[n], WidenMultiplier_EAC_NEON<n>(multipliers))),
+    uint8x8_t recVals[16] = { EAC_APPLY_16X(EAC_RECONSTRUCT_VALUE) };
+
+    // find selector
+    int err = std::numeric_limits<int>::max();
+    int sel = 0;
+    for (int r = 0; r < 16; r++)
+    {
+        uint8x8_t recVal = recVals[r];
+
+        int rangeErr = 0;
+#define EAC_ACCUMULATE_ERROR(n) rangeErr += MinError_EAC_NEON(ErrorProbe_EAC_NEON<n>(recVal, srcAlphaBlock));
+        EAC_APPLY_16X(EAC_ACCUMULATE_ERROR)
+
+        if (rangeErr < err)
+        {
+            err = rangeErr;
+            sel = r;
+            if (err == 0) break;
+        }
+    }
+
+    // combine results
+    uint64_t d = (uint64_t(srcMid) << 56) |
+        (uint64_t(multipliers[GetMulSel(sel)]) << 52) |
+        (uint64_t(sel) << 48);
+
+    // generate indices
+    uint8x8_t recVal = recVals[sel];
+#define EAC_INSERT_INDEX(n) d |= MinErrorIndex_EAC_NEON<n>(recVal, srcAlphaBlock);
+    EAC_APPLY_16X(EAC_INSERT_INDEX)
+
+    return _bswap64(d);
+
+#undef EAC_APPLY_16X
+#undef EAC_INSERT_INDEX
+#undef EAC_ACCUMULATE_ERROR
+#undef EAC_RECONSTRUCT_VALUE
+
 #else
     {
         bool solid = true;
