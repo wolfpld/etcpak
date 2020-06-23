@@ -1690,6 +1690,221 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* s
     return std::make_pair(result, error);
 }
 
+#ifdef __ARM_NEON
+
+static etcpak_force_inline int32_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t dif_hi)
+{
+    int32x4_t dif0 = vmull_n_s16(vget_low_s16(dif_lo), -255);
+    int32x4_t dif1 = vmull_n_s16(vget_high_s16(dif_lo), -85);
+    int32x4_t dif2 = vmull_n_s16(vget_low_s16(dif_hi), 85);
+    int32x4_t dif3 = vmull_n_s16(vget_high_s16(dif_hi), 255);
+    int32x4_t dif4 = vaddq_u32(vaddq_u32(dif0, dif1), vaddq_u32(dif2, dif3));
+
+#if __ARM_ARCH < 8
+    int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
+    int32x2_t dif6 = vpadd_s32(dif5, dif5);
+    return dif6[0];
+#else
+    return vaddvq_s32(dif4);
+#endif
+}
+
+static etcpak_force_inline int32_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t dif_hi)
+{
+    int16x4_t scaling = { -255, -85, 85, 255 };
+    int32x4_t dif0 = vmull_s16(vget_low_s16(dif_lo), scaling);
+    int32x4_t dif1 = vmull_s16(vget_high_s16(dif_lo), scaling);
+    int32x4_t dif2 = vmull_s16(vget_low_s16(dif_hi), scaling);
+    int32x4_t dif3 = vmull_s16(vget_high_s16(dif_hi), scaling);
+    int32x4_t dif4 = vaddq_u32(vaddq_u32(dif0, dif1), vaddq_u32(dif2, dif3));
+
+#if __ARM_ARCH < 8
+    int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
+    int32x2_t dif6 = vpadd_s32(dif5, dif5);
+    return dif6[0];
+#else // __ARM_ARCH < 8
+    return vaddvq_s32(dif4);
+#endif // __ARM_ARCH < 8
+}
+
+static etcpak_force_inline int16x8_t Planar_NEON_SumWide(uint8x16_t src)
+{
+    uint16x8_t accu8 = vpaddlq_u8(src);
+#if __ARM_ARCH < 8
+    uint16x4_t accu4 = vpadd_u16(vget_low_u16(accu8), vget_high_u16(accu8));
+    uint16x4_t accu2 = vpadd_u16(accu4, accu4);
+    uint16x4_t accu1 = vpadd_u16(accu2, accu2);
+    return vreinterpretq_s16_u16(vcombine_u16(accu1, accu1));
+#else // __ARM_ARCH < 8
+    return vdupq_n_s16(vaddvq_u16(accu8));
+#endif // __ARM_ARCH < 8
+}
+
+static etcpak_force_inline int16x8_t convert6_NEON(int32x4_t lo, int32x4_t hi)
+{
+    uint16x8_t x = vcombine_u16(vqmovun_s32(lo), vqmovun_s32(hi));
+    int16x8_t i = vreinterpretq_s16_u16(vshrq_n_u16(vqshlq_n_u16(x, 6), 6)); // clamp 0-1023
+    i = vhsubq_s16(i, vdupq_n_s16(15));
+
+    int16x8_t ip11 = vaddq_s16(i, vdupq_n_s16(11));
+    int16x8_t ip4 = vaddq_s16(i, vdupq_n_s16(4));
+
+    return vshrq_n_s16(vsubq_s16(vsubq_s16(ip11, vshrq_n_s16(ip11, 7)), vshrq_n_s16(ip4, 7)), 3);
+}
+
+static etcpak_force_inline int16x4_t convert7_NEON(int32x4_t x)
+{
+    int16x4_t i = vreinterpret_s16_u16(vshr_n_u16(vqshl_n_u16(vqmovun_s32(x), 6), 6)); // clamp 0-1023
+    i = vhsub_s16(i, vdup_n_s16(15));
+
+    int16x4_t p9 = vadd_s16(i, vdup_n_s16(9));
+    int16x4_t p6 = vadd_s16(i, vdup_n_s16(6));
+    return vshr_n_s16(vsub_s16(vsub_s32(p9, vshr_n_s16(p9, 8)), vshr_n_s16(p6, 8)), 2);
+}
+
+static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON(const uint8_t* src)
+{
+    uint8x16x4_t srcBlock = vld4q_u8(src);
+
+    int16x8_t bSumWide = Planar_NEON_SumWide(srcBlock.val[0]);
+    int16x8_t gSumWide = Planar_NEON_SumWide(srcBlock.val[1]);
+    int16x8_t rSumWide = Planar_NEON_SumWide(srcBlock.val[2]);
+
+    int16x8_t dif_R_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[2]), 4)), rSumWide);
+    int16x8_t dif_R_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[2]), 4)), rSumWide);
+
+    int16x8_t dif_G_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[1]), 4)), gSumWide);
+    int16x8_t dif_G_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[1]), 4)), gSumWide);
+
+    int16x8_t dif_B_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[0]), 4)), bSumWide);
+    int16x8_t dif_B_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[0]), 4)), bSumWide);
+
+    int32x4_t dif_xz =
+    {
+        Planar_NEON_DifXZ(dif_B_lo, dif_B_hi),
+        Planar_NEON_DifXZ(dif_G_lo, dif_G_hi),
+        Planar_NEON_DifXZ(dif_R_lo, dif_R_hi),
+        0
+    };
+
+    int32x4_t dif_yz =
+    {
+        Planar_NEON_DifYZ(dif_B_lo, dif_B_hi),
+        Planar_NEON_DifYZ(dif_G_lo, dif_G_hi),
+        Planar_NEON_DifYZ(dif_R_lo, dif_R_hi),
+        0
+    };
+
+    const float fscale = -4.0f / ((255 * 255 * 8.0f + 85 * 85 * 8.0f) * 16.0f);
+    float32x4_t fa = vmulq_n_f32(vcvtq_f32_s32(dif_xz), fscale);
+    float32x4_t fb = vmulq_n_f32(vcvtq_f32_s32(dif_yz), fscale);
+    float32x4_t fd = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(int16x4_t{ bSumWide[0], gSumWide[0], rSumWide[0], gSumWide[0] })), 4.0f / 16.0f);
+
+    float32x4_t cof = vmlaq_n_f32(vmlaq_n_f32(fd, fb, 255.0f), fa, 255.0f);
+    float32x4_t chf = vmlaq_n_f32(vmlaq_n_f32(fd, fb, 255.0f), fa, -425.0f);
+    float32x4_t cvf = vmlaq_n_f32(vmlaq_n_f32(fd, fb, -425.0f), fa, 255.0f);
+
+    int32x4_t coi = vcvtq_s32_f32(cof);
+    int32x4_t chi = vcvtq_s32_f32(chf);
+    int32x4_t cvi = vcvtq_s32_f32(cvf);
+
+    int32x4x2_t tr_hv = vtrnq_s32(chi, cvi);
+    int32x4x2_t tr_o = vtrnq_s32(coi, coi);
+
+    int16x8_t c_hvoo_br_6 = convert6_NEON(tr_hv.val[0], tr_o.val[0]);
+    int16x4_t c_hvox_g_7 = convert7_NEON(vcombine_s32(vget_low_s32(tr_hv.val[1]), vget_low_s32(tr_o.val[1])));
+    int16x8_t c_hvoo_br_8 = vorrq_s16(vshrq_n_s16(c_hvoo_br_6, 4), vshlq_n_s16(c_hvoo_br_6, 2));
+    int16x4_t c_hvox_g_8 = vorr_s16(vshr_n_s16(c_hvox_g_7, 6), vshl_n_s16(c_hvox_g_7, 1));
+
+    int16x4_t rec_gxbr_o = vext_s16(c_hvox_g_8, vget_high_s16(c_hvoo_br_8), 3);
+
+    rec_gxbr_o = vadd_s16(vshl_n_s16(rec_gxbr_o, 2), vdup_n_s16(2));
+    int16x8_t rec_ro_wide = vdupq_lane_s16(rec_gxbr_o, 3);
+    int16x8_t rec_go_wide = vdupq_lane_s16(rec_gxbr_o, 0);
+    int16x8_t rec_bo_wide = vdupq_lane_s16(rec_gxbr_o, 1);
+
+    int16x4_t br_hv2 = vsub_s16(vget_low_s16(c_hvoo_br_8), vget_high_s16(c_hvoo_br_8));
+    int16x4_t gg_hv2 = vsub_s16(c_hvox_g_8, vdup_lane_s16(c_hvox_g_8, 2));
+
+    int16x8_t scaleh_lo = { 0, 0, 0, 0, 1, 1, 1, 1 };
+    int16x8_t scaleh_hi = { 2, 2, 2, 2, 3, 3, 3, 3 };
+    int16x8_t scalev = { 0, 1, 2, 3, 0, 1, 2, 3 };
+
+    int16x8_t rec_r_1 = vmlaq_lane_s16(rec_ro_wide, scalev, br_hv2, 3);
+    int16x8_t rec_r_lo = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_r_1, scaleh_lo, br_hv2, 2), 2)));
+    int16x8_t rec_r_hi = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_r_1, scaleh_hi, br_hv2, 2), 2)));
+
+    int16x8_t rec_b_1 = vmlaq_lane_s16(rec_bo_wide, scalev, br_hv2, 1);
+    int16x8_t rec_b_lo = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_b_1, scaleh_lo, br_hv2, 0), 2)));
+    int16x8_t rec_b_hi = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_b_1, scaleh_hi, br_hv2, 0), 2)));
+
+    int16x8_t rec_g_1 = vmlaq_lane_s16(rec_go_wide, scalev, gg_hv2, 1);
+    int16x8_t rec_g_lo = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_g_1, scaleh_lo, gg_hv2, 0), 2)));
+    int16x8_t rec_g_hi = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_g_1, scaleh_hi, gg_hv2, 0), 2)));
+
+    int16x8_t dif_r_lo = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(srcBlock.val[2]))), rec_r_lo);
+    int16x8_t dif_r_hi = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(srcBlock.val[2]))), rec_r_hi);
+
+    int16x8_t dif_g_lo = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(srcBlock.val[1]))), rec_g_lo);
+    int16x8_t dif_g_hi = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(srcBlock.val[1]))), rec_g_hi);
+
+    int16x8_t dif_b_lo = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(srcBlock.val[0]))), rec_b_lo);
+    int16x8_t dif_b_hi = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(srcBlock.val[0]))), rec_b_hi);
+
+    int16x8_t dif_lo = vmlaq_n_s16(vmlaq_n_s16(vmulq_n_s16(dif_r_lo, 38), dif_g_lo, 76), dif_b_lo, 14);
+    int16x8_t dif_hi = vmlaq_n_s16(vmlaq_n_s16(vmulq_n_s16(dif_r_hi, 38), dif_g_hi, 76), dif_b_hi, 14);
+
+    int16x4_t tmpDif = vget_low_s16(dif_lo);
+    int32x4_t difsq_0 = vmull_s16(tmpDif, tmpDif);
+    tmpDif = vget_high_s16(dif_lo);
+    int32x4_t difsq_1 = vmull_s16(tmpDif, tmpDif);
+    tmpDif = vget_low_s16(dif_hi);
+    int32x4_t difsq_2 = vmull_s16(tmpDif, tmpDif);
+    tmpDif = vget_high_s16(dif_hi);
+    int32x4_t difsq_3 = vmull_s16(tmpDif, tmpDif);
+
+    uint32x4_t difsq_5 = vaddq_u32(vreinterpretq_u32_s32(difsq_0), vreinterpretq_u32_s32(difsq_1));
+    uint32x4_t difsq_6 = vaddq_u32(vreinterpretq_u32_s32(difsq_2), vreinterpretq_u32_s32(difsq_3));
+
+    uint64x2_t difsq_7 = vaddl_u32(vget_low_u32(difsq_5), vget_high_u32(difsq_5));
+    uint64x2_t difsq_8 = vaddl_u32(vget_low_u32(difsq_6), vget_high_u32(difsq_6));
+
+    uint64x2_t difsq_9 = vaddq_u64(difsq_7, difsq_8);
+
+    uint64_t error = difsq_9[0] + difsq_9[1];
+
+    int32_t coR = c_hvoo_br_6[6];
+    int32_t coG = c_hvox_g_7[2];
+    int32_t coB = c_hvoo_br_6[4];
+
+    int32_t chR = c_hvoo_br_6[2];
+    int32_t chG = c_hvox_g_7[0];
+    int32_t chB = c_hvoo_br_6[0];
+
+    int32_t cvR = c_hvoo_br_6[3];
+    int32_t cvG = c_hvox_g_7[1];
+    int32_t cvB = c_hvoo_br_6[1];
+
+    uint32_t rgbv = cvB | (cvG << 6) | (cvR << 13);
+    uint32_t rgbh = chB | (chG << 6) | (chR << 13);
+    uint32_t hi = rgbv | ((rgbh & 0x1FFF) << 19);
+    uint32_t lo = (chR & 0x1) | 0x2 | ((chR << 1) & 0x7C);
+    lo |= ((coB & 0x07) << 7) | ((coB & 0x18) << 8) | ((coB & 0x20) << 11);
+    lo |= ((coG & 0x3F) << 17) | ((coG & 0x40) << 18);
+    lo |= coR << 25;
+
+    const auto idx = (coR & 0x20) | ((coG & 0x20) >> 1) | ((coB & 0x1E) >> 1);
+
+    lo |= g_flags[idx];
+
+    uint64_t result = static_cast<uint32_t>(_bswap(lo));
+    result |= static_cast<uint64_t>(static_cast<uint32_t>(_bswap(hi))) << 32;
+
+    return std::make_pair(result, error);
+}
+
+#endif
+
 template<class T, class S>
 static etcpak_force_inline uint64_t EncodeSelectors( uint64_t d, const T terr[2][8], const S tsel[16][8], const uint32_t* id, const uint64_t value, const uint64_t error)
 {
@@ -1821,7 +2036,11 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
     uint64_t d = CheckSolid(src);
     if (d != 0) return d;
 
+#ifdef __ARM_NEON
+    auto result = Planar_NEON(src);
+#else
     auto result = Planar( src );
+#endif
 
     v4i a[8];
     unsigned int err[4] = {};
