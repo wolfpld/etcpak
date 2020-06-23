@@ -1780,6 +1780,9 @@ static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 {
 #ifdef __AVX2__
+    uint64_t d = CheckSolid_AVX2( src );
+    if( d != 0 ) return d;
+
     auto plane = Planar_AVX2( src );
 
     alignas(32) v4i a[8];
@@ -1815,9 +1818,10 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 
     return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error );
 #else
-    auto result = Planar( src );
+    uint64_t d = CheckSolid(src);
+    if (d != 0) return d;
 
-    uint64_t d = 0;
+    auto result = Planar( src );
 
     v4i a[8];
     unsigned int err[4] = {};
