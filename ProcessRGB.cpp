@@ -1700,7 +1700,7 @@ static etcpak_force_inline int32_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t
     int32x4_t dif3 = vmull_n_s16(vget_high_s16(dif_hi), 255);
     int32x4_t dif4 = vaddq_s32(vaddq_s32(dif0, dif1), vaddq_s32(dif2, dif3));
 
-#if __ARM_ARCH < 8
+#ifndef __aarch64__ 
     int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
     int32x2_t dif6 = vpadd_s32(dif5, dif5);
     return dif6[0];
@@ -1718,26 +1718,26 @@ static etcpak_force_inline int32_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t
     int32x4_t dif3 = vmull_s16(vget_high_s16(dif_hi), scaling);
     int32x4_t dif4 = vaddq_u32(vaddq_u32(dif0, dif1), vaddq_u32(dif2, dif3));
 
-#if __ARM_ARCH < 8
+#ifndef __aarch64__
     int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
     int32x2_t dif6 = vpadd_s32(dif5, dif5);
     return dif6[0];
-#else // __ARM_ARCH < 8
+#else
     return vaddvq_s32(dif4);
-#endif // __ARM_ARCH < 8
+#endif
 }
 
 static etcpak_force_inline int16x8_t Planar_NEON_SumWide(uint8x16_t src)
 {
     uint16x8_t accu8 = vpaddlq_u8(src);
-#if __ARM_ARCH < 8
+#ifndef __aarch64__
     uint16x4_t accu4 = vpadd_u16(vget_low_u16(accu8), vget_high_u16(accu8));
     uint16x4_t accu2 = vpadd_u16(accu4, accu4);
     uint16x4_t accu1 = vpadd_u16(accu2, accu2);
     return vreinterpretq_s16_u16(vcombine_u16(accu1, accu1));
-#else // __ARM_ARCH < 8
+#else 
     return vdupq_n_s16(vaddvq_u16(accu8));
-#endif // __ARM_ARCH < 8
+#endif
 }
 
 static etcpak_force_inline int16x8_t convert6_NEON(int32x4_t lo, int32x4_t hi)
@@ -2173,7 +2173,7 @@ template <int Index>
 etcpak_force_inline static uint16x8_t ErrorProbe_EAC_NEON(uint8x8_t recVal, uint8x16_t alphaBlock)
 {
     uint8x8_t srcValWide;
-#if __ARM_ARCH < 8
+#ifndef __aarch64__
     if constexpr (Index < 8)
         srcValWide = vdup_lane_u8(vget_low_u8(alphaBlock), Index);
     else
@@ -2188,7 +2188,7 @@ etcpak_force_inline static uint16x8_t ErrorProbe_EAC_NEON(uint8x8_t recVal, uint
 
 etcpak_force_inline static uint16_t MinError_EAC_NEON(uint16x8_t errProbe)
 {
-#if __ARCH_ARCH < 8
+#ifndef __aarch64__
     uint16x4_t tmpErr = vpmin_u16(vget_low_u16(errProbe), vget_high_u16(errProbe));
     tmpErr = vpmin_u16(tmpErr, tmpErr);
     return vpmin_u16(tmpErr, tmpErr)[0];
@@ -2217,7 +2217,7 @@ template <int Index>
 etcpak_force_inline static int16x8_t WidenMultiplier_EAC_NEON(int16x8_t multipliers)
 {
     constexpr int Lane = GetMulSel(Index);
-#if __ARM_ARCH < 8
+#ifndef __aarch64__ 
     if constexpr (Lane < 4)
         return vdupq_lane_s16(vget_low_s16(multipliers), Lane);
     else
@@ -2658,7 +2658,7 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
             return ref;
 
         // srcRange
-#if __ARM_ARCH >= 8
+#ifdef __aarch64__
         uint8_t min = vminvq_u8(srcAlphaBlock);
         uint8_t max = vmaxvq_u8(srcAlphaBlock);
 #else
