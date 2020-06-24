@@ -1716,7 +1716,7 @@ static etcpak_force_inline int32_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t
     int32x4_t dif1 = vmull_s16(vget_high_s16(dif_lo), scaling);
     int32x4_t dif2 = vmull_s16(vget_low_s16(dif_hi), scaling);
     int32x4_t dif3 = vmull_s16(vget_high_s16(dif_hi), scaling);
-    int32x4_t dif4 = vaddq_u32(vaddq_u32(dif0, dif1), vaddq_u32(dif2, dif3));
+    int32x4_t dif4 = vaddq_s32(vaddq_s32(dif0, dif1), vaddq_s32(dif2, dif3));
 
 #ifndef __aarch64__
     int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
@@ -1759,7 +1759,7 @@ static etcpak_force_inline int16x4_t convert7_NEON(int32x4_t x)
 
     int16x4_t p9 = vadd_s16(i, vdup_n_s16(9));
     int16x4_t p6 = vadd_s16(i, vdup_n_s16(6));
-    return vshr_n_s16(vsub_s16(vsub_s32(p9, vshr_n_s16(p9, 8)), vshr_n_s16(p6, 8)), 2);
+    return vshr_n_s16(vsub_s16(vsub_s16(p9, vshr_n_s16(p9, 8)), vshr_n_s16(p6, 8)), 2);
 }
 
 static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON(const uint8_t* src)
@@ -2202,7 +2202,7 @@ etcpak_force_inline static uint64_t MinErrorIndex_EAC_NEON(uint8x8_t recVal, uin
 {
     uint16x8_t errProbe = ErrorProbe_EAC_NEON<Index>(recVal, alphaBlock);
     uint16x8_t minErrMask = vceqq_u16(errProbe, vdupq_n_u16(MinError_EAC_NEON(errProbe)));
-    uint64_t idx = __builtin_ctzll(vreinterpret_u64_u8(vqmovn_u16(minErrMask))[0]);
+    uint64_t idx = __builtin_ctzll(vget_lane_u64(vreinterpret_u64_u8(vqmovn_u16(minErrMask)), 0));
 
     const int shift = 45 - Index * 3 - 3;
     if constexpr (shift >= 0)
