@@ -1698,7 +1698,7 @@ static etcpak_force_inline int32_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t
     int32x4_t dif1 = vmull_n_s16(vget_high_s16(dif_lo), -85);
     int32x4_t dif2 = vmull_n_s16(vget_low_s16(dif_hi), 85);
     int32x4_t dif3 = vmull_n_s16(vget_high_s16(dif_hi), 255);
-    int32x4_t dif4 = vaddq_u32(vaddq_u32(dif0, dif1), vaddq_u32(dif2, dif3));
+    int32x4_t dif4 = vaddq_s32(vaddq_s32(dif0, dif1), vaddq_s32(dif2, dif3));
 
 #if __ARM_ARCH < 8
     int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
