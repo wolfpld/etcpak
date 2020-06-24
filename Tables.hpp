@@ -42,6 +42,8 @@ extern const __m256i g_alphaRange_AVX;
 #ifdef __ARM_NEON
 extern const int16x8_t g_table128_NEON[2];
 extern const int32x4_t g_table256_NEON[4];
+extern const int16x8_t g_alpha_NEON[16];
+extern const int16x8_t g_alphaRange_NEON;
 #endif
 
 #endif
