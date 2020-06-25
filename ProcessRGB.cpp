@@ -1692,177 +1692,177 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* s
 
 #ifdef __ARM_NEON
 
-static etcpak_force_inline int32x2_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t dif_hi)
+static etcpak_force_inline int32x2_t Planar_NEON_DifXZ( int16x8_t dif_lo, int16x8_t dif_hi )
 {
-    int32x4_t dif0 = vmull_n_s16(vget_low_s16(dif_lo), -255);
-    int32x4_t dif1 = vmull_n_s16(vget_high_s16(dif_lo), -85);
-    int32x4_t dif2 = vmull_n_s16(vget_low_s16(dif_hi), 85);
-    int32x4_t dif3 = vmull_n_s16(vget_high_s16(dif_hi), 255);
-    int32x4_t dif4 = vaddq_s32(vaddq_s32(dif0, dif1), vaddq_s32(dif2, dif3));
+    int32x4_t dif0 = vmull_n_s16( vget_low_s16( dif_lo ), -255 );
+    int32x4_t dif1 = vmull_n_s16( vget_high_s16( dif_lo ), -85 );
+    int32x4_t dif2 = vmull_n_s16( vget_low_s16( dif_hi ), 85 );
+    int32x4_t dif3 = vmull_n_s16( vget_high_s16( dif_hi ), 255 );
+    int32x4_t dif4 = vaddq_s32( vaddq_s32( dif0, dif1 ), vaddq_s32( dif2, dif3 ) );
 
 #ifndef __aarch64__
-    int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
-    return vpadd_s32(dif5, dif5);
+    int32x2_t dif5 = vpadd_s32( vget_low_s32( dif4 ), vget_high_s32( dif4 ) );
+    return vpadd_s32( dif5, dif5 );
 #else
-    return vdup_n_s32(vaddvq_s32(dif4));
+    return vdup_n_s32( vaddvq_s32( dif4 ) );
 #endif
 }
 
-static etcpak_force_inline int32x2_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t dif_hi)
+static etcpak_force_inline int32x2_t Planar_NEON_DifYZ( int16x8_t dif_lo, int16x8_t dif_hi )
 {
     int16x4_t scaling = { -255, -85, 85, 255 };
-    int32x4_t dif0 = vmull_s16(vget_low_s16(dif_lo), scaling);
-    int32x4_t dif1 = vmull_s16(vget_high_s16(dif_lo), scaling);
-    int32x4_t dif2 = vmull_s16(vget_low_s16(dif_hi), scaling);
-    int32x4_t dif3 = vmull_s16(vget_high_s16(dif_hi), scaling);
-    int32x4_t dif4 = vaddq_s32(vaddq_s32(dif0, dif1), vaddq_s32(dif2, dif3));
+    int32x4_t dif0 = vmull_s16( vget_low_s16( dif_lo ), scaling );
+    int32x4_t dif1 = vmull_s16( vget_high_s16( dif_lo ), scaling );
+    int32x4_t dif2 = vmull_s16( vget_low_s16( dif_hi ), scaling );
+    int32x4_t dif3 = vmull_s16( vget_high_s16( dif_hi ), scaling );
+    int32x4_t dif4 = vaddq_s32( vaddq_s32( dif0, dif1 ), vaddq_s32( dif2, dif3 ) );
 
 #ifndef __aarch64__
-    int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
-    return vpadd_s32(dif5, dif5);
+    int32x2_t dif5 = vpadd_s32( vget_low_s32( dif4 ), vget_high_s32( dif4 ) );
+    return vpadd_s32( dif5, dif5 );
 #else
-    return vdup_n_s32(vaddvq_s32(dif4));
+    return vdup_n_s32( vaddvq_s32( dif4 ) );
 #endif
 }
 
-static etcpak_force_inline int16x8_t Planar_NEON_SumWide(uint8x16_t src)
+static etcpak_force_inline int16x8_t Planar_NEON_SumWide( uint8x16_t src )
 {
-    uint16x8_t accu8 = vpaddlq_u8(src);
+    uint16x8_t accu8 = vpaddlq_u8( src );
 #ifndef __aarch64__
-    uint16x4_t accu4 = vpadd_u16(vget_low_u16(accu8), vget_high_u16(accu8));
-    uint16x4_t accu2 = vpadd_u16(accu4, accu4);
-    uint16x4_t accu1 = vpadd_u16(accu2, accu2);
-    return vreinterpretq_s16_u16(vcombine_u16(accu1, accu1));
+    uint16x4_t accu4 = vpadd_u16( vget_low_u16( accu8 ), vget_high_u16( accu8 ) );
+    uint16x4_t accu2 = vpadd_u16( accu4, accu4 );
+    uint16x4_t accu1 = vpadd_u16( accu2, accu2 );
+    return vreinterpretq_s16_u16( vcombine_u16( accu1, accu1 ) );
 #else 
-    return vdupq_n_s16(vaddvq_u16(accu8));
+    return vdupq_n_s16( vaddvq_u16( accu8 ) );
 #endif
 }
 
-static etcpak_force_inline int16x8_t convert6_NEON(int32x4_t lo, int32x4_t hi)
+static etcpak_force_inline int16x8_t convert6_NEON( int32x4_t lo, int32x4_t hi )
 {
-    uint16x8_t x = vcombine_u16(vqmovun_s32(lo), vqmovun_s32(hi));
-    int16x8_t i = vreinterpretq_s16_u16(vshrq_n_u16(vqshlq_n_u16(x, 6), 6)); // clamp 0-1023
-    i = vhsubq_s16(i, vdupq_n_s16(15));
+    uint16x8_t x = vcombine_u16( vqmovun_s32( lo ), vqmovun_s32( hi ) );
+    int16x8_t i = vreinterpretq_s16_u16( vshrq_n_u16( vqshlq_n_u16( x, 6 ), 6) ); // clamp 0-1023
+    i = vhsubq_s16( i, vdupq_n_s16( 15 ) );
 
-    int16x8_t ip11 = vaddq_s16(i, vdupq_n_s16(11));
-    int16x8_t ip4 = vaddq_s16(i, vdupq_n_s16(4));
+    int16x8_t ip11 = vaddq_s16( i, vdupq_n_s16( 11 ) );
+    int16x8_t ip4 = vaddq_s16( i, vdupq_n_s16( 4 ) );
 
-    return vshrq_n_s16(vsubq_s16(vsubq_s16(ip11, vshrq_n_s16(ip11, 7)), vshrq_n_s16(ip4, 7)), 3);
+    return vshrq_n_s16( vsubq_s16( vsubq_s16( ip11, vshrq_n_s16( ip11, 7 ) ), vshrq_n_s16( ip4, 7) ), 3 );
 }
 
-static etcpak_force_inline int16x4_t convert7_NEON(int32x4_t x)
+static etcpak_force_inline int16x4_t convert7_NEON( int32x4_t x )
 {
-    int16x4_t i = vreinterpret_s16_u16(vshr_n_u16(vqshl_n_u16(vqmovun_s32(x), 6), 6)); // clamp 0-1023
-    i = vhsub_s16(i, vdup_n_s16(15));
+    int16x4_t i = vreinterpret_s16_u16( vshr_n_u16( vqshl_n_u16( vqmovun_s32( x ), 6 ), 6 ) ); // clamp 0-1023
+    i = vhsub_s16( i, vdup_n_s16( 15 ) );
 
-    int16x4_t p9 = vadd_s16(i, vdup_n_s16(9));
-    int16x4_t p6 = vadd_s16(i, vdup_n_s16(6));
-    return vshr_n_s16(vsub_s16(vsub_s16(p9, vshr_n_s16(p9, 8)), vshr_n_s16(p6, 8)), 2);
+    int16x4_t p9 = vadd_s16( i, vdup_n_s16( 9 ) );
+    int16x4_t p6 = vadd_s16( i, vdup_n_s16( 6 ) );
+    return vshr_n_s16( vsub_s16( vsub_s16( p9, vshr_n_s16( p9, 8 ) ), vshr_n_s16( p6, 8 ) ), 2 );
 }
 
-static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON(const uint8_t* src)
+static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON( const uint8_t* src )
 {
-    uint8x16x4_t srcBlock = vld4q_u8(src);
+    uint8x16x4_t srcBlock = vld4q_u8( src );
 
-    int16x8_t bSumWide = Planar_NEON_SumWide(srcBlock.val[0]);
-    int16x8_t gSumWide = Planar_NEON_SumWide(srcBlock.val[1]);
-    int16x8_t rSumWide = Planar_NEON_SumWide(srcBlock.val[2]);
+    int16x8_t bSumWide = Planar_NEON_SumWide( srcBlock.val[0] );
+    int16x8_t gSumWide = Planar_NEON_SumWide( srcBlock.val[1] );
+    int16x8_t rSumWide = Planar_NEON_SumWide( srcBlock.val[2] );
 
-    int16x8_t dif_R_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[2]), 4)), rSumWide);
-    int16x8_t dif_R_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[2]), 4)), rSumWide);
+    int16x8_t dif_R_lo = vsubq_s16( vreinterpretq_s16_u16( vshll_n_u8( vget_low_u8( srcBlock.val[2] ), 4) ), rSumWide );
+    int16x8_t dif_R_hi = vsubq_s16( vreinterpretq_s16_u16( vshll_n_u8( vget_high_u8( srcBlock.val[2] ), 4) ), rSumWide );
 
-    int16x8_t dif_G_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[1]), 4)), gSumWide);
-    int16x8_t dif_G_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[1]), 4)), gSumWide);
+    int16x8_t dif_G_lo = vsubq_s16( vreinterpretq_s16_u16( vshll_n_u8( vget_low_u8( srcBlock.val[1] ), 4 ) ), gSumWide );
+    int16x8_t dif_G_hi = vsubq_s16( vreinterpretq_s16_u16( vshll_n_u8( vget_high_u8( srcBlock.val[1] ), 4 ) ), gSumWide );
 
-    int16x8_t dif_B_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[0]), 4)), bSumWide);
-    int16x8_t dif_B_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[0]), 4)), bSumWide);
+    int16x8_t dif_B_lo = vsubq_s16( vreinterpretq_s16_u16( vshll_n_u8( vget_low_u8( srcBlock.val[0] ), 4) ), bSumWide );
+    int16x8_t dif_B_hi = vsubq_s16( vreinterpretq_s16_u16( vshll_n_u8( vget_high_u8( srcBlock.val[0] ), 4) ), bSumWide );
 
-    int32x2x2_t dif_xz_z = vzip_s32(vzip_s32(Planar_NEON_DifXZ(dif_B_lo, dif_B_hi), Planar_NEON_DifXZ(dif_R_lo, dif_R_hi)).val[0], Planar_NEON_DifXZ(dif_G_lo, dif_G_hi));
-    int32x4_t dif_xz = vcombine_s32(dif_xz_z.val[0], dif_xz_z.val[1]);
-    int32x2x2_t dif_yz_z = vzip_s32(vzip_s32(Planar_NEON_DifYZ(dif_B_lo, dif_B_hi), Planar_NEON_DifYZ(dif_R_lo, dif_R_hi)).val[0], Planar_NEON_DifYZ(dif_G_lo, dif_G_hi));
-    int32x4_t dif_yz = vcombine_s32(dif_yz_z.val[0], dif_yz_z.val[1]);
+    int32x2x2_t dif_xz_z = vzip_s32( vzip_s32( Planar_NEON_DifXZ( dif_B_lo, dif_B_hi ), Planar_NEON_DifXZ( dif_R_lo, dif_R_hi ) ).val[0], Planar_NEON_DifXZ( dif_G_lo, dif_G_hi ) );
+    int32x4_t dif_xz = vcombine_s32( dif_xz_z.val[0], dif_xz_z.val[1] );
+    int32x2x2_t dif_yz_z = vzip_s32( vzip_s32( Planar_NEON_DifYZ( dif_B_lo, dif_B_hi ), Planar_NEON_DifYZ( dif_R_lo, dif_R_hi ) ).val[0], Planar_NEON_DifYZ( dif_G_lo, dif_G_hi ) );
+    int32x4_t dif_yz = vcombine_s32( dif_yz_z.val[0], dif_yz_z.val[1] );
 
-    const float fscale = -4.0f / ((255 * 255 * 8.0f + 85 * 85 * 8.0f) * 16.0f);
-    float32x4_t fa = vmulq_n_f32(vcvtq_f32_s32(dif_xz), fscale);
-    float32x4_t fb = vmulq_n_f32(vcvtq_f32_s32(dif_yz), fscale);
-    int16x4_t bgrgSum = vzip_s16(vzip_s16(vget_low_s16(bSumWide), vget_low_s16(rSumWide)).val[0], vget_low_s16(gSumWide)).val[0];
-    float32x4_t fd = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(bgrgSum)), 4.0f / 16.0f);
+    const float fscale = -4.0f / ( (255 * 255 * 8.0f + 85 * 85 * 8.0f ) * 16.0f );
+    float32x4_t fa = vmulq_n_f32( vcvtq_f32_s32( dif_xz ), fscale );
+    float32x4_t fb = vmulq_n_f32( vcvtq_f32_s32( dif_yz ), fscale );
+    int16x4_t bgrgSum = vzip_s16( vzip_s16( vget_low_s16( bSumWide ), vget_low_s16( rSumWide ) ).val[0], vget_low_s16( gSumWide ) ).val[0];
+    float32x4_t fd = vmulq_n_f32( vcvtq_f32_s32( vmovl_s16( bgrgSum ) ), 4.0f / 16.0f);
 
-    float32x4_t cof = vmlaq_n_f32(vmlaq_n_f32(fd, fb, 255.0f), fa, 255.0f);
-    float32x4_t chf = vmlaq_n_f32(vmlaq_n_f32(fd, fb, 255.0f), fa, -425.0f);
-    float32x4_t cvf = vmlaq_n_f32(vmlaq_n_f32(fd, fb, -425.0f), fa, 255.0f);
+    float32x4_t cof = vmlaq_n_f32( vmlaq_n_f32( fd, fb, 255.0f ), fa, 255.0f );
+    float32x4_t chf = vmlaq_n_f32( vmlaq_n_f32( fd, fb, 255.0f ), fa, -425.0f );
+    float32x4_t cvf = vmlaq_n_f32( vmlaq_n_f32( fd, fb, -425.0f ), fa, 255.0f );
 
-    int32x4_t coi = vcvtq_s32_f32(cof);
-    int32x4_t chi = vcvtq_s32_f32(chf);
-    int32x4_t cvi = vcvtq_s32_f32(cvf);
+    int32x4_t coi = vcvtq_s32_f32( cof );
+    int32x4_t chi = vcvtq_s32_f32( chf );
+    int32x4_t cvi = vcvtq_s32_f32( cvf );
 
-    int32x4x2_t tr_hv = vtrnq_s32(chi, cvi);
-    int32x4x2_t tr_o = vtrnq_s32(coi, coi);
+    int32x4x2_t tr_hv = vtrnq_s32( chi, cvi );
+    int32x4x2_t tr_o = vtrnq_s32( coi, coi );
 
-    int16x8_t c_hvoo_br_6 = convert6_NEON(tr_hv.val[0], tr_o.val[0]);
-    int16x4_t c_hvox_g_7 = convert7_NEON(vcombine_s32(vget_low_s32(tr_hv.val[1]), vget_low_s32(tr_o.val[1])));
-    int16x8_t c_hvoo_br_8 = vorrq_s16(vshrq_n_s16(c_hvoo_br_6, 4), vshlq_n_s16(c_hvoo_br_6, 2));
-    int16x4_t c_hvox_g_8 = vorr_s16(vshr_n_s16(c_hvox_g_7, 6), vshl_n_s16(c_hvox_g_7, 1));
+    int16x8_t c_hvoo_br_6 = convert6_NEON( tr_hv.val[0], tr_o.val[0] );
+    int16x4_t c_hvox_g_7 = convert7_NEON( vcombine_s32( vget_low_s32( tr_hv.val[1] ), vget_low_s32( tr_o.val[1] ) ) );
+    int16x8_t c_hvoo_br_8 = vorrq_s16( vshrq_n_s16( c_hvoo_br_6, 4 ), vshlq_n_s16( c_hvoo_br_6, 2 ) );
+    int16x4_t c_hvox_g_8 = vorr_s16( vshr_n_s16( c_hvox_g_7, 6 ), vshl_n_s16( c_hvox_g_7, 1 ) );
 
-    int16x4_t rec_gxbr_o = vext_s16(c_hvox_g_8, vget_high_s16(c_hvoo_br_8), 3);
+    int16x4_t rec_gxbr_o = vext_s16( c_hvox_g_8, vget_high_s16( c_hvoo_br_8 ), 3 );
 
-    rec_gxbr_o = vadd_s16(vshl_n_s16(rec_gxbr_o, 2), vdup_n_s16(2));
-    int16x8_t rec_ro_wide = vdupq_lane_s16(rec_gxbr_o, 3);
-    int16x8_t rec_go_wide = vdupq_lane_s16(rec_gxbr_o, 0);
-    int16x8_t rec_bo_wide = vdupq_lane_s16(rec_gxbr_o, 1);
+    rec_gxbr_o = vadd_s16( vshl_n_s16( rec_gxbr_o, 2 ), vdup_n_s16( 2 ) );
+    int16x8_t rec_ro_wide = vdupq_lane_s16( rec_gxbr_o, 3 );
+    int16x8_t rec_go_wide = vdupq_lane_s16( rec_gxbr_o, 0 );
+    int16x8_t rec_bo_wide = vdupq_lane_s16( rec_gxbr_o, 1 );
 
-    int16x4_t br_hv2 = vsub_s16(vget_low_s16(c_hvoo_br_8), vget_high_s16(c_hvoo_br_8));
-    int16x4_t gg_hv2 = vsub_s16(c_hvox_g_8, vdup_lane_s16(c_hvox_g_8, 2));
+    int16x4_t br_hv2 = vsub_s16( vget_low_s16( c_hvoo_br_8 ), vget_high_s16( c_hvoo_br_8 ) );
+    int16x4_t gg_hv2 = vsub_s16( c_hvox_g_8, vdup_lane_s16( c_hvox_g_8, 2 ) );
 
     int16x8_t scaleh_lo = { 0, 0, 0, 0, 1, 1, 1, 1 };
     int16x8_t scaleh_hi = { 2, 2, 2, 2, 3, 3, 3, 3 };
     int16x8_t scalev = { 0, 1, 2, 3, 0, 1, 2, 3 };
 
-    int16x8_t rec_r_1 = vmlaq_lane_s16(rec_ro_wide, scalev, br_hv2, 3);
-    int16x8_t rec_r_lo = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_r_1, scaleh_lo, br_hv2, 2), 2)));
-    int16x8_t rec_r_hi = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_r_1, scaleh_hi, br_hv2, 2), 2)));
+    int16x8_t rec_r_1 = vmlaq_lane_s16( rec_ro_wide, scalev, br_hv2, 3 );
+    int16x8_t rec_r_lo = vreinterpretq_s16_u16( vmovl_u8( vqshrun_n_s16( vmlaq_lane_s16( rec_r_1, scaleh_lo, br_hv2, 2 ), 2 ) ) );
+    int16x8_t rec_r_hi = vreinterpretq_s16_u16( vmovl_u8( vqshrun_n_s16( vmlaq_lane_s16( rec_r_1, scaleh_hi, br_hv2, 2 ), 2 ) ) );
 
-    int16x8_t rec_b_1 = vmlaq_lane_s16(rec_bo_wide, scalev, br_hv2, 1);
-    int16x8_t rec_b_lo = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_b_1, scaleh_lo, br_hv2, 0), 2)));
-    int16x8_t rec_b_hi = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_b_1, scaleh_hi, br_hv2, 0), 2)));
+    int16x8_t rec_b_1 = vmlaq_lane_s16( rec_bo_wide, scalev, br_hv2, 1 );
+    int16x8_t rec_b_lo = vreinterpretq_s16_u16( vmovl_u8( vqshrun_n_s16( vmlaq_lane_s16( rec_b_1, scaleh_lo, br_hv2, 0 ), 2 ) ) );
+    int16x8_t rec_b_hi = vreinterpretq_s16_u16( vmovl_u8( vqshrun_n_s16( vmlaq_lane_s16( rec_b_1, scaleh_hi, br_hv2, 0 ), 2 ) ) );
 
-    int16x8_t rec_g_1 = vmlaq_lane_s16(rec_go_wide, scalev, gg_hv2, 1);
-    int16x8_t rec_g_lo = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_g_1, scaleh_lo, gg_hv2, 0), 2)));
-    int16x8_t rec_g_hi = vreinterpretq_s16_u16(vmovl_u8(vqshrun_n_s16(vmlaq_lane_s16(rec_g_1, scaleh_hi, gg_hv2, 0), 2)));
+    int16x8_t rec_g_1 = vmlaq_lane_s16( rec_go_wide, scalev, gg_hv2, 1 );
+    int16x8_t rec_g_lo = vreinterpretq_s16_u16( vmovl_u8( vqshrun_n_s16( vmlaq_lane_s16( rec_g_1, scaleh_lo, gg_hv2, 0 ), 2 ) ) );
+    int16x8_t rec_g_hi = vreinterpretq_s16_u16( vmovl_u8( vqshrun_n_s16( vmlaq_lane_s16( rec_g_1, scaleh_hi, gg_hv2, 0 ), 2 ) ) );
 
-    int16x8_t dif_r_lo = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(srcBlock.val[2]))), rec_r_lo);
-    int16x8_t dif_r_hi = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(srcBlock.val[2]))), rec_r_hi);
+    int16x8_t dif_r_lo = vsubq_s16( vreinterpretq_s16_u16( vmovl_u8( vget_low_u8( srcBlock.val[2] ) ) ), rec_r_lo );
+    int16x8_t dif_r_hi = vsubq_s16( vreinterpretq_s16_u16( vmovl_u8( vget_high_u8( srcBlock.val[2] ) ) ), rec_r_hi );
 
-    int16x8_t dif_g_lo = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(srcBlock.val[1]))), rec_g_lo);
-    int16x8_t dif_g_hi = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(srcBlock.val[1]))), rec_g_hi);
+    int16x8_t dif_g_lo = vsubq_s16( vreinterpretq_s16_u16( vmovl_u8( vget_low_u8( srcBlock.val[1] ) ) ), rec_g_lo );
+    int16x8_t dif_g_hi = vsubq_s16( vreinterpretq_s16_u16( vmovl_u8( vget_high_u8( srcBlock.val[1] ) ) ), rec_g_hi );
 
-    int16x8_t dif_b_lo = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(srcBlock.val[0]))), rec_b_lo);
-    int16x8_t dif_b_hi = vsubq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(srcBlock.val[0]))), rec_b_hi);
+    int16x8_t dif_b_lo = vsubq_s16( vreinterpretq_s16_u16( vmovl_u8( vget_low_u8( srcBlock.val[0] ) ) ), rec_b_lo );
+    int16x8_t dif_b_hi = vsubq_s16( vreinterpretq_s16_u16( vmovl_u8( vget_high_u8( srcBlock.val[0] ) ) ), rec_b_hi );
 
-    int16x8_t dif_lo = vmlaq_n_s16(vmlaq_n_s16(vmulq_n_s16(dif_r_lo, 38), dif_g_lo, 76), dif_b_lo, 14);
-    int16x8_t dif_hi = vmlaq_n_s16(vmlaq_n_s16(vmulq_n_s16(dif_r_hi, 38), dif_g_hi, 76), dif_b_hi, 14);
+    int16x8_t dif_lo = vmlaq_n_s16( vmlaq_n_s16( vmulq_n_s16( dif_r_lo, 38 ), dif_g_lo, 76 ), dif_b_lo, 14 );
+    int16x8_t dif_hi = vmlaq_n_s16( vmlaq_n_s16( vmulq_n_s16( dif_r_hi, 38 ), dif_g_hi, 76 ), dif_b_hi, 14 );
 
-    int16x4_t tmpDif = vget_low_s16(dif_lo);
-    int32x4_t difsq_0 = vmull_s16(tmpDif, tmpDif);
-    tmpDif = vget_high_s16(dif_lo);
-    int32x4_t difsq_1 = vmull_s16(tmpDif, tmpDif);
-    tmpDif = vget_low_s16(dif_hi);
-    int32x4_t difsq_2 = vmull_s16(tmpDif, tmpDif);
-    tmpDif = vget_high_s16(dif_hi);
-    int32x4_t difsq_3 = vmull_s16(tmpDif, tmpDif);
+    int16x4_t tmpDif = vget_low_s16( dif_lo );
+    int32x4_t difsq_0 = vmull_s16( tmpDif, tmpDif );
+    tmpDif = vget_high_s16( dif_lo );
+    int32x4_t difsq_1 = vmull_s16( tmpDif, tmpDif );
+    tmpDif = vget_low_s16( dif_hi );
+    int32x4_t difsq_2 = vmull_s16( tmpDif, tmpDif );
+    tmpDif = vget_high_s16( dif_hi );
+    int32x4_t difsq_3 = vmull_s16( tmpDif, tmpDif );
 
-    uint32x4_t difsq_5 = vaddq_u32(vreinterpretq_u32_s32(difsq_0), vreinterpretq_u32_s32(difsq_1));
-    uint32x4_t difsq_6 = vaddq_u32(vreinterpretq_u32_s32(difsq_2), vreinterpretq_u32_s32(difsq_3));
+    uint32x4_t difsq_5 = vaddq_u32( vreinterpretq_u32_s32( difsq_0 ), vreinterpretq_u32_s32( difsq_1 ) );
+    uint32x4_t difsq_6 = vaddq_u32( vreinterpretq_u32_s32( difsq_2 ), vreinterpretq_u32_s32( difsq_3) );
 
-    uint64x2_t difsq_7 = vaddl_u32(vget_low_u32(difsq_5), vget_high_u32(difsq_5));
-    uint64x2_t difsq_8 = vaddl_u32(vget_low_u32(difsq_6), vget_high_u32(difsq_6));
+    uint64x2_t difsq_7 = vaddl_u32( vget_low_u32( difsq_5 ), vget_high_u32( difsq_5 ) );
+    uint64x2_t difsq_8 = vaddl_u32( vget_low_u32( difsq_6 ), vget_high_u32( difsq_6 ) );
 
-    uint64x2_t difsq_9 = vaddq_u64(difsq_7, difsq_8);
+    uint64x2_t difsq_9 = vaddq_u64( difsq_7, difsq_8 );
 
 #ifdef __aarch64__
-    uint64_t error = vaddvq_u64(difsq_9);
+    uint64_t error = vaddvq_u64( difsq_9 );
 #else
-    uint64_t error = vgetq_lane_u64(difsq_9, 0) + vgetq_lane_u64(difsq_9, 1);
+    uint64_t error = vgetq_lane_u64( difsq_9, 0 ) + vgetq_lane_u64( difsq_9, 1 );
 #endif
 
     int32_t coR = c_hvoo_br_6[6];
@@ -1877,22 +1877,22 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON(const uint8
     int32_t cvG = c_hvox_g_7[1];
     int32_t cvB = c_hvoo_br_6[1];
 
-    uint32_t rgbv = cvB | (cvG << 6) | (cvR << 13);
-    uint32_t rgbh = chB | (chG << 6) | (chR << 13);
-    uint32_t hi = rgbv | ((rgbh & 0x1FFF) << 19);
-    uint32_t lo = (chR & 0x1) | 0x2 | ((chR << 1) & 0x7C);
-    lo |= ((coB & 0x07) << 7) | ((coB & 0x18) << 8) | ((coB & 0x20) << 11);
-    lo |= ((coG & 0x3F) << 17) | ((coG & 0x40) << 18);
+    uint32_t rgbv = cvB | ( cvG << 6 ) | ( cvR << 13 );
+    uint32_t rgbh = chB | ( chG << 6 ) | ( chR << 13 );
+    uint32_t hi = rgbv | ( ( rgbh & 0x1FFF ) << 19 );
+    uint32_t lo = ( chR & 0x1 ) | 0x2 | ( ( chR << 1 ) & 0x7C );
+    lo |= ( (coB & 0x07 ) << 7 ) | ( ( coB & 0x18 ) << 8 ) | ( ( coB & 0x20 ) << 11 );
+    lo |= ( (coG & 0x3F) << 17) | ( (coG & 0x40 ) << 18 );
     lo |= coR << 25;
 
-    const auto idx = (coR & 0x20) | ((coG & 0x20) >> 1) | ((coB & 0x1E) >> 1);
+    const auto idx = ( coR & 0x20 ) | ( ( coG & 0x20 ) >> 1 ) | ( ( coB & 0x1E ) >> 1 );
 
     lo |= g_flags[idx];
 
-    uint64_t result = static_cast<uint32_t>(_bswap(lo));
-    result |= static_cast<uint64_t>(static_cast<uint32_t>(_bswap(hi))) << 32;
+    uint64_t result = static_cast<uint32_t>( _bswap(lo) );
+    result |= static_cast<uint64_t>( static_cast<uint32_t>( _bswap( hi ) ) ) << 32;
 
-    return std::make_pair(result, error);
+    return std::make_pair( result, error );
 }
 
 #endif
@@ -2025,11 +2025,11 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 
     return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error );
 #else
-    uint64_t d = CheckSolid(src);
+    uint64_t d = CheckSolid( src );
     if (d != 0) return d;
 
 #ifdef __ARM_NEON
-    auto result = Planar_NEON(src);
+    auto result = Planar_NEON( src );
 #else
     auto result = Planar( src );
 #endif
@@ -2124,48 +2124,48 @@ static etcpak_force_inline int GetMulSel( int sel )
 
 static constexpr etcpak_force_inline int GetMulSel(int sel)
 {
-    return (sel < 1) ? 0 : (sel < 4) ? 1 : (sel < 5) ? 2 : (sel < 8) ? 3 : (sel < 14) ? 4 : 5;
+    return ( sel < 1 ) ? 0 : ( sel < 4 ) ? 1 : ( sel < 5 ) ? 2 : ( sel < 8 ) ? 3 : ( sel < 14 ) ? 4 : 5;
 }
 
-static constexpr int ClampConstant(int x, int min, int max)
+static constexpr int ClampConstant( int x, int min, int max )
 {
     return x < min ? min : x > max ? max : x;
 }
 
 template <int Index>
-etcpak_force_inline static uint16x8_t ErrorProbe_EAC_NEON(uint8x8_t recVal, uint8x16_t alphaBlock)
+etcpak_force_inline static uint16x8_t ErrorProbe_EAC_NEON( uint8x8_t recVal, uint8x16_t alphaBlock )
 {
     uint8x8_t srcValWide;
 #ifndef __aarch64__
-    if (Index < 8)
-        srcValWide = vdup_lane_u8(vget_low_u8(alphaBlock), ClampConstant(Index, 0, 8));
+    if( Index < 8 )
+        srcValWide = vdup_lane_u8( vget_low_u8( alphaBlock ), ClampConstant( Index, 0, 8 ) );
     else
-        srcValWide = vdup_lane_u8(vget_high_u8(alphaBlock), ClampConstant(Index - 8, 0, 8));
+        srcValWide = vdup_lane_u8( vget_high_u8( alphaBlock ), ClampConstant( Index - 8, 0, 8 ) );
 #else
-    srcValWide = vdup_laneq_u8(alphaBlock, Index);
+    srcValWide = vdup_laneq_u8( alphaBlock, Index );
 #endif
 
-    uint8x8_t deltaVal = vabd_u8(srcValWide, recVal);
-    return vmull_u8(deltaVal, deltaVal);
+    uint8x8_t deltaVal = vabd_u8( srcValWide, recVal );
+    return vmull_u8( deltaVal, deltaVal );
 }
 
-etcpak_force_inline static uint16_t MinError_EAC_NEON(uint16x8_t errProbe)
+etcpak_force_inline static uint16_t MinError_EAC_NEON( uint16x8_t errProbe )
 {
 #ifndef __aarch64__
-    uint16x4_t tmpErr = vpmin_u16(vget_low_u16(errProbe), vget_high_u16(errProbe));
-    tmpErr = vpmin_u16(tmpErr, tmpErr);
-    return vpmin_u16(tmpErr, tmpErr)[0];
+    uint16x4_t tmpErr = vpmin_u16( vget_low_u16( errProbe ), vget_high_u16( errProbe ) );
+    tmpErr = vpmin_u16( tmpErr, tmpErr );
+    return vpmin_u16( tmpErr, tmpErr )[0];
 #else
-    return vminvq_u16(errProbe);
+    return vminvq_u16( errProbe );
 #endif
 }
 
 template <int Index>
-etcpak_force_inline static uint64_t MinErrorIndex_EAC_NEON(uint8x8_t recVal, uint8x16_t alphaBlock)
+etcpak_force_inline static uint64_t MinErrorIndex_EAC_NEON( uint8x8_t recVal, uint8x16_t alphaBlock )
 {
-    uint16x8_t errProbe = ErrorProbe_EAC_NEON<Index>(recVal, alphaBlock);
-    uint16x8_t minErrMask = vceqq_u16(errProbe, vdupq_n_u16(MinError_EAC_NEON(errProbe)));
-    uint64_t idx = __builtin_ctzll(vget_lane_u64(vreinterpret_u64_u8(vqmovn_u16(minErrMask)), 0));
+    uint16x8_t errProbe = ErrorProbe_EAC_NEON<Index>( recVal, alphaBlock );
+    uint16x8_t minErrMask = vceqq_u16( errProbe, vdupq_n_u16( MinError_EAC_NEON( errProbe ) ) );
+    uint64_t idx = __builtin_ctzll( vget_lane_u64( vreinterpret_u64_u8( vqmovn_u16( minErrMask ) ), 0 ) );
     idx >>= 3;
     idx <<= 45 - Index * 3;
 
@@ -2173,16 +2173,16 @@ etcpak_force_inline static uint64_t MinErrorIndex_EAC_NEON(uint8x8_t recVal, uin
 }
 
 template <int Index>
-etcpak_force_inline static int16x8_t WidenMultiplier_EAC_NEON(int16x8_t multipliers)
+etcpak_force_inline static int16x8_t WidenMultiplier_EAC_NEON( int16x8_t multipliers )
 {
-    constexpr int Lane = GetMulSel(Index);
+    constexpr int Lane = GetMulSel( Index );
 #ifndef __aarch64__
-    if (Lane < 4)
-        return vdupq_lane_s16(vget_low_s16(multipliers), ClampConstant(Lane, 0, 4));
+    if( Lane < 4 )
+        return vdupq_lane_s16( vget_low_s16( multipliers ), ClampConstant( Lane, 0, 4 ) );
     else
-        return vdupq_lane_s16(vget_high_s16(multipliers), ClampConstant(Lane - 4, 0, 4));
+        return vdupq_lane_s16( vget_high_s16( multipliers ), ClampConstant( Lane - 4, 0, 4 ) );
 #else
-    return vdupq_laneq_s16(multipliers, Lane);
+    return vdupq_laneq_s16( multipliers, Lane );
 #endif
 }
 
@@ -2604,76 +2604,76 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
 
     int16x8_t srcMidWide, multipliers;
     int srcMid;
-    uint8x16_t srcAlphaBlock = vld1q_u8(src);
+    uint8x16_t srcAlphaBlock = vld1q_u8( src );
     {
         uint8_t ref = src[0];
-        uint8x16_t a0 = vdupq_n_u8(ref);
-        uint8x16_t r = vceqq_u8(srcAlphaBlock, a0);
-        int64x2_t m = vreinterpretq_s64_u8(r);
-        if (m[0] == -1 && m[1] == -1)
+        uint8x16_t a0 = vdupq_n_u8( ref );
+        uint8x16_t r = vceqq_u8( srcAlphaBlock, a0 );
+        int64x2_t m = vreinterpretq_s64_u8( r );
+        if( m[0] == -1 && m[1] == -1 )
             return ref;
 
         // srcRange
 #ifdef __aarch64__
-        uint8_t min = vminvq_u8(srcAlphaBlock);
-        uint8_t max = vmaxvq_u8(srcAlphaBlock);
+        uint8_t min = vminvq_u8( srcAlphaBlock );
+        uint8_t max = vmaxvq_u8( srcAlphaBlock );
         uint8_t srcRange = max - min;
-        multipliers = vqaddq_s16(vshrq_n_s16(vqdmulhq_n_s16(g_alphaRange_NEON, srcRange), 1), vdupq_n_s16(1));
+        multipliers = vqaddq_s16( vshrq_n_s16( vqdmulhq_n_s16( g_alphaRange_NEON, srcRange ), 1 ), vdupq_n_s16( 1 ) );
         srcMid = min + srcRange / 2;
-        srcMidWide = vdupq_n_s16(srcMid);
+        srcMidWide = vdupq_n_s16( srcMid );
 #else
-        uint8x8_t vmin = vpmin_u8(vget_low_u8(srcAlphaBlock), vget_high_u8(srcAlphaBlock));
-        vmin = vpmin_u8(vmin, vmin);
-        vmin = vpmin_u8(vmin, vmin);
-        vmin = vpmin_u8(vmin, vmin);
-        uint8x8_t vmax = vpmax_u8(vget_low_u8(srcAlphaBlock), vget_high_u8(srcAlphaBlock));
-        vmax = vpmax_u8(vmax, vmax);
-        vmax = vpmax_u8(vmax, vmax);
-        vmax = vpmax_u8(vmax, vmax);
+        uint8x8_t vmin = vpmin_u8( vget_low_u8( srcAlphaBlock ), vget_high_u8( srcAlphaBlock ) );
+        vmin = vpmin_u8( vmin, vmin );
+        vmin = vpmin_u8( vmin, vmin );
+        vmin = vpmin_u8( vmin, vmin );
+        uint8x8_t vmax = vpmax_u8( vget_low_u8( srcAlphaBlock ), vget_high_u8( srcAlphaBlock ) );
+        vmax = vpmax_u8( vmax, vmax );
+        vmax = vpmax_u8( vmax, vmax );
+        vmax = vpmax_u8( vmax, vmax );
 
-        int16x8_t srcRangeWide = vreinterpretq_s16_u16(vsubl_u8(vmax, vmin));
-        multipliers = vqaddq_s16(vshrq_n_s16(vqdmulhq_s16(g_alphaRange_NEON, srcRangeWide), 1), vdupq_n_s16(1));
-        srcMidWide = vsraq_n_s16(vreinterpretq_s16_u16(vmovl_u8(vmin)), srcRangeWide, 1);
-        srcMid = vgetq_lane_s16(srcMidWide, 0);
+        int16x8_t srcRangeWide = vreinterpretq_s16_u16( vsubl_u8( vmax, vmin ) );
+        multipliers = vqaddq_s16( vshrq_n_s16( vqdmulhq_s16( g_alphaRange_NEON, srcRangeWide ), 1 ), vdupq_n_s16( 1 ) );
+        srcMidWide = vsraq_n_s16( vreinterpretq_s16_u16(vmovl_u8(vmin)), srcRangeWide, 1);
+        srcMid = vgetq_lane_s16( srcMidWide, 0 );
 #endif
     }
 
     // calculate reconstructed values
-#define EAC_APPLY_16X(m) m(0) m(1) m(2) m(3) m(4) m(5) m(6) m(7) m(8) m(9) m(10) m(11) m(12) m(13) m(14) m(15)
+#define EAC_APPLY_16X( m ) m( 0 ) m( 1 ) m( 2 ) m( 3 ) m( 4 ) m( 5 ) m( 6 ) m( 7 ) m( 8 ) m( 9 ) m( 10 ) m( 11 ) m( 12 ) m( 13 ) m( 14 ) m( 15 )
 
-#define EAC_RECONSTRUCT_VALUE(n) vqmovun_s16(vmlaq_s16(srcMidWide, g_alpha_NEON[n], WidenMultiplier_EAC_NEON<n>(multipliers))),
-    uint8x8_t recVals[16] = { EAC_APPLY_16X(EAC_RECONSTRUCT_VALUE) };
+#define EAC_RECONSTRUCT_VALUE( n ) vqmovun_s16( vmlaq_s16( srcMidWide, g_alpha_NEON[n], WidenMultiplier_EAC_NEON<n>( multipliers ) ) ),
+    uint8x8_t recVals[16] = { EAC_APPLY_16X( EAC_RECONSTRUCT_VALUE ) };
 
     // find selector
     int err = std::numeric_limits<int>::max();
     int sel = 0;
-    for (int r = 0; r < 16; r++)
+    for( int r = 0; r < 16; r++ )
     {
         uint8x8_t recVal = recVals[r];
 
         int rangeErr = 0;
-#define EAC_ACCUMULATE_ERROR(n) rangeErr += MinError_EAC_NEON(ErrorProbe_EAC_NEON<n>(recVal, srcAlphaBlock));
-        EAC_APPLY_16X(EAC_ACCUMULATE_ERROR)
+#define EAC_ACCUMULATE_ERROR( n ) rangeErr += MinError_EAC_NEON( ErrorProbe_EAC_NEON<n>( recVal, srcAlphaBlock ) );
+        EAC_APPLY_16X( EAC_ACCUMULATE_ERROR )
 
-        if (rangeErr < err)
+        if( rangeErr < err )
         {
             err = rangeErr;
             sel = r;
-            if (err == 0) break;
+            if ( err == 0 ) break;
         }
     }
 
     // combine results
-    uint64_t d = (uint64_t(srcMid) << 56) |
-        (uint64_t(multipliers[GetMulSel(sel)]) << 52) |
-        (uint64_t(sel) << 48);
+    uint64_t d = ( uint64_t( srcMid ) << 56 ) |
+        ( uint64_t( multipliers[GetMulSel( sel )] ) << 52 ) |
+        ( uint64_t( sel ) << 48);
 
     // generate indices
     uint8x8_t recVal = recVals[sel];
-#define EAC_INSERT_INDEX(n) d |= MinErrorIndex_EAC_NEON<n>(recVal, srcAlphaBlock);
-    EAC_APPLY_16X(EAC_INSERT_INDEX)
+#define EAC_INSERT_INDEX(n) d |= MinErrorIndex_EAC_NEON<n>( recVal, srcAlphaBlock );
+    EAC_APPLY_16X( EAC_INSERT_INDEX )
 
-    return _bswap64(d);
+    return _bswap64( d );
 
 #undef EAC_APPLY_16X
 #undef EAC_INSERT_INDEX
