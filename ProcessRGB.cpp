@@ -2130,43 +2130,14 @@ static etcpak_force_inline int GetMulSel( int sel )
 
 #ifdef __ARM_NEON
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc++14-extensions"
-#pragma clang diagnostic ignored "-Wc++17-extensions"
-#endif
-
 static constexpr etcpak_force_inline int GetMulSel(int sel)
 {
-    switch (sel)
-    {
-    case 0:
-        return 0;
-    case 1:
-    case 2:
-    case 3:
-        return 1;
-    case 4:
-        return 2;
-    case 5:
-    case 6:
-    case 7:
-        return 3;
-    case 8:
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-        return 4;
-    case 14:
-    case 15:
-        return 5;
-    }
+    return (sel < 1) ? 0 : (sel < 4) ? 1 : (sel < 5) ? 2 : (sel < 8) ? 3 : (sel < 14) ? 4 : 5;
+}
 
-#ifdef __GNUC__
-    __builtin_unreachable();
-#endif
+static constexpr int ClampConstant(int x, int min, int max)
+{
+    return x < min ? min : x > max ? max : x;
 }
 
 template <int Index>
@@ -2174,10 +2145,10 @@ etcpak_force_inline static uint16x8_t ErrorProbe_EAC_NEON(uint8x8_t recVal, uint
 {
     uint8x8_t srcValWide;
 #ifndef __aarch64__
-    if constexpr (Index < 8)
-        srcValWide = vdup_lane_u8(vget_low_u8(alphaBlock), Index);
+    if (Index < 8)
+        srcValWide = vdup_lane_u8(vget_low_u8(alphaBlock), ClampConstant(Index, 0, 8));
     else
-        srcValWide = vdup_lane_u8(vget_high_u8(alphaBlock), Index - 8);
+        srcValWide = vdup_lane_u8(vget_high_u8(alphaBlock), ClampConstant(Index - 8, 0, 8));
 #else
     srcValWide = vdup_laneq_u8(alphaBlock, Index);
 #endif
@@ -2203,12 +2174,8 @@ etcpak_force_inline static uint64_t MinErrorIndex_EAC_NEON(uint8x8_t recVal, uin
     uint16x8_t errProbe = ErrorProbe_EAC_NEON<Index>(recVal, alphaBlock);
     uint16x8_t minErrMask = vceqq_u16(errProbe, vdupq_n_u16(MinError_EAC_NEON(errProbe)));
     uint64_t idx = __builtin_ctzll(vget_lane_u64(vreinterpret_u64_u8(vqmovn_u16(minErrMask)), 0));
-
-    const int shift = 45 - Index * 3 - 3;
-    if constexpr (shift >= 0)
-        idx <<= shift;
-    else
-        idx >>= -shift;
+    idx >>= 3;
+    idx <<= 45 - Index * 3;
 
     return idx;
 }
@@ -2218,18 +2185,14 @@ etcpak_force_inline static int16x8_t WidenMultiplier_EAC_NEON(int16x8_t multipli
 {
     constexpr int Lane = GetMulSel(Index);
 #ifndef __aarch64__ 
-    if constexpr (Lane < 4)
-        return vdupq_lane_s16(vget_low_s16(multipliers), Lane);
+    if (Lane < 4)
+        return vdupq_lane_s16(vget_low_s16(multipliers), ClampConstant(Lane, 0, 4));
     else
-        return vdupq_lane_s16(vget_high_s16(multipliers), Lane - 4);
+        return vdupq_lane_s16(vget_high_s16(multipliers), ClampConstant(Lane - 4, 0, 4));
 #else
     return vdupq_laneq_s16(multipliers, Lane);
 #endif
 }
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 #endif
 
