@@ -1692,7 +1692,7 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* s
 
 #ifdef __ARM_NEON
 
-static etcpak_force_inline int32_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t dif_hi)
+static etcpak_force_inline int32x2_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t dif_hi)
 {
     int32x4_t dif0 = vmull_n_s16(vget_low_s16(dif_lo), -255);
     int32x4_t dif1 = vmull_n_s16(vget_high_s16(dif_lo), -85);
@@ -1700,16 +1700,15 @@ static etcpak_force_inline int32_t Planar_NEON_DifXZ(int16x8_t dif_lo, int16x8_t
     int32x4_t dif3 = vmull_n_s16(vget_high_s16(dif_hi), 255);
     int32x4_t dif4 = vaddq_s32(vaddq_s32(dif0, dif1), vaddq_s32(dif2, dif3));
 
-#ifndef __aarch64__ 
+#ifndef __aarch64__
     int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
-    int32x2_t dif6 = vpadd_s32(dif5, dif5);
-    return dif6[0];
+    return vpadd_s32(dif5, dif5);
 #else
-    return vaddvq_s32(dif4);
+    return vdup_n_s32(vaddvq_s32(dif4));
 #endif
 }
 
-static etcpak_force_inline int32_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t dif_hi)
+static etcpak_force_inline int32x2_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t dif_hi)
 {
     int16x4_t scaling = { -255, -85, 85, 255 };
     int32x4_t dif0 = vmull_s16(vget_low_s16(dif_lo), scaling);
@@ -1720,10 +1719,9 @@ static etcpak_force_inline int32_t Planar_NEON_DifYZ(int16x8_t dif_lo, int16x8_t
 
 #ifndef __aarch64__
     int32x2_t dif5 = vpadd_s32(vget_low_s32(dif4), vget_high_s32(dif4));
-    int32x2_t dif6 = vpadd_s32(dif5, dif5);
-    return dif6[0];
+    return vpadd_s32(dif5, dif5);
 #else
-    return vaddvq_s32(dif4);
+    return vdup_n_s32(vaddvq_s32(dif4));
 #endif
 }
 
@@ -1779,26 +1777,16 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON(const uint8
     int16x8_t dif_B_lo = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_low_u8(srcBlock.val[0]), 4)), bSumWide);
     int16x8_t dif_B_hi = vsubq_s16(vreinterpretq_s16_u16(vshll_n_u8(vget_high_u8(srcBlock.val[0]), 4)), bSumWide);
 
-    int32x4_t dif_xz =
-    {
-        Planar_NEON_DifXZ(dif_B_lo, dif_B_hi),
-        Planar_NEON_DifXZ(dif_G_lo, dif_G_hi),
-        Planar_NEON_DifXZ(dif_R_lo, dif_R_hi),
-        0
-    };
-
-    int32x4_t dif_yz =
-    {
-        Planar_NEON_DifYZ(dif_B_lo, dif_B_hi),
-        Planar_NEON_DifYZ(dif_G_lo, dif_G_hi),
-        Planar_NEON_DifYZ(dif_R_lo, dif_R_hi),
-        0
-    };
+    int32x2x2_t dif_xz_z = vzip_s32(vzip_s32(Planar_NEON_DifXZ(dif_B_lo, dif_B_hi), Planar_NEON_DifXZ(dif_R_lo, dif_R_hi)).val[0], Planar_NEON_DifXZ(dif_G_lo, dif_G_hi));
+    int32x4_t dif_xz = vcombine_s32(dif_xz_z.val[0], dif_xz_z.val[1]);
+    int32x2x2_t dif_yz_z = vzip_s32(vzip_s32(Planar_NEON_DifYZ(dif_B_lo, dif_B_hi), Planar_NEON_DifYZ(dif_R_lo, dif_R_hi)).val[0], Planar_NEON_DifYZ(dif_G_lo, dif_G_hi));
+    int32x4_t dif_yz = vcombine_s32(dif_yz_z.val[0], dif_yz_z.val[1]);
 
     const float fscale = -4.0f / ((255 * 255 * 8.0f + 85 * 85 * 8.0f) * 16.0f);
     float32x4_t fa = vmulq_n_f32(vcvtq_f32_s32(dif_xz), fscale);
     float32x4_t fb = vmulq_n_f32(vcvtq_f32_s32(dif_yz), fscale);
-    float32x4_t fd = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(int16x4_t{ bSumWide[0], gSumWide[0], rSumWide[0], gSumWide[0] })), 4.0f / 16.0f);
+    int16x4_t bgrgSum = vzip_s16(vzip_s16(vget_low_s16(bSumWide), vget_low_s16(rSumWide)).val[0], vget_low_s16(gSumWide)).val[0];
+    float32x4_t fd = vmulq_n_f32(vcvtq_f32_s32(vmovl_s16(bgrgSum)), 4.0f / 16.0f);
 
     float32x4_t cof = vmlaq_n_f32(vmlaq_n_f32(fd, fb, 255.0f), fa, 255.0f);
     float32x4_t chf = vmlaq_n_f32(vmlaq_n_f32(fd, fb, 255.0f), fa, -425.0f);
@@ -1871,7 +1859,11 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON(const uint8
 
     uint64x2_t difsq_9 = vaddq_u64(difsq_7, difsq_8);
 
-    uint64_t error = difsq_9[0] + difsq_9[1];
+#ifdef __aarch64__
+    uint64_t error = vaddvq_u64(difsq_9);
+#else
+    uint64_t error = vgetq_lane_u64(difsq_9, 0) + vgetq_lane_u64(difsq_9, 1);
+#endif
 
     int32_t coR = c_hvoo_br_6[6];
     int32_t coG = c_hvox_g_7[2];
@@ -2184,7 +2176,7 @@ template <int Index>
 etcpak_force_inline static int16x8_t WidenMultiplier_EAC_NEON(int16x8_t multipliers)
 {
     constexpr int Lane = GetMulSel(Index);
-#ifndef __aarch64__ 
+#ifndef __aarch64__
     if (Lane < 4)
         return vdupq_lane_s16(vget_low_s16(multipliers), ClampConstant(Lane, 0, 4));
     else
