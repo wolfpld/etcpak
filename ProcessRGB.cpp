@@ -3007,6 +3007,20 @@ void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_
         _mm_store_si128( (__m128i*)(buf + 12), _mm_castps_si128( px3 ) );
 
         src += 4;
+#elif defined(__ARM_NEON)
+        uint32x4x4_t block;
+
+        block = vld4q_lane_u32(src, block, 0);
+        block = vld4q_lane_u32(src + width, block, 1);
+        block = vld4q_lane_u32(src + 2 * width, block, 2);
+        block = vld4q_lane_u32(src + 3 * width, block, 3);
+
+        vst1q_u32(buf, block.val[0]);
+        vst1q_u32(buf + 4, block.val[1]);
+        vst1q_u32(buf + 8, block.val[2]);
+        vst1q_u32(buf + 12, block.val[3]);
+
+        src += 4;
 #else
         auto ptr = buf;
         for( int x=0; x<4; x++ )
