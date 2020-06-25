@@ -3007,20 +3007,6 @@ void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_
         _mm_store_si128( (__m128i*)(buf + 12), _mm_castps_si128( px3 ) );
 
         src += 4;
-#elif defined(__ARM_NEON)
-        uint32x4x4_t block;
-
-        block = vld4q_lane_u32(src, block, 0);
-        block = vld4q_lane_u32(src + width, block, 1);
-        block = vld4q_lane_u32(src + 2 * width, block, 2);
-        block = vld4q_lane_u32(src + 3 * width, block, 3);
-
-        vst1q_u32(buf, block.val[0]);
-        vst1q_u32(buf + 4, block.val[1]);
-        vst1q_u32(buf + 8, block.val[2]);
-        vst1q_u32(buf + 12, block.val[3]);
-
-        src += 4;
 #else
         auto ptr = buf;
         for( int x=0; x<4; x++ )
@@ -3082,25 +3068,6 @@ void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size
         __m128i s2 = _mm_or_si128( s0, s1 );
 
         _mm_store_si128( (__m128i*)alpha, s2 );
-
-        src += 4;
-#elif defined(__ARM_NEON)
-        uint32x4x4_t block;
-
-        block = vld4q_lane_u32(src, block, 0);
-        block = vld4q_lane_u32(src + width, block, 1);
-        block = vld4q_lane_u32(src + 2 * width, block, 2);
-        block = vld4q_lane_u32(src + 3 * width, block, 3);
-
-        vst1q_u32(rgba, block.val[0]);
-        vst1q_u32(rgba + 4, block.val[1]);
-        vst1q_u32(rgba + 8, block.val[2]);
-        vst1q_u32(rgba + 12, block.val[3]);
-
-        uint8x16_t z0 = vuzpq_u8(vreinterpretq_u8_u32(block.val[0]), vreinterpretq_u8_u32(block.val[0])).val[1];
-        uint8x16_t z1 = vuzpq_u8(vreinterpretq_u8_u32(block.val[2]), vreinterpretq_u8_u32(block.val[3])).val[1];
-        uint8x16_t a = vuzpq_u8(z0, z1).val[1];
-        vst1q_u8(alpha, a);
 
         src += 4;
 #else
