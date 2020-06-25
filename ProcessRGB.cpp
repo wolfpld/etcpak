@@ -2602,7 +2602,8 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
     return _bswap64( d );
 #elif defined __ARM_NEON
 
-    int srcRange, srcMid;
+    int16x8_t srcMidWide, multipliers;
+    int srcMid;
     uint8x16_t srcAlphaBlock = vld1q_u8(src);
     {
         uint8_t ref = src[0];
@@ -2616,30 +2617,30 @@ static etcpak_force_inline uint64_t ProcessAlpha_ETC2( const uint8_t* src )
 #ifdef __aarch64__
         uint8_t min = vminvq_u8(srcAlphaBlock);
         uint8_t max = vmaxvq_u8(srcAlphaBlock);
-#else
-        uint8_t min = src[0];
-        uint8_t max = src[0];
-        for (int i = 1; i < 16; i++)
-        {
-            if (min > src[i]) min = src[i];
-            else if (max < src[i]) max = src[i];
-        }
-#endif
-
-        srcRange = max - min;
+        uint8_t srcRange = max - min;
+        multipliers = vqaddq_s16(vshrq_n_s16(vqdmulhq_n_s16(g_alphaRange_NEON, srcRange), 1), vdupq_n_s16(1));
         srcMid = min + srcRange / 2;
+        srcMidWide = vdupq_n_s16(srcMid);
+#else
+        uint8x8_t vmin = vpmin_u8(vget_low_u8(srcAlphaBlock), vget_high_u8(srcAlphaBlock));
+        vmin = vpmin_u8(vmin, vmin);
+        vmin = vpmin_u8(vmin, vmin);
+        vmin = vpmin_u8(vmin, vmin);
+        uint8x8_t vmax = vpmax_u8(vget_low_u8(srcAlphaBlock), vget_high_u8(srcAlphaBlock));
+        vmax = vpmax_u8(vmax, vmax);
+        vmax = vpmax_u8(vmax, vmax);
+        vmax = vpmax_u8(vmax, vmax);
+
+        int16x8_t srcRangeWide = vreinterpretq_s16_u16(vsubl_u8(vmax, vmin));
+        multipliers = vqaddq_s16(vshrq_n_s16(vqdmulhq_s16(g_alphaRange_NEON, srcRangeWide), 1), vdupq_n_s16(1));
+        srcMidWide = vsraq_n_s16(vreinterpretq_s16_u16(vmovl_u8(vmin)), srcRangeWide, 1);
+        srcMid = vgetq_lane_s16(srcMidWide, 0);
+#endif
     }
 
     // calculate reconstructed values
-#if 0 // __ARM_FEATURE_QRDMX // untested
-    int16x8_t multipliers = vqrdmlahq_s16(g_alphaRange_NEON, vdupq_n_s16(srcRange), vdupq_n_s16(2));
-#else
-    int16x8_t multipliers = vqaddq_s16(vshrq_n_s16(vqdmulhq_n_s16(g_alphaRange_NEON, srcRange), 1), vdupq_n_s16(1));
-#endif
-
 #define EAC_APPLY_16X(m) m(0) m(1) m(2) m(3) m(4) m(5) m(6) m(7) m(8) m(9) m(10) m(11) m(12) m(13) m(14) m(15)
 
-    int16x8_t srcMidWide = vdupq_n_s16(srcMid);
 #define EAC_RECONSTRUCT_VALUE(n) vqmovun_s16(vmlaq_s16(srcMidWide, g_alpha_NEON[n], WidenMultiplier_EAC_NEON<n>(multipliers))),
     uint8x8_t recVals[16] = { EAC_APPLY_16X(EAC_RECONSTRUCT_VALUE) };
 
