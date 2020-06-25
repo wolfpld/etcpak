@@ -1881,8 +1881,8 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON( const uint
     uint32_t rgbh = chB | ( chG << 6 ) | ( chR << 13 );
     uint32_t hi = rgbv | ( ( rgbh & 0x1FFF ) << 19 );
     uint32_t lo = ( chR & 0x1 ) | 0x2 | ( ( chR << 1 ) & 0x7C );
-    lo |= ( (coB & 0x07 ) << 7 ) | ( ( coB & 0x18 ) << 8 ) | ( ( coB & 0x20 ) << 11 );
-    lo |= ( (coG & 0x3F) << 17) | ( (coG & 0x40 ) << 18 );
+    lo |= ( ( coB & 0x07 ) << 7 ) | ( ( coB & 0x18 ) << 8 ) | ( ( coB & 0x20 ) << 11 );
+    lo |= ( ( coG & 0x3F) << 17) | ( (coG & 0x40 ) << 18 );
     lo |= coR << 25;
 
     const auto idx = ( coR & 0x20 ) | ( ( coG & 0x20 ) >> 1 ) | ( ( coB & 0x1E ) >> 1 );
