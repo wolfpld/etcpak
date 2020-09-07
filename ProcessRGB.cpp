@@ -1,6 +1,13 @@
 #include <array>
 #include <string.h>
 
+#define QUICK_ETC2
+
+#ifdef QUICK_ETC2
+#define MAXIMUM_ERROR 1065369600 // ((38+76+14) * 255)^2
+#define QUICK_ETC2_TH // Full ETC2 mode
+#endif
+
 #ifdef __ARM_NEON
 #  include <arm_neon.h>
 #endif
@@ -32,6 +39,12 @@
 #ifndef _bswap
 #  define _bswap(x) __builtin_bswap32(x)
 #  define _bswap64(x) __builtin_bswap64(x)
+#endif
+
+#ifdef QUICK_ETC2
+// thresholds for the early compression-mode decision scheme
+// default: 0.03, 0.09, and 0.38
+extern float ecmd_threshold[3]; 
 #endif
 
 namespace
@@ -573,10 +586,46 @@ struct Plane
     uint64_t plane;
     uint64_t error;
     __m256i sum4;
+#ifdef QUICK_ETC2
+    bool planar_mode_expected;
+    bool th_mode_expected;
+    __m128i r8, g8, b8, luma8; //variables to store SSE RGB&luma values
+#endif
 };
+
+
+#ifdef QUICK_ETC2
+// horizontal min/max functions. https://stackoverflow.com/questions/22256525/horizontal-minimum-and-maximum-using-sse
+// if an error occurs in GCC, please change the value of -march in CFLAGS to a specific value for your CPU (e.g., skylake).
+static inline int16_t hMax(__m128i buffer, uint8_t& idx)
+{
+    __m128i tmp1 = _mm_sub_epi8(_mm_set1_epi8((char)(255)), buffer);
+    __m128i tmp2 = _mm_min_epu8(tmp1, _mm_srli_epi16(tmp1, 8));
+    __m128i tmp3 = _mm_minpos_epu16(tmp2);
+    uint8_t result = 255 - (uint8_t)_mm_cvtsi128_si32(tmp3);
+    __m128i mask =_mm_cmpeq_epi8(buffer, _mm_set1_epi8(result));
+    idx = _tzcnt_u32(_mm_movemask_epi8(mask)); 
+
+    return result;
+}
+
+static inline int16_t hMin(__m128i buffer, uint8_t& idx)
+{
+    __m128i tmp2 = _mm_min_epu8(buffer, _mm_srli_epi16(buffer, 8));
+    __m128i tmp3 = _mm_minpos_epu16(tmp2);
+    uint8_t result = (uint8_t)_mm_cvtsi128_si32(tmp3);
+    __m128i mask = _mm_cmpeq_epi8(buffer, _mm_set1_epi8(result));
+    idx = _tzcnt_u32(_mm_movemask_epi8(mask));
+    return result;
+}
+#endif
 
 static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
 {
+#ifdef QUICK_ETC2
+    bool planar_mode_expected = false;
+    bool th_mode_expected = false;
+#endif
     __m128i d0 = _mm_loadu_si128(((__m128i*)src) + 0);
     __m128i d1 = _mm_loadu_si128(((__m128i*)src) + 1);
     __m128i d2 = _mm_loadu_si128(((__m128i*)src) + 2);
@@ -596,6 +645,60 @@ static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
     __m128i b8 = _mm_unpacklo_epi64(rg0, rg1);
     __m128i g8 = _mm_unpackhi_epi64(rg0, rg1);
     __m128i r8 = _mm_unpacklo_epi64(b0, b1);
+
+#ifdef QUICK_ETC2
+    // luma calculation
+    __m256i b16_luma = _mm256_mullo_epi16(_mm256_cvtepu8_epi16(b8), _mm256_set1_epi16(14));
+    __m256i g16_luma = _mm256_mullo_epi16(_mm256_cvtepu8_epi16(g8), _mm256_set1_epi16(76));
+    __m256i r16_luma = _mm256_mullo_epi16(_mm256_cvtepu8_epi16(r8), _mm256_set1_epi16(38));
+
+    __m256i luma_16bit = _mm256_add_epi16(_mm256_add_epi16(g16_luma, r16_luma), b16_luma);
+    __m256i luma_8bit_m256i = _mm256_srli_epi16(luma_16bit, 7);
+    __m128i luma_8bit_lo = _mm256_extractf128_si256(luma_8bit_m256i, 0);
+    __m128i luma_8bit_hi = _mm256_extractf128_si256(luma_8bit_m256i, 1);
+
+    static const __m128i interleaving_mask_lo = _mm_set_epi8(15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0);
+    static const __m128i interleaving_mask_hi = _mm_set_epi8(14, 12, 10, 8, 6, 4, 2, 0, 15, 13, 11, 9, 7, 5, 3, 1);
+    __m128i luma_8bit_lo_moved = _mm_shuffle_epi8(luma_8bit_lo, interleaving_mask_lo);
+    __m128i luma_8bit_hi_moved = _mm_shuffle_epi8(luma_8bit_hi, interleaving_mask_hi);
+    __m128i luma_8bit = _mm_or_si128(luma_8bit_hi_moved, luma_8bit_lo_moved);
+
+    // min/max calculation
+    uint8_t min_idx = 255, max_idx = 255;
+    float min_luma = hMin(luma_8bit, min_idx) * 0.00392156f;
+    float max_luma = hMax(luma_8bit, max_idx) * 0.00392156f;
+    float luma_range = max_luma - min_luma;
+
+    // filters a very-low-contrast block
+    if (luma_range <= ecmd_threshold[0])
+    {
+        planar_mode_expected = true;
+    }
+
+    // checks whether a pair of the corner pixels in a block has the min/max luma values;
+    // if so, the ETC2 planar mode is enabled, and otherwise, the ETC1 mode is enabled
+    else if (luma_range <= ecmd_threshold[1])
+    {
+        planar_mode_expected = false;
+        static const __m128i corner_pair = _mm_set_epi8(1, 1, 1, 1, 1, 1, 1, 1, 0, 15, 3, 12, 12, 3, 15, 0);
+        __m128i current_max_min
+            = _mm_set_epi8(0, 0, 0, 0, 0, 0, 0, 0,
+                min_idx, max_idx, min_idx, max_idx,
+                min_idx, max_idx, min_idx, max_idx);
+
+        __m128i max_min_result = _mm_cmpeq_epi16(corner_pair, current_max_min);
+
+        int mask = _mm_movemask_epi8(max_min_result);
+        if (mask)
+        {
+            planar_mode_expected = true;
+        }
+    }
+
+    // filters a high-contrast block for checking both ETC1 mode and the ETC2 T/H mode
+    else if (luma_range >= ecmd_threshold[2])
+        th_mode_expected = true;
+#endif
 
     __m128i t0 = _mm_sad_epu8(r8, _mm_setzero_si128());
     __m128i t1 = _mm_sad_epu8(g8, _mm_setzero_si128());
@@ -618,6 +721,21 @@ static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
 
     __m256i srb = _mm256_or_si256(sr1, sb0);
     __m256i srgb = _mm256_or_si256(srb, sg1);
+
+#ifdef QUICK_ETC2
+    if (!planar_mode_expected) //early termination
+    {
+        Plane plane;
+        plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
+        plane.planar_mode_expected = false;
+        plane.th_mode_expected = th_mode_expected;
+        plane.r8 = r8;
+        plane.g8 = g8;
+        plane.b8 = b8;
+        plane.luma8 = luma_8bit;
+        return plane;
+    }
+#endif
 
     __m128i t3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(t0), _mm_castsi128_ps(t1), _MM_SHUFFLE(2, 0, 2, 0)));
     __m128i t4 = _mm_shuffle_epi32(t2, _MM_SHUFFLE(3, 1, 2, 0));
@@ -686,6 +804,7 @@ static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
     uint64_t rgbho = _mm_extract_epi64(cohv, 0);
     uint32_t rgbv0 = _mm_extract_epi32(cohv, 2);
 
+#ifndef QUICK_ETC2
     // Error calculation
     auto ro0 = (rgbho >> 48) & 0x3F;
     auto go0 = (rgbho >> 40) & 0x7F;
@@ -781,7 +900,7 @@ static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
 
     uint64_t error = err0 + err1 + err2 + err3;
     /**/
-
+#endif
     uint32_t rgbv = ( rgbv0 & 0x3F ) | ( ( rgbv0 >> 2 ) & 0x1FC0 ) | ( ( rgbv0 >> 3 ) & 0x7E000 );
     uint64_t rgbho0_ = ( rgbho & 0x3F0000003F ) | ( ( rgbho >> 2 ) & 0x1FC000001FC0 ) | ( ( rgbho >> 3 ) & 0x7E0000007E000 );
     uint64_t rgbho0 = ( rgbho0_ & 0x7FFFF ) | ( ( rgbho0_ >> 13 ) & 0x3FFFF80000 );
@@ -798,7 +917,12 @@ static etcpak_force_inline Plane Planar_AVX2(const uint8_t* src)
     Plane plane;
 
     plane.plane = result;
+#ifdef QUICK_ETC2
+    plane.error = 0;
+    plane.planar_mode_expected = planar_mode_expected;
+#else
     plane.error = error;
+#endif
     plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
 
     return plane;
@@ -1548,18 +1672,68 @@ static etcpak_force_inline uint8_t convert7(float f)
     return (i + 9 - ((i + 9) >> 8) - ((i + 6) >> 8)) >> 2;
 }
 
+#ifdef QUICK_ETC2
+static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* src, uint8_t* luma, bool& th_mode_expected)
+#else
 static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* src)
+#endif
 {
     int32_t r = 0;
     int32_t g = 0;
     int32_t b = 0;
 
+#ifdef QUICK_ETC2
+    uint8_t max_luma = 0;
+    uint8_t max_luma_idx = 0;
+    uint8_t min_luma = 255;
+    uint8_t min_luma_idx = 0;
+    bool planar_mode_expected = false;
+#endif
     for (int i = 0; i < 16; ++i)
     {
         b += src[i * 4 + 0];
         g += src[i * 4 + 1];
         r += src[i * 4 + 2];
+#ifdef QUICK_ETC2
+        luma [i] = (src[i*4+2]*76 + src[i*4+1]*150 + src[i*4]*28) / 254; // luma calculation
+        if (min_luma > luma[i])
+        {
+            min_luma = luma[i];
+            min_luma_idx = i;
+        }
+        if (max_luma < luma[i])
+        {
+            max_luma = luma[i];
+            max_luma_idx = i;
+        }
+#endif
     }
+
+#ifdef QUICK_ETC2
+    float luma_range = (max_luma - min_luma) / 255.0f;
+    // filters a very-low-contrast block
+    if (luma_range <= ecmd_threshold[0])
+    {
+        planar_mode_expected = true;
+    }
+    // checks whether a pair of the corner pixels in a block has the min/max luma values;
+    // if so, the ETC2 planar mode is enabled, and otherwise, the ETC1 mode is enabled
+    else if (luma_range <= ecmd_threshold[1])
+    {
+        // check whether a pair of the corner pixels in a block has the min/max luma values;
+        // if so, the ETC2 planar mode is enabled.
+        if ((min_luma_idx == 0 && max_luma_idx == 15) ||
+            (min_luma_idx == 15 && max_luma_idx == 0) ||
+            (min_luma_idx == 3 && max_luma_idx == 12) ||
+            (min_luma_idx == 12 && max_luma_idx == 3))
+        {
+            planar_mode_expected = true;
+        }
+    }
+    // filters a high-contrast block for checking both ETC1 mode and the ETC2 T/H mode
+    else if (luma_range >= ecmd_threshold[2])
+        th_mode_expected = true;
+#endif
 
     int32_t difRyz = 0;
     int32_t difGyz = 0;
@@ -1622,6 +1796,11 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* s
     int32_t cvB = convert6(cvfB);
 
     // Error calculation
+    uint64_t error = 0;
+#ifdef QUICK_ETC2
+    if (planar_mode_expected == false)
+    {
+#endif
     auto ro0 = coR;
     auto go0 = coG;
     auto bo0 = coB;
@@ -1653,9 +1832,6 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* s
     auto rv2 = rv1 - ro1;
     auto gv2 = gv1 - go1;
     auto bv2 = bv1 - bo1;
-
-    uint64_t error = 0;
-
     for (int i = 0; i < 16; ++i)
     {
         int32_t cR = clampu8((rh2 * (i / 4) + rv2 * (i % 4) + ro2) >> 2);
@@ -1670,6 +1846,9 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar(const uint8_t* s
 
         error += dif * dif;
     }
+#ifdef QUICK_ETC2
+    }
+#endif
 
     /**/
     uint32_t rgbv = cvB | (cvG << 6) | (cvR << 13);
@@ -1733,7 +1912,7 @@ static etcpak_force_inline int16x8_t Planar_NEON_SumWide( uint8x16_t src )
     uint16x4_t accu2 = vpadd_u16( accu4, accu4 );
     uint16x4_t accu1 = vpadd_u16( accu2, accu2 );
     return vreinterpretq_s16_u16( vcombine_u16( accu1, accu1 ) );
-#else 
+#else
     return vdupq_n_s16( vaddvq_u16( accu8 ) );
 #endif
 }
@@ -1984,6 +2163,587 @@ static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 #endif
 }
 
+
+#ifdef QUICK_ETC2_TH
+//converts indices from  |a0|a1|e0|e1|i0|i1|m0|m1|b0|b1|f0|f1|j0|j1|n0|n1|c0|c1|g0|g1|k0|k1|o0|o1|d0|d1|h0|h1|l0|l1|p0|p1| previously used by T- and H-modes
+//                     into  |p0|o0|n0|m0|l0|k0|j0|i0|h0|g0|f0|e0|d0|c0|b0|a0|p1|o1|n1|m1|l1|k1|j1|i1|h1|g1|f1|e1|d1|c1|b1|a1| which should be used for all modes.
+// NO WARRANTY --- SEE STATEMENT IN TOP OF FILE (C) Ericsson AB 2005-2013. All Rights Reserved.
+int indexConversion(int pixelIndices)
+{
+    int correctIndices = 0;
+    int LSB[4][4];
+    int MSB[4][4];
+    int shift = 0;
+    for (int y = 3; y >= 0; y--)
+    {
+        for (int x = 3; x >= 0; x--)
+        {
+            LSB[x][y] = (pixelIndices >> shift) & 1;
+            shift++;
+            MSB[x][y] = (pixelIndices >> shift) & 1;
+            shift++;
+        }
+    }
+    shift = 0;
+    for (int x = 0; x<4; x++)
+    {
+        for (int y = 0; y<4; y++)
+        {
+            correctIndices |= (LSB[x][y] << shift);
+            correctIndices |= (MSB[x][y] << (16 + shift));
+            shift++;
+        }
+    }
+    return correctIndices;
+}
+
+// Swapping two RGB-colors
+// NO WARRANTY --- SEE STATEMENT IN TOP OF FILE (C) Ericsson AB 2005-2013. All Rights Reserved.
+void swapColors(uint8_t(colors)[2][3])
+{
+    uint8_t temp = colors[0][R];
+    colors[0][R] = colors[1][R];
+    colors[1][R] = temp;
+
+    temp = colors[0][G];
+    colors[0][G] = colors[1][G];
+    colors[1][G] = temp;
+
+    temp = colors[0][B];
+    colors[0][B] = colors[1][B];
+    colors[1][B] = temp;
+}
+
+// During search it is not convenient to store the bits the way they are stored in the
+// file format. Hence, after search, it is converted to this format.
+// NO WARRANTY --- SEE STATEMENT IN TOP OF FILE (C) Ericsson AB 2005-2013. All Rights Reserved.
+void stuff59bits(unsigned int thumbT59_word1, unsigned int thumbT59_word2, unsigned int &thumbT_word1, unsigned int &thumbT_word2)
+{
+    // Put bits in twotimer configuration for 59 (red overflows)
+    //
+    // Go from this bit layout:
+    //
+    //     |63 62 61 60 59|58 57 56 55|54 53 52 51|50 49 48 47|46 45 44 43|42 41 40 39|38 37 36 35|34 33 32|
+    //     |----empty-----|---red 0---|--green 0--|--blue 0---|---red 1---|--green 1--|--blue 1---|--dist--|
+    //
+    //     |31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00|
+    //     |----------------------------------------index bits---------------------------------------------|
+    //
+    //
+    //  To this:
+    //
+    //      63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33 32
+    //      -----------------------------------------------------------------------------------------------
+    //     |// // //|R0a  |//|R0b  |G0         |B0         |R1         |G1         |B1          |da  |df|db|
+    //      -----------------------------------------------------------------------------------------------
+    //
+    //     |31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00|
+    //     |----------------------------------------index bits---------------------------------------------|
+    //
+    //      63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33 32
+    //      -----------------------------------------------------------------------------------------------
+    //     | base col1    | dcol 2 | base col1    | dcol 2 | base col 1   | dcol 2 | table  | table  |df|fp|
+    //     | R1' (5 bits) | dR2    | G1' (5 bits) | dG2    | B1' (5 bits) | dB2    | cw 1   | cw 2   |bt|bt|
+    //      ------------------------------------------------------------------------------------------------
+
+    uint8_t R0a;
+    uint8_t bit, a, b, c, d, bits;
+
+    R0a = GETBITSHIGH(thumbT59_word1, 2, 58);
+
+    // Fix middle part
+    thumbT_word1 = thumbT59_word1 << 1;
+    // Fix R0a (top two bits of R0)
+    PUTBITSHIGH(thumbT_word1, R0a, 2, 60);
+    // Fix db (lowest bit of d)
+    PUTBITSHIGH(thumbT_word1, thumbT59_word1, 1, 32);
+    //
+    // Make sure that red overflows:
+    a = GETBITSHIGH(thumbT_word1, 1, 60);
+    b = GETBITSHIGH(thumbT_word1, 1, 59);
+    c = GETBITSHIGH(thumbT_word1, 1, 57);
+    d = GETBITSHIGH(thumbT_word1, 1, 56);
+    // The following bit abcd bit sequences should be padded with ones: 0111, 1010, 1011, 1101, 1110, 1111
+    // The following logical expression checks for the presence of any of those:
+    bit = (a & c) | (!a & b & c & d) | (a & b & !c & d);
+    bits = 0xf * bit;
+    PUTBITSHIGH(thumbT_word1, bits, 3, 63);
+    PUTBITSHIGH(thumbT_word1, !bit, 1, 58);
+
+    // Set diffbit
+    PUTBITSHIGH(thumbT_word1, 1, 1, 33);
+    thumbT_word2 = thumbT59_word2;
+}
+
+// During search it is not convenient to store the bits the way they are stored in the
+// file format. Hence, after search, it is converted to this format.
+// NO WARRANTY --- SEE STATEMENT IN TOP OF FILE (C) Ericsson AB 2005-2013. All Rights Reserved.
+void stuff58bits(unsigned int thumbH58_word1, unsigned int thumbH58_word2, unsigned int &thumbH_word1, unsigned int &thumbH_word2)
+{
+    // Put bits in twotimer configuration for 58 (red doesn't overflow, green does)
+    //
+    // Go from this bit layout:
+    //
+    //
+    //     |63 62 61 60 59 58|57 56 55 54|53 52 51 50|49 48 47 46|45 44 43 42|41 40 39 38|37 36 35 34|33 32|
+    //     |-------empty-----|---red 0---|--green 0--|--blue 0---|---red 1---|--green 1--|--blue 1---|d2 d1|
+    //
+    //     |31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00|
+    //     |---------------------------------------index bits----------------------------------------------|
+    //
+    //  To this:
+    //
+    //      63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33 32
+    //      -----------------------------------------------------------------------------------------------
+    //     |//|R0         |G0      |// // //|G0|B0|//|B0b     |R1         |G1         |B0         |d2|df|d1|
+    //      -----------------------------------------------------------------------------------------------
+    //
+    //     |31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00|
+    //     |---------------------------------------index bits----------------------------------------------|
+    //
+    //      63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33 32
+    //      -----------------------------------------------------------------------------------------------
+    //     | base col1    | dcol 2 | base col1    | dcol 2 | base col 1   | dcol 2 | table  | table  |df|fp|
+    //     | R1' (5 bits) | dR2    | G1' (5 bits) | dG2    | B1' (5 bits) | dB2    | cw 1   | cw 2   |bt|bt|
+    //      -----------------------------------------------------------------------------------------------
+    //
+    //
+    // Thus, what we are really doing is going from this bit layout:
+    //
+    //
+    //     |63 62 61 60 59 58|57 56 55 54 53 52 51|50 49|48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33|32   |
+    //     |-------empty-----|part0---------------|part1|part2------------------------------------------|part3|
+    //
+    //  To this:
+    //
+    //      63 62 61 60 59 58 57 56 55 54 53 52 51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33 32
+    //      --------------------------------------------------------------------------------------------------|
+    //     |//|part0               |// // //|part1|//|part2                                          |df|part3|
+    //      --------------------------------------------------------------------------------------------------|
+
+    unsigned int part0, part1, part2, part3;
+    uint8_t bit, a, b, c, d, bits;
+
+    // move parts
+    part0 = GETBITSHIGH(thumbH58_word1, 7, 57);
+    part1 = GETBITSHIGH(thumbH58_word1, 2, 50);
+    part2 = GETBITSHIGH(thumbH58_word1, 16, 48);
+    part3 = GETBITSHIGH(thumbH58_word1, 1, 32);
+    thumbH_word1 = 0;
+    PUTBITSHIGH(thumbH_word1, part0, 7, 62);
+    PUTBITSHIGH(thumbH_word1, part1, 2, 52);
+    PUTBITSHIGH(thumbH_word1, part2, 16, 49);
+    PUTBITSHIGH(thumbH_word1, part3, 1, 32);
+
+    // Make sure that red does not overflow:
+    bit = GETBITSHIGH(thumbH_word1, 1, 62);
+    PUTBITSHIGH(thumbH_word1, !bit, 1, 63);
+
+    // Make sure that green overflows:
+    a = GETBITSHIGH(thumbH_word1, 1, 52);
+    b = GETBITSHIGH(thumbH_word1, 1, 51);
+    c = GETBITSHIGH(thumbH_word1, 1, 49);
+    d = GETBITSHIGH(thumbH_word1, 1, 48);
+    // The following bit abcd bit sequences should be padded with ones: 0111, 1010, 1011, 1101, 1110, 1111
+    // The following logical expression checks for the presence of any of those:
+    bit = (a & c) | (!a & b & c & d) | (a & b & !c & d);
+    bits = 0xf * bit;
+    PUTBITSHIGH(thumbH_word1, bits, 3, 55);
+    PUTBITSHIGH(thumbH_word1, !bit, 1, 50);
+
+    // Set diffbit
+    PUTBITSHIGH(thumbH_word1, 1, 1, 33);
+    thumbH_word2 = thumbH58_word2;
+}
+
+// calculates quantized colors for T or H modes
+void compressColor(uint8_t(current_color)[2][3], uint8_t(quantized_color)[2][3], bool t_mode)
+{
+    if (t_mode)
+    {
+        quantized_color[0][R] = CLAMP_R(15 * (current_color[0][R] + 8) / 255, 15);
+        quantized_color[0][G] = CLAMP_R(15 * (current_color[0][G] + 8) / 255, 15);
+        quantized_color[0][B] = CLAMP_R(15 * (current_color[0][B] + 8) / 255, 15);
+    }
+    else // clamped to [1,14] to get a wider range
+    {
+        quantized_color[0][R] = CLAMP(1, 15 * (current_color[0][R] + 8) / 255, 14);
+        quantized_color[0][G] = CLAMP(1, 15 * (current_color[0][G] + 8) / 255, 14);
+        quantized_color[0][B] = CLAMP(1, 15 * (current_color[0][B] + 8) / 255, 14);
+    }
+
+    // clamped to [1,14] to get a wider range
+    quantized_color[1][R] = CLAMP(1, 15 * (current_color[1][R] + 8) / 255, 14);
+    quantized_color[1][G] = CLAMP(1, 15 * (current_color[1][G] + 8) / 255, 14);
+    quantized_color[1][B] = CLAMP(1, 15 * (current_color[1][B] + 8) / 255, 14);
+}
+
+
+// calculates errors for T or H modes
+#ifdef __AVX2__
+// Vectorized ver
+uint32_t calculateErrorTH(bool t_mode, uint8_t(colorsRGB444)[2][3], uint8_t &distance, uint32_t &pixel_indices, uint8_t start_distance, __m128i r8, __m128i g8, __m128i b8)
+#else
+// Scalar ver
+uint32_t calculateErrorTH(bool t_mode, uint8_t* srcimg, uint8_t(colorsRGB444)[2][3], uint8_t& distance, uint32_t& pixel_indices, uint8_t start_distance)
+#endif
+{
+    uint32_t block_error = 0,
+        best_block_error = MAXIMUM_ERROR;
+
+    uint32_t pixel_colors;
+    uint8_t possible_colors[4][3];
+    uint8_t colors[2][3];
+
+    decompressColor(colorsRGB444, colors);
+
+#ifdef __AVX2__
+    __m128i reverse_mask = _mm_set_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+#endif
+
+    // test distances
+    for (uint8_t d = start_distance; d < 8; ++d)
+    {
+        if (d >= 2 && distance == d - 2) break;
+        block_error = 0;
+        pixel_colors = 0;
+
+        if (t_mode)
+            calculatePaintColors59T(d, colors, possible_colors);
+        else
+            calculatePaintColors58H(d, colors, possible_colors);
+
+#ifdef __AVX2__
+        // RGB ordering
+        __m128i b8_reversed = _mm_shuffle_epi8(b8, reverse_mask);
+        __m128i g8_reversed = _mm_shuffle_epi8(g8, reverse_mask);
+        __m128i r8_reversed = _mm_shuffle_epi8(r8, reverse_mask);
+
+        // extends 3x128 bits RGB into 3x256 bits RGB for error comparisions
+        static const __m128i zero = _mm_setzero_si128();
+        __m128i b8_lo = _mm_unpacklo_epi8(b8_reversed, zero);
+        __m128i g8_lo = _mm_unpacklo_epi8(g8_reversed, zero);
+        __m128i r8_lo = _mm_unpacklo_epi8(r8_reversed, zero);
+        __m128i b8_hi = _mm_unpackhi_epi8(b8_reversed, zero);
+        __m128i g8_hi = _mm_unpackhi_epi8(g8_reversed, zero);
+        __m128i r8_hi = _mm_unpackhi_epi8(r8_reversed, zero);
+
+        __m256i b8_256i = _mm256_set_m128i(b8_hi, b8_lo);
+        __m256i g8_256i = _mm256_set_m128i(g8_hi, g8_lo);
+        __m256i r8_256i = _mm256_set_m128i(r8_hi, r8_lo);
+
+        // caculates differences between the pixel colrs and the palette colors
+        __m256i diffb = _mm256_abs_epi16(_mm256_sub_epi16(b8_256i, _mm256_set1_epi16(possible_colors[0][B])));
+        __m256i diffg = _mm256_abs_epi16(_mm256_sub_epi16(g8_256i, _mm256_set1_epi16(possible_colors[0][G])));
+        __m256i diffr = _mm256_abs_epi16(_mm256_sub_epi16(r8_256i, _mm256_set1_epi16(possible_colors[0][R])));
+
+        // luma-based error calculations
+        static const __m256i b_weight = _mm256_set1_epi16(14);
+        static const __m256i g_weight = _mm256_set1_epi16(76);
+        static const __m256i r_weight = _mm256_set1_epi16(38);
+
+        diffb = _mm256_mullo_epi16(diffb, b_weight);
+        diffg = _mm256_mullo_epi16(diffg, g_weight);
+        diffr = _mm256_mullo_epi16(diffr, r_weight);
+
+        // obtains the error with the current palette color
+        __m256i lowest_pixel_error = _mm256_add_epi16(_mm256_add_epi16(diffb, diffg), diffr);
+
+        // error calucations with the remaining three palette colors
+        static const uint32_t masks[4] = {0, 0x55555555, 0xAAAAAAAA, 0xFFFFFFFF};
+        for (uint8_t c = 1; c < 4; c++)
+        {
+            __m256i diffb = _mm256_abs_epi16(_mm256_sub_epi16(b8_256i, _mm256_set1_epi16(possible_colors[c][B])));
+            __m256i diffg = _mm256_abs_epi16(_mm256_sub_epi16(g8_256i, _mm256_set1_epi16(possible_colors[c][G])));
+            __m256i diffr = _mm256_abs_epi16(_mm256_sub_epi16(r8_256i, _mm256_set1_epi16(possible_colors[c][R])));
+
+            diffb = _mm256_mullo_epi16(diffb, b_weight);
+            diffg = _mm256_mullo_epi16(diffg, g_weight);
+            diffr = _mm256_mullo_epi16(diffr, r_weight);
+
+            // error comparison with the previous best color
+            __m256i pixel_errors = _mm256_add_epi16(_mm256_add_epi16(diffb, diffg), diffr);
+            __m256i min_error = _mm256_min_epu16(lowest_pixel_error, pixel_errors);
+            __m256i cmp_result = _mm256_cmpeq_epi16(pixel_errors, min_error);
+            lowest_pixel_error = min_error;
+
+            // update pixel colors
+            uint32_t updated_pixel_colors = _mm256_movemask_epi8(cmp_result);
+            uint32_t previous_pixel_colors = pixel_colors & ~updated_pixel_colors;
+            uint32_t masked_pixel_colors = masks[c] & updated_pixel_colors;
+            pixel_colors = previous_pixel_colors | masked_pixel_colors;
+        }
+
+        // accumulate the block error
+        alignas(32) uint16_t pixel_error16[16] = { 0, };
+        _mm256_storeu_si256((__m256i*)pixel_error16, lowest_pixel_error);
+        for (uint8_t p = 0; p < 16; p++)
+        {
+            block_error += (int)(pixel_error16[p]) * pixel_error16[p];
+        }
+#else //__AVX2__
+        // Loop block
+        for (size_t y = 0; y < 4; ++y)
+        {
+            for (size_t x = 0; x < 4; ++x)
+            {
+                uint32_t best_pixel_error = MAXIMUM_ERROR;
+                pixel_colors <<= 2; // Make room for next value
+
+                // Loop possible block colors
+                for (uint8_t c = 0; c < 4; ++c)
+                {
+                    int diff[3];
+                    diff[R] = srcimg[4 * (x * 4 + y) + R] - possible_colors[c][R];
+                    diff[G] = srcimg[4 * (x * 4 + y) + G] - possible_colors[c][G];
+                    diff[B] = srcimg[4 * (x * 4 + y) + B] - possible_colors[c][B];
+
+                    uint32_t pixel_error = SQUARE(38 * abs(diff[R]) +
+                        76 * abs(diff[G]) +
+                        14 * abs(diff[B]));
+
+                    // Choose best error
+                    if (pixel_error < best_pixel_error)
+                    {
+                        best_pixel_error = pixel_error;
+                        pixel_colors ^= (pixel_colors & 3); // Reset the two first bits
+                        pixel_colors |= c;
+                    }
+                }
+                block_error += best_pixel_error;
+            }
+        }
+#endif
+
+        if (block_error < best_block_error)
+        {
+            best_block_error = block_error;
+            distance = d;
+            pixel_indices = pixel_colors;
+        }
+    }
+
+    return best_block_error;
+}
+
+// slightly faster than std:sort
+void static_insertion_sort(uint8_t* arr1, uint8_t *arr2)
+{
+    for (uint8_t i = 1; i < 16; ++i)
+    {
+        uint8_t value = arr1[i];
+        uint8_t hole = i;
+
+        for (; hole > 0 && value < arr1[hole - 1]; --hole)
+        {
+            arr1[hole] = arr1[hole - 1];
+            arr2[hole] = arr2[hole - 1];
+        }
+        arr1[hole] = value;
+        arr2[hole] = i;
+    }
+}
+
+// main T-/H-mode compression function
+#ifdef __AVX2__
+uint32_t compressBlockTH
+(uint8_t* src, __m128i luma8, uint32_t& compressed1, uint32_t& compressed2, bool& t_mode,
+    __m128i r8, __m128i g8, __m128i b8)
+#else
+uint32_t  compressBlockTH
+(uint8_t *src, uint8_t* luma, uint32_t&compressed1, uint32_t&compressed2, bool &t_mode)
+
+#endif
+{
+
+#ifdef __AVX2__
+    alignas(8) uint8_t luma[16] = { 0, };
+    _mm_storeu_si128((__m128i*)luma, luma8);
+#endif
+
+    uint8_t pixel_idx[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+    // 1) sorts the pairs of (luma, pix_idx)
+    static_insertion_sort(luma, pixel_idx);
+
+    // 2) finds the min (left+right)
+    uint8_t min_sum_range_idx = 0;
+    uint16_t min_sum_range_value;
+    uint16_t sum;
+    static const uint8_t diff_bonus[15] = {8, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 8};
+    const int16_t temp = luma[15] - luma[0];
+
+    min_sum_range_value = luma[15] - luma[1] + diff_bonus[0];
+    for (uint8_t i = 1; i < 14; i++)
+    {
+        sum = temp - luma[i+1] + luma[i] + diff_bonus[i];
+        if (min_sum_range_value > sum)
+        {
+            min_sum_range_value = sum;
+            min_sum_range_idx = i;
+        }
+    }
+
+    sum = luma[14] - luma[0] + diff_bonus[14];
+    if (min_sum_range_value > sum)
+    {
+        min_sum_range_value = sum;
+        min_sum_range_idx = 14;
+    }
+    uint8_t left_range, right_range;
+
+    left_range = luma[min_sum_range_idx] - luma[0];
+    right_range = luma[15] - luma[min_sum_range_idx + 1];
+
+    // 3) sets a proper mode
+    bool sw = false; //swap
+    if (left_range >= right_range)
+    {
+        if (left_range >= right_range * 2)
+        {
+            sw = true;
+            t_mode = true;
+        }
+    }
+    else
+    {
+        if (left_range * 2 <= right_range)
+            t_mode = true;
+    }
+    // 4) calculates the two base colors
+    uint8_t range_idx[4] = { pixel_idx[0], pixel_idx[min_sum_range_idx], pixel_idx[min_sum_range_idx + 1], pixel_idx[15] };
+
+    uint16_t r[4], g[4], b[4];
+    for (uint8_t i = 0; i < 4; ++i)
+    {
+        uint8_t idx = range_idx[i] * 4;
+        b[i] = src[idx];
+        g[i] = src[idx + 1];
+        r[i] = src[idx + 2];
+    }
+
+    uint8_t mid_rgb[2][3];
+    if (sw)
+    {
+        mid_rgb[1][B] = (b[0] + b[1]) / 2;
+        mid_rgb[1][G] = (g[0] + g[1]) / 2;
+        mid_rgb[1][R] = (r[0] + r[1]) / 2;
+
+        uint16_t sum_rgb[3] = { 0, 0, 0 };
+        for (uint8_t i = min_sum_range_idx + 1; i < 16; i++)
+        {
+            uint8_t idx = pixel_idx[i] * 4;
+            sum_rgb[B] += src[idx];
+            sum_rgb[G] += src[idx + 1];
+            sum_rgb[R] += src[idx + 2];
+        }
+        const uint8_t temp = 15 - min_sum_range_idx;
+        mid_rgb[0][B] = sum_rgb[B] / temp;
+        mid_rgb[0][G] = sum_rgb[G] / temp;
+        mid_rgb[0][R] = sum_rgb[R] / temp;
+    }
+    else
+    {
+        mid_rgb[0][B] = (b[0] + b[1]) / 2;
+        mid_rgb[0][G] = (g[0] + g[1]) / 2;
+        mid_rgb[0][R] = (r[0] + r[1]) / 2;
+        if (t_mode)
+        {
+            uint16_t sum_rgb[3] = { 0, 0, 0 };
+            for (uint8_t i = min_sum_range_idx + 1; i < 16; i++)
+            {
+                uint8_t idx = pixel_idx[i] * 4;
+                sum_rgb[B] += src[idx];
+                sum_rgb[G] += src[idx + 1];
+                sum_rgb[R] += src[idx + 2];
+            }
+            const uint8_t temp = 15 - min_sum_range_idx;
+            mid_rgb[1][B] = sum_rgb[B] / temp;
+            mid_rgb[1][G] = sum_rgb[G] / temp;
+            mid_rgb[1][R] = sum_rgb[R] / temp;
+        }
+        else
+        {
+            mid_rgb[1][B] = (b[2] + b[3]) / 2;
+            mid_rgb[1][G] = (g[2] + g[3]) / 2;
+            mid_rgb[1][R] = (r[2] + r[3]) / 2;
+        }
+    }
+
+    // 5) sets the start distance index
+    uint32_t start_distance_candidate;
+    uint32_t avg_dist;
+    if (t_mode)
+    {
+        if (sw) avg_dist = (b[1] - b[0] + g[1] - g[0] + r[1] - r[0]) / 6;
+        else avg_dist = (b[3] - b[2] + g[3] - g[2] + r[3] - r[2]) / 6;
+    }
+    else
+        avg_dist = (b[1] - b[0] + g[1] - g[0] + r[1] - r[0] + b[3] - b[2] + g[3] - g[2] + r[3] - r[2]) / 12;
+
+    if (avg_dist <= 16) start_distance_candidate = 0;
+    else if (avg_dist <= 23) start_distance_candidate = 1;
+    else if (avg_dist <= 32) start_distance_candidate = 2;
+    else if (avg_dist <= 41) start_distance_candidate = 3;
+    else start_distance_candidate = 4;
+
+    uint32_t best_error = MAXIMUM_ERROR;
+    uint32_t best_pixel_indices;
+    uint8_t best_distance = 10;
+    uint8_t colorsRGB444[2][3];
+    compressColor(mid_rgb, colorsRGB444, t_mode);
+    compressed1 = 0;
+
+    // 6) finds the best candidate with the lowest error
+#ifdef __AVX2__
+    // Vectorized ver
+    best_error = calculateErrorTH(t_mode, colorsRGB444, best_distance, best_pixel_indices, start_distance_candidate, r8, g8, b8);
+#else
+    // Scalar ver
+    best_error = calculateErrorTH(t_mode, src, colorsRGB444, best_distance, best_pixel_indices, start_distance_candidate);
+#endif
+
+    // 7) outputs the final T or H block
+    if (t_mode)
+    {
+        // Put the compress params into the compression block
+        PUTBITSHIGH(compressed1, colorsRGB444[0][R], 4, 58);
+        PUTBITSHIGH(compressed1, colorsRGB444[0][G], 4, 54);
+        PUTBITSHIGH(compressed1, colorsRGB444[0][B], 4, 50);
+        PUTBITSHIGH(compressed1, colorsRGB444[1][R], 4, 46);
+        PUTBITSHIGH(compressed1, colorsRGB444[1][G], 4, 42);
+        PUTBITSHIGH(compressed1, colorsRGB444[1][B], 4, 38);
+        PUTBITSHIGH(compressed1, best_distance, 3, 34);
+    }
+    else
+    {
+        int best_colorsRGB444_packed[2];
+        best_colorsRGB444_packed[0] = (colorsRGB444[0][R] << 8) + (colorsRGB444[0][G] << 4) + colorsRGB444[0][B];
+        best_colorsRGB444_packed[1] = (colorsRGB444[1][R] << 8) + (colorsRGB444[1][G] << 4) + colorsRGB444[1][B];
+        if ((best_colorsRGB444_packed[0] >= best_colorsRGB444_packed[1]) ^ ((best_distance & 1) == 1))
+        {
+            swapColors(colorsRGB444);
+            // Reshuffle pixel indices to to exchange C1 with C3, and C2 with C4
+            best_pixel_indices = (0x55555555 & best_pixel_indices) | (0xaaaaaaaa & (~best_pixel_indices));
+        }
+
+        // Put the compress params into the compression block
+        PUTBITSHIGH(compressed1, colorsRGB444[0][R], 4, 57);
+        PUTBITSHIGH(compressed1, colorsRGB444[0][G], 4, 53);
+        PUTBITSHIGH(compressed1, colorsRGB444[0][B], 4, 49);
+        PUTBITSHIGH(compressed1, colorsRGB444[1][R], 4, 45);
+        PUTBITSHIGH(compressed1, colorsRGB444[1][G], 4, 41);
+        PUTBITSHIGH(compressed1, colorsRGB444[1][B], 4, 37);
+        PUTBITSHIGH(compressed1, (best_distance >> 1), 2, 33);
+    }
+
+    best_pixel_indices = indexConversion(best_pixel_indices);
+    compressed2 = 0;
+    PUTBITS(compressed2, best_pixel_indices, 32, 31);
+    return best_error;
+}
+#endif
+
 static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 {
 #ifdef __AVX2__
@@ -1991,6 +2751,10 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
     if( d != 0 ) return d;
 
     auto plane = Planar_AVX2( src );
+
+#ifdef QUICK_ETC2
+    if (plane.planar_mode_expected) return plane.plane;
+#endif
 
     alignas(32) v4i a[8];
 
@@ -2023,15 +2787,86 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
         FindBestFit_2x4_AVX2( terr, tsel, a, idx * 2, src );
     }
 
+#ifdef QUICK_ETC2_TH
+    Plane planeTH;
+    if (plane.th_mode_expected)
+    {
+        uint64_t result = 0;
+        uint64_t error = 0;
+        uint32_t compressed[4] = { 0, 0, 0, 0};
+        bool t_mode = false;
+
+        error = compressBlockTH((uint8_t*)src, plane.luma8, compressed[0], compressed[1], t_mode, plane.r8, plane.g8, plane.b8);
+        if (t_mode)
+            stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+        else
+            stuff58bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+
+        result = (uint32_t)_bswap(compressed[2]);
+        result |= static_cast<uint64_t>(_bswap(compressed[3])) << 32;
+
+        planeTH.plane = result;
+        planeTH.error = error;
+    }
+    else
+    {
+        planeTH.plane = 0;
+        planeTH.error = MAXIMUM_ERROR;
+    }
+#endif
+
+#ifdef QUICK_ETC2
+#ifdef QUICK_ETC2_TH
+    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, planeTH.plane, planeTH.error);
+#else
+    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1);
+#endif
+#else
     return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error );
+#endif
 #else
     uint64_t d = CheckSolid( src );
     if (d != 0) return d;
 
+#ifdef QUICK_ETC2
+    uint8_t luma[16];
+    bool th_mode_expected = false;
+    auto result = Planar( src, luma, th_mode_expected );
+    if (result.second == 0)
+    {
+        return result.first;
+    }
+#else
 #ifdef __ARM_NEON
     auto result = Planar_NEON( src );
 #else
     auto result = Planar( src );
+#endif
+#endif
+
+
+#ifdef QUICK_ETC2_TH
+    uint64_t plane = 0;
+    uint64_t error = MAXIMUM_ERROR;
+    if (th_mode_expected)
+    {
+        uint64_t result = 0;
+        uint32_t compressed[4] = { 0, 0, 0, 0};
+        bool t_mode = false;
+        error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], t_mode);
+
+        if (t_mode)
+            stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+        else
+            stuff58bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+
+        result = (uint32_t)_bswap(compressed[2]);
+        result |= static_cast<uint64_t>(_bswap(compressed[3])) << 32;
+
+        plane = result;
+    }
+    result.first = plane;
+    result.second = error;
 #endif
 
     v4i a[8];

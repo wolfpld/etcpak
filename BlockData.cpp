@@ -11,6 +11,8 @@
 #include "Tables.hpp"
 #include "TaskDispatch.hpp"
 
+#include "ProcessCommon.hpp"
+
 #ifdef __ARM_NEON
 #  include <arm_neon.h>
 #endif
@@ -36,6 +38,159 @@
 #  define _bswap(x) __builtin_bswap32(x)
 #  define _bswap64(x) __builtin_bswap64(x)
 #endif
+
+
+
+// most parts of the following T-/H-mode decoding functions come from ETCPACK v2.74
+// decompresses a T-mode block
+static etcpak_force_inline void DecodeT(uint64_t block, uint64_t alpha, uint32_t* dst, uint32_t w, bool includeAlpha)
+{
+    uint8_t colorsRGB444[2][3];
+    uint8_t colors[2][3];
+    uint8_t paint_colors[4][3];
+    uint8_t distance;
+    uint8_t block_mask[4][4];
+
+    uint32_t hi0, hi1;
+    hi0 = (block & 0xFFFFFFFF);
+    hi1 = hi0 >> 1;
+    PUTBITS(hi1, hi0, 1, 32-32);
+    uint8_t R0a = GETBITS(hi0, 2, 60-32);
+    PUTBITS(hi1, R0a, 2, 58-32);
+
+    // First decode left part of block.
+    colorsRGB444[0][0] = GETBITS(hi1, 4, 58-32);
+    colorsRGB444[0][1] = GETBITS(hi1, 4, 54-32);
+    colorsRGB444[0][2] = GETBITS(hi1, 4, 50-32);
+
+    colorsRGB444[1][0] = GETBITS(hi1, 4, 46-32);
+    colorsRGB444[1][1] = GETBITS(hi1, 4, 42-32);
+    colorsRGB444[1][2] = GETBITS(hi1, 4, 38-32);
+
+    distance = GETBITS(hi1, 3, 34-32);
+
+    // Extend the two colors to RGB888
+    decompressColor(colorsRGB444, colors);
+    calculatePaintColors59T(distance, colors, paint_colors);
+
+    // Choose one of the four paint colors for each texel
+    for (uint8_t x = 0; x < 4; ++x)
+    {
+        for (uint8_t y = 0; y < 4; ++y)
+        {
+            block_mask[x][y] = GETBITS(block, 1, (y + x * 4) + 16 + 32) << 1;
+            block_mask[x][y] |= GETBITS(block, 1, (y + x * 4) + 32);
+        }
+    }
+
+    // alpha calculation
+    const int32_t base = alpha >> 56;
+    const int32_t mul = ( alpha >> 52 ) & 0xF;
+    const auto tbl = g_alpha[( alpha >> 48 ) & 0xF];
+
+    for (uint8_t y = 0; y < 4; ++y)
+    {
+        for (uint8_t x = 0; x < 4; ++x)
+        {
+            const auto r = CLAMP(0, paint_colors[block_mask[x][y]][0], 255); // RED
+            const auto g = CLAMP(0, paint_colors[block_mask[x][y]][1], 255); // GREEN
+            const auto b = CLAMP(0, paint_colors[block_mask[x][y]][2], 255); // BLUE
+
+            uint32_t shifted_alpha = 0xFF000000;
+            if (includeAlpha)
+            {
+                const auto amod = tbl[(alpha >> ( 45 - y*3 - x*12 )) & 0x7];
+                shifted_alpha = clampu8( base + amod * mul ) << 24;
+            }
+            dst[y*w+x] = r | (g << 8) | (b << 16) | shifted_alpha;
+        }
+    }
+}
+
+// decompresses an H-mode block
+static etcpak_force_inline void DecodeH(uint64_t block, uint64_t alpha, uint32_t* dst, uint32_t w, bool includeAlpha)
+{
+    unsigned int col0, col1;
+    uint8_t colors[2][3];
+    uint8_t colorsRGB444[2][3];
+    uint8_t paint_colors[4][3];
+    uint8_t distance;
+    uint8_t block_mask[4][4];
+
+    unsigned int part0, part1, part2, part3;
+    uint32_t hi0, hi1;
+    hi0 = (block & 0xFFFFFFFF);
+    hi1 = hi0 >> 1;
+
+    // move parts
+    part0 = GETBITS(hi0, 7, 62-32);
+    part1 = GETBITS(hi0, 2, 52-32);
+    part2 = GETBITS(hi0, 16, 49-32);
+    part3 = GETBITS(hi0, 1, 32-32);
+    hi1 = 0;
+    PUTBITS(hi1, part0, 7, 57-32);
+    PUTBITS(hi1, part1, 2, 50-32);
+    PUTBITS(hi1, part2, 16, 48-32);
+    PUTBITS(hi1, part3, 1, 32-32);
+
+    // First decode left part of block.
+    colorsRGB444[0][R] = GETBITS(hi1, 4, 57-32);
+    colorsRGB444[0][G] = GETBITS(hi1, 4, 53-32);
+    colorsRGB444[0][B] = GETBITS(hi1, 4, 49-32);
+
+    colorsRGB444[1][R] = GETBITS(hi1, 4, 45-32);
+    colorsRGB444[1][G] = GETBITS(hi1, 4, 41-32);
+    colorsRGB444[1][B] = GETBITS(hi1, 4, 37-32);
+
+    distance = 0;
+    distance = (GETBITS(hi1, 2, 33-32)) << 1;
+
+    col0 = GETBITS(hi1, 12, 57-32);
+    col1 = GETBITS(hi1, 12, 45-32);
+
+    if (col0 >= col1)
+    {
+        distance |= 1;
+    }
+
+    // Extend the two colors to RGB888
+    decompressColor(colorsRGB444, colors);
+
+    calculatePaintColors58H(distance, colors, paint_colors);
+
+    // Choose one of the four paint colors for each texel
+    for (uint8_t x = 0; x < 4; ++x)
+    {
+        for (uint8_t y = 0; y < 4; ++y)
+        {
+            block_mask[x][y] = GETBITS(block, 1, (y + x * 4) + 16 + 32) << 1;
+            block_mask[x][y] |= GETBITS(block, 1, (y + x * 4) + 32);
+        }
+    }
+
+    // alpha calculation
+    const int32_t base = alpha >> 56;
+    const int32_t mul = ( alpha >> 52 ) & 0xF;
+    const auto tbl = g_alpha[( alpha >> 48 ) & 0xF];
+
+    for (uint8_t y = 0; y < 4; ++y)
+    {
+        for (uint8_t x = 0; x < 4; ++x)
+        {
+            const auto r = CLAMP(0, paint_colors[block_mask[x][y]][R], 255); // RED
+            const auto g = CLAMP(0, paint_colors[block_mask[x][y]][G], 255); // GREEN
+            const auto b = CLAMP(0, paint_colors[block_mask[x][y]][B], 255); // BLUE
+
+            uint32_t shifted_alpha = 0xFF000000;
+            if (includeAlpha)
+            {
+                const auto amod = tbl[(alpha >> ( 45 - y*3 - x*12 )) & 0x7];
+                shifted_alpha = clampu8( base + amod * mul ) << 24;
+            }
+            dst[y*w+x] = r | (g << 8) | (b << 16) | shifted_alpha;
+        }
+    }
+}
 
 
 BlockData::BlockData( const char* fn )
@@ -547,7 +702,18 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
         int32_t g1 = int32_t(g0) + dg;
         int32_t b1 = int32_t(b0) + db;
 
-        // T and H modes are not handled
+        if ((r1 < 0) || (r1 > 31))
+        {
+            DecodeT(d, 0, dst, w, false);
+            return;
+        }
+
+        if ((g1 < 0) || (g1 > 31))
+        {
+            DecodeH(d, 0, dst, w, false);
+            return;
+        }
+
         if( (b1 < 0) || (b1 > 31) )
         {
             DecodePlanar( d, dst, w );
@@ -670,7 +836,18 @@ static etcpak_force_inline void DecodeRGBAPart( uint64_t d, uint64_t alpha, uint
         int32_t g1 = int32_t(g0) + dg;
         int32_t b1 = int32_t(b0) + db;
 
-        // T and H modes are not handled
+        if ((r1 < 0) || (r1 > 31))
+        {
+            DecodeT(d, alpha, dst, w, true);
+            return;
+        }
+
+        if ((g1 < 0) || (g1 > 31))
+        {
+            DecodeH(d, alpha, dst, w, true);
+            return;
+        }
+
         if( (b1 < 0) || (b1 > 31) )
         {
             DecodePlanarAlpha( d, alpha, dst, w );

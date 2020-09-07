@@ -21,6 +21,14 @@
 #include "TaskDispatch.hpp"
 #include "Timing.hpp"
 
+#define QUICK_ETC2
+#ifdef QUICK_ETC2
+// thresholds for the early compression-mode decision scheme
+// which can be changed by the option -e
+float ecmd_threshold[3] = {0.03f, 0.09f, 0.38f};
+#endif //QUICK_ETC2
+
+
 struct DebugCallback_t : public DebugLog::Callback
 {
     void OnDebugMessage( const char* msg ) override
@@ -42,6 +50,9 @@ void Usage()
     fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
     fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
     fprintf( stderr, "  --dxtc          use DXT1 compression\n\n" );
+#ifdef QUICK_ETC2
+    fprintf( stderr, "  -e \"value1 value2 value3\"      set ECMD threshold values\n\n" );
+#endif
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -58,6 +69,10 @@ int main( int argc, char** argv )
     bool rgba = false;
     bool dxtc = false;
     const char* alpha = nullptr;
+#ifdef QUICK_ETC2
+    const char* ecmd_string = nullptr;
+#endif
+
     unsigned int cpus = System::CPUCores();
 
     if( argc < 3 )
@@ -81,7 +96,7 @@ int main( int argc, char** argv )
     };
 
     int c;
-    while( ( c = getopt_long( argc, argv, "vo:a:sbmd", longopts, nullptr ) ) != -1 )
+    while( ( c = getopt_long( argc, argv, "vo:a:sbmde:", longopts, nullptr ) ) != -1 )
     {
         switch( c )
         {
@@ -106,6 +121,28 @@ int main( int argc, char** argv )
         case 'd':
             dither = true;
             break;
+#ifdef QUICK_ETC2
+        case 'e':
+            ecmd_string = optarg;
+            {
+                char *err, *p = (char*) ecmd_string;
+                float val;
+                unsigned int idx = 0;
+                while (*p) {
+                    val = strtof(p, &err);
+                    if (p == err) p++;
+                    else if ((err == NULL) || (*err == 0)) {
+                        ecmd_threshold[idx++] = val;
+                        break;
+                    }
+                    else {
+                        ecmd_threshold[idx++] = val;
+                        p = err + 1;
+                    }
+                }
+            }
+            break;
+#endif
         case OptEtc2:
             etc2 = true;
             break;
