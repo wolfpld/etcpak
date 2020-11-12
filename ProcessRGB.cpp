@@ -2009,7 +2009,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
 
     size_t idx = _bit_scan_forward(mask) >> 2;
 
-    uint64_t d = EncodeAverages_AVX2( a, idx );
+    d = EncodeAverages_AVX2( a, idx );
 
     alignas(32) uint32_t terr[2][8] = {};
     alignas(32) uint32_t tsel[8];
