@@ -1,4 +1,4 @@
-etcpak, an extremely fast ETC compression utility (https://bitbucket.org/wolfpld/etcpak)
+etcpak, an extremely fast ETC compression utility (https://github.com/wolfpld/etcpak)
 
 Copyright (c) 2013-2020, Bartosz Taudul <wolf.pld@gmail.com>
 All rights reserved.
