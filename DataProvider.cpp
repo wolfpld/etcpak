@@ -49,8 +49,9 @@ DataPart DataProvider::NextPart()
     unsigned int lines = m_lines;
     bool done;
 
+    const auto ptr = m_current->NextBlock( lines, done );
     DataPart ret = {
-        m_current->NextBlock( lines, done ),
+        ptr,
         std::max<unsigned int>( 4, m_current->Size().x ),
         lines,
         m_offset
