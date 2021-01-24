@@ -36,6 +36,7 @@ void Usage()
     fprintf( stderr, "  -v              view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
     fprintf( stderr, "  -s              display image quality measurements\n" );
     fprintf( stderr, "  -b              benchmark mode\n" );
+    fprintf( stderr, "  -M              switch benchmark to multi-threaded mode\n" );
     fprintf( stderr, "  -m              generate mipmaps\n" );
     fprintf( stderr, "  -d              enable dithering\n" );
     fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
@@ -52,6 +53,7 @@ int main( int argc, char** argv )
     bool viewMode = false;
     bool stats = false;
     bool benchmark = false;
+    bool benchMt = false;
     bool mipmap = false;
     bool dither = false;
     bool etc2 = false;
@@ -81,7 +83,7 @@ int main( int argc, char** argv )
     };
 
     int c;
-    while( ( c = getopt_long( argc, argv, "vo:a:sbmd", longopts, nullptr ) ) != -1 )
+    while( ( c = getopt_long( argc, argv, "vo:a:sbMmd", longopts, nullptr ) ) != -1 )
     {
         switch( c )
         {
@@ -99,6 +101,9 @@ int main( int argc, char** argv )
             break;
         case 'b':
             benchmark = true;
+            break;
+        case 'M':
+            benchMt = true;
             break;
         case 'm':
             mipmap = true;
@@ -180,32 +185,95 @@ int main( int argc, char** argv )
 
             constexpr int NumTasks = 9;
             uint64_t timeData[NumTasks];
-            for( int i=0; i<NumTasks; i++ )
+            if( benchMt )
             {
-                BlockData::Type type;
-                Channels channel;
-                if( alpha ) channel = Channels::Alpha;
-                else channel = Channels::RGB;
-                if( rgba ) type = BlockData::Etc2_RGBA;
-                else if( etc2 ) type = BlockData::Etc2_RGB;
-                else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
-                else type = BlockData::Etc1;
-                auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
-                const auto localStart = GetTime();
-                if( rgba || type == BlockData::Dxt5 )
+                TaskDispatch taskDispatch( cpus );
+                const unsigned int parts = ( ( bmp->Size().y / 4 ) + 32 - 1 ) / 32;
+
+                for( int i=0; i<NumTasks; i++ )
                 {
-                    bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x );
+                    BlockData::Type type;
+                    Channels channel;
+                    if( alpha ) channel = Channels::Alpha;
+                    else channel = Channels::RGB;
+                    if( rgba ) type = BlockData::Etc2_RGBA;
+                    else if( etc2 ) type = BlockData::Etc2_RGB;
+                    else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+                    else type = BlockData::Etc1;
+                    auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
+                    auto ptr = bmp->Data();
+                    const auto width = bmp->Size().x;
+                    const auto localStart = GetTime();
+                    auto linesLeft = bmp->Size().y / 4;
+                    size_t offset = 0;
+                    if( rgba || type == BlockData::Dxt5 )
+                    {
+                        for( int j=0; j<parts; j++ )
+                        {
+                            const auto lines = std::min( 32, linesLeft );
+                            taskDispatch.Queue( [bd, ptr, width, lines, offset] {
+                                bd->ProcessRGBA( ptr, width * lines / 4, offset, width );
+                            } );
+                            linesLeft -= lines;
+                            ptr += width * lines;
+                            offset += width * lines / 4;
+                        }
+                    }
+                    else
+                    {
+                        for( int j=0; j<parts; j++ )
+                        {
+                            const auto lines = std::min( 32, linesLeft );
+                            taskDispatch.Queue( [bd, ptr, width, lines, offset, channel, dither] {
+                                bd->Process( ptr, width * lines / 4, offset, width, channel, dither );
+                            } );
+                            linesLeft -= lines;
+                            ptr += width * lines;
+                            offset += width * lines / 4;
+                        }
+                    }
+                    taskDispatch.Sync();
+                    const auto localEnd = GetTime();
+                    timeData[i] = localEnd - localStart;
                 }
-                else
+            }
+            else
+            {
+                for( int i=0; i<NumTasks; i++ )
                 {
-                    bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, channel, dither );
+                    BlockData::Type type;
+                    Channels channel;
+                    if( alpha ) channel = Channels::Alpha;
+                    else channel = Channels::RGB;
+                    if( rgba ) type = BlockData::Etc2_RGBA;
+                    else if( etc2 ) type = BlockData::Etc2_RGB;
+                    else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+                    else type = BlockData::Etc1;
+                    auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
+                    const auto localStart = GetTime();
+                    if( rgba || type == BlockData::Dxt5 )
+                    {
+                        bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x );
+                    }
+                    else
+                    {
+                        bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, channel, dither );
+                    }
+                    const auto localEnd = GetTime();
+                    timeData[i] = localEnd - localStart;
                 }
-                const auto localEnd = GetTime();
-                timeData[i] = localEnd - localStart;
             }
             std::sort( timeData, timeData+NumTasks );
             const auto median = timeData[NumTasks/2] / 1000.f;
-            printf( "Median compression time for %i runs: %0.3f ms (%0.3f Mpx/s)\n", NumTasks, median, bmp->Size().x * bmp->Size().y / ( median * 1000 ) );
+            printf( "Median compression time for %i runs: %0.3f ms (%0.3f Mpx/s)", NumTasks, median, bmp->Size().x * bmp->Size().y / ( median * 1000 ) );
+            if( benchMt )
+            {
+                printf( " multi threaded (%i cores)\n", cpus );
+            }
+            else
+            {
+                printf( " single threaded\n" );
+            }
         }
     }
     else if( viewMode )
