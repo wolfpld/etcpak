@@ -37,6 +37,7 @@
 #  define _bswap64(x) __builtin_bswap64(x)
 #endif
 
+static uint8_t table59T58H[8] = { 3,6,11,16,23,32,41,64 };
 
 BlockData::BlockData( const char* fn )
     : m_file( fopen( fn, "rb" ) )
@@ -306,6 +307,57 @@ static etcpak_force_inline int32_t expand7(uint32_t value)
     return (value << 1) | (value >> 6);
 }
 
+static etcpak_force_inline void DecodeT(uint64_t block, uint32_t* dst, uint32_t w)
+{
+    const auto r0 = (block >> 24) & 0x1B;
+    const auto rh0 = (r0 >> 3) & 0x3;
+    const auto rl0 = r0 & 0x3;
+    const auto g0 = (block >> 20) & 0xF;
+    const auto b0 = (block >> 16) & 0xF;
+
+    const auto r1 = (block >> 12) & 0xF;
+    const auto g1 = (block >> 8) & 0xF;
+    const auto b1 = (block >> 4) & 0xF;
+
+    const auto cr0 = ((rh0 << 6) | (rl0 << 4) | (rh0 << 2) | rl0);
+    const auto cg0 = (g0 << 4) | g0;
+    const auto cb0 = (b0 << 4) | b0;
+
+    const auto cr1 = (r1 << 4) | r1;
+    const auto cg1 = (g1 << 4) | g1;
+    const auto cb1 = (b1 << 4) | b1;
+
+    const auto codeword_hi = (block >> 2) & 0x3;
+    const auto codeword_lo = block & 0x1;
+    const auto codeword = (codeword_hi << 1) | codeword_lo;
+
+    const auto c2r = clampu8(cr1 + table59T58H[codeword]);
+    const auto c2g = clampu8(cg1 + table59T58H[codeword]);
+    const auto c2b = clampu8(cb1 + table59T58H[codeword]);
+
+    const auto c3r = clampu8(cr1 - table59T58H[codeword]);
+    const auto c3g = clampu8(cg1 - table59T58H[codeword]);
+    const auto c3b = clampu8(cb1 - table59T58H[codeword]);
+
+    const uint32_t col_tab[4] = {
+        cr0 | (cg0 << 8) | (cb0 << 16) | 0xFF000000,
+        c2r | (c2g << 8) | (c2b << 16) | 0xFF000000,
+        cr1 | (cg1 << 8) | (cb1 << 16) | 0xFF000000,
+        c3r | (c3g << 8) | (c3b << 16) | 0xFF000000
+    };
+
+    const uint32_t indexes = (block >> 32) & 0xFFFFFFFF;
+    for (uint8_t j = 0; j < 4; j++)
+    {
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            //2bit indices distributed on two lane 16bit numbers
+            const uint8_t index = (((indexes >> (j + i * 4 + 16)) & 0x1) << 1) | ((indexes >> (j + i * 4)) & 0x1);
+            dst[j * w + i] = col_tab[index];
+        }
+    }
+}
+
 static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uint32_t w )
 {
     const auto bv = expand6((block >> ( 0 + 32)) & 0x3F);
@@ -547,7 +599,14 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
         int32_t g1 = int32_t(g0) + dg;
         int32_t b1 = int32_t(b0) + db;
 
-        // T and H modes are not handled
+        // T mode
+        if ((r1 < 0) || (r1 > 31))
+        {
+            DecodeT(d, dst, w);
+            return;
+        }
+
+        // P mode
         if( (b1 < 0) || (b1 > 31) )
         {
             DecodePlanar( d, dst, w );
