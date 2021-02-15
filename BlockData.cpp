@@ -458,6 +458,55 @@ static etcpak_force_inline void DecodeH(uint64_t block, uint32_t* dst, uint32_t 
     }
 }
 
+static etcpak_force_inline void DecodeHAlpha(uint64_t block, uint64_t alpha, uint32_t* dst, uint32_t w)
+{
+    const uint32_t indexes = (block >> 32) & 0xFFFFFFFF;
+
+    const auto r0444 = (block >> 27) & 0xF;
+    const auto g0444 = ((block >> 20) & 0x1) | (((block >> 24) & 0x7) << 1);
+    const auto b0444 = ((block >> 15) & 0x7) | (((block >> 19) & 0x1) << 3);
+
+    const auto r1444 = (block >> 11) & 0xF;
+    const auto g1444 = (block >> 7) & 0xF;
+    const auto b1444 = (block >> 3) & 0xF;
+
+    const auto r0 = (r0444 << 4) | r0444;
+    const auto g0 = (g0444 << 4) | g0444;
+    const auto b0 = (b0444 << 4) | b0444;
+
+    const auto r1 = (r1444 << 4) | r1444;
+    const auto g1 = (g1444 << 4) | g1444;
+    const auto b1 = (b1444 << 4) | b1444;
+
+    const auto codeword_hi = ((block & 0x1) << 1) | ((block & 0x4) );
+    const auto c0 = (r0444 << 8) | (g0444 << 4) | (b0444 << 0);
+    const auto c1 = (block >> 3) & ((1 << 12) - 1);
+    const auto codeword_lo = (c0 >= c1) ? 1 : 0;
+    const auto codeword = codeword_hi | codeword_lo;
+
+    const int32_t base = alpha >> 56;
+    const int32_t mul = (alpha >> 52) & 0xF;
+    const auto tbl = g_alpha[(alpha >> 48) & 0xF];
+
+    const uint32_t col_tab[] = {
+        clampu8(r0 + table59T58H[codeword]) | (clampu8(g0 + table59T58H[codeword]) << 8) | (clampu8(b0 + table59T58H[codeword]) << 16),
+        clampu8(r0 - table59T58H[codeword]) | (clampu8(g0 - table59T58H[codeword]) << 8) | (clampu8(b0 - table59T58H[codeword]) << 16),
+        clampu8(r1 + table59T58H[codeword]) | (clampu8(g1 + table59T58H[codeword]) << 8) | (clampu8(b1 + table59T58H[codeword]) << 16),
+        clampu8(r1 - table59T58H[codeword]) | (clampu8(g1 - table59T58H[codeword]) << 8) | (clampu8(b1 - table59T58H[codeword]) << 16)
+    };
+
+    for (uint8_t j = 0; j < 4; j++)
+    {
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            const uint8_t index = (((indexes >> (j + i * 4 + 16)) & 0x1) << 1) | ((indexes >> (j + i * 4)) & 0x1);
+            const auto amod = tbl[(alpha >> (45 - j * 3 - i * 12)) & 0x7];
+            const uint32_t a = clampu8(base + amod * mul);
+            dst[j * w + i] = col_tab[index] | (a << 24);
+        }
+    }
+}
+
 static etcpak_force_inline void DecodePlanar( uint64_t block, uint32_t* dst, uint32_t w )
 {
     const auto bv = expand6((block >> ( 0 + 32)) & 0x3F);
@@ -840,6 +889,13 @@ static etcpak_force_inline void DecodeRGBAPart( uint64_t d, uint64_t alpha, uint
         if ((r1 < 0) || (r1 > 31))
         {
             DecodeTAlpha(d, alpha, dst, w);
+            return;
+        }
+
+        // H mode
+        if ((g1 < 0) || (g1 > 31))
+        {
+            DecodeHAlpha(d, alpha, dst, w);
             return;
         }
 
