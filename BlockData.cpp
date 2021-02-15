@@ -749,16 +749,16 @@ static etcpak_force_inline void DecodeRGBPart( uint64_t d, uint32_t* dst, uint32
         int32_t b1 = int32_t(b0) + db;
 
         // T mode
-        if ((r1 < 0) || (r1 > 31))
+        if ( (r1 < 0) || (r1 > 31) )
         {
-            DecodeT(d, dst, w);
+            DecodeT( d, dst, w );
             return;
         }
 
         // H mode
         if ((g1 < 0) || (g1 > 31))
         {
-            DecodeH(d, dst, w);
+            DecodeH( d, dst, w );
             return;
         }
 
@@ -886,23 +886,23 @@ static etcpak_force_inline void DecodeRGBAPart( uint64_t d, uint64_t alpha, uint
         int32_t b1 = int32_t(b0) + db;
 
         // T mode
-        if ((r1 < 0) || (r1 > 31))
+        if ( (r1 < 0) || (r1 > 31) )
         {
-            DecodeTAlpha(d, alpha, dst, w);
+            DecodeTAlpha( d, alpha, dst, w );
             return;
         }
 
         // H mode
-        if ((g1 < 0) || (g1 > 31))
+        if ( (g1 < 0) || (g1 > 31) )
         {
-            DecodeHAlpha(d, alpha, dst, w);
+            DecodeHAlpha( d, alpha, dst, w );
             return;
         }
 
         // P mode
-        if ((b1 < 0) || (b1 > 31))
+        if ( (b1 < 0) || (b1 > 31) )
         {
-            DecodePlanarAlpha(d, alpha, dst, w);
+            DecodePlanarAlpha( d, alpha, dst, w );
             return;
         }
 
