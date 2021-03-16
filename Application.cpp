@@ -40,8 +40,8 @@ void Usage()
     fprintf( stderr, "  -m              generate mipmaps\n" );
     fprintf( stderr, "  -d              enable dithering\n" );
     fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
-    fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
-    fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
+    fprintf( stderr, "  --etc1          use ETC1 mode (ETC2 is used by default)\n" );
+    fprintf( stderr, "  --rgba          enable RGBA in ETC2 mode (RGB is used by default)\n" );
     fprintf( stderr, "  --dxtc          use DXT1 compression\n" );
     fprintf( stderr, "  --linear        input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
@@ -57,7 +57,7 @@ int main( int argc, char** argv )
     bool benchMt = false;
     bool mipmap = false;
     bool dither = false;
-    bool etc2 = false;
+    bool etc2 = true;
     bool rgba = false;
     bool dxtc = false;
     bool linearize = true;
@@ -72,14 +72,14 @@ int main( int argc, char** argv )
 
     enum Options
     {
-        OptEtc2,
+        OptEtc1,
         OptRgba,
         OptDxtc,
         OptLinear
     };
 
     struct option longopts[] = {
-        { "etc2", no_argument, nullptr, OptEtc2 },
+        { "etc1", no_argument, nullptr, OptEtc1 },
         { "rgba", no_argument, nullptr, OptRgba },
         { "dxtc", no_argument, nullptr, OptDxtc },
         { "linear", no_argument, nullptr, OptLinear },
@@ -115,8 +115,8 @@ int main( int argc, char** argv )
         case 'd':
             dither = true;
             break;
-        case OptEtc2:
-            etc2 = true;
+        case OptEtc1:
+            etc2 = false;
             break;
         case OptRgba:
             rgba = true;
