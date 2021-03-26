@@ -35,7 +35,7 @@ unsigned int System::CPUCores()
 
 void System::SetThreadName( std::thread& thread, const char* name )
 {
-#ifdef _WIN32
+#ifdef defined(_WIN32) && !defined(__MINGW32__)
     const DWORD MS_VC_EXCEPTION=0x406D1388;
 
 #  pragma pack( push, 8 )
@@ -62,7 +62,7 @@ void System::SetThreadName( std::thread& thread, const char* name )
     __except(EXCEPTION_EXECUTE_HANDLER)
     {
     }
-#elif !defined(__APPLE__)
+#elif !defined(__APPLE__) && !defined(__MINGW32__) && !defined(_WIN32)
     pthread_setname_np( thread.native_handle(), name );
 #endif
 }

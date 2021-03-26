@@ -22,7 +22,7 @@
 #    include <x86intrin.h>
 #  endif
 #else
-#  ifndef _MSC_VER
+#  if !defined(_MSC_VER) && !defined(__MINGW32__)
 #    include <byteswap.h>
 #    define _bswap(x) bswap_32(x)
 #    define _bswap64(x) bswap_64(x)
