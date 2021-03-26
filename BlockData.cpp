@@ -16,7 +16,7 @@
 #endif
 
 #ifdef __SSE4_1__
-#  ifdef _MSC_VER
+#  if defined(_MSC_VER) && !defined(__MINGW32__)
 #    include <intrin.h>
 #    include <Windows.h>
 #    define _bswap(x) _byteswap_ulong(x)
@@ -24,17 +24,26 @@
 #  else
 #    include <x86intrin.h>
 #  endif
-#else
-#  ifndef _MSC_VER
-#    include <byteswap.h>
-#    define _bswap(x) bswap_32(x)
-#    define _bswap64(x) bswap_64(x)
-#  endif
 #endif
-
-#ifndef _bswap
-#  define _bswap(x) __builtin_bswap32(x)
-#  define _bswap64(x) __builtin_bswap64(x)
+#if !defined(_bswap) && !defined(_bswap64)
+// Copyright 2020 github user jtbr, Released under MIT license
+// https://gist.github.com/jtbr/7a43e6281e6cca353b33ee501421860c
+static inline uint32_t _bswap(uint32_t x) {
+    return ((( x & 0xff000000u ) >> 24 ) |
+            (( x & 0x00ff0000u ) >> 8  ) |
+            (( x & 0x0000ff00u ) << 8  ) |
+            (( x & 0x000000ffu ) << 24 ));
+}
+static inline uint64_t _bswap64(uint64_t x) {
+    return ((( x & 0xff00000000000000ull ) >> 56 ) |
+            (( x & 0x00ff000000000000ull ) >> 40 ) |
+            (( x & 0x0000ff0000000000ull ) >> 24 ) |
+            (( x & 0x000000ff00000000ull ) >> 8  ) |
+            (( x & 0x00000000ff000000ull ) << 8  ) |
+            (( x & 0x0000000000ff0000ull ) << 24 ) |
+            (( x & 0x000000000000ff00ull ) << 40 ) |
+            (( x & 0x00000000000000ffull ) << 56 ));
+}
 #endif
 
 static uint8_t table59T58H[8] = { 3,6,11,16,23,32,41,64 };
@@ -340,10 +349,10 @@ static etcpak_force_inline void DecodeT( uint64_t block, uint32_t* dst, uint32_t
     const auto c3b = clampu8( cb1 - table59T58H[codeword] );
 
     const uint32_t col_tab[4] = {
-        cr0 | ( cg0 << 8 ) | ( cb0 << 16 ) | 0xFF000000,
-        c2r | ( c2g << 8 ) | ( c2b << 16 ) | 0xFF000000,
-        cr1 | ( cg1 << 8 ) | ( cb1 << 16 ) | 0xFF000000,
-        c3r | ( c3g << 8 ) | ( c3b << 16 ) | 0xFF000000
+        static_cast<uint32_t>(cr0 | ( cg0 << 8 ) | ( cb0 << 16 )),
+        static_cast<uint32_t>(c2r | ( c2g << 8 ) | ( c2b << 16 )),
+        static_cast<uint32_t>(cr1 | ( cg1 << 8 ) | ( cb1 << 16 )),
+        static_cast<uint32_t>(c3r | ( c3g << 8 ) | ( c3b << 16 ))
     };
 
     const uint32_t indexes = ( block >> 32 ) & 0xFFFFFFFF;
@@ -395,10 +404,10 @@ static etcpak_force_inline void DecodeTAlpha( uint64_t block, uint64_t alpha, ui
     const auto c3b = clampu8( cb1 - table59T58H[codeword] );
 
     const uint32_t col_tab[4] = {
-        cr0 | ( cg0 << 8 ) | ( cb0 << 16 ),
-        c2r | ( c2g << 8 ) | ( c2b << 16 ),
-        cr1 | ( cg1 << 8 ) | ( cb1 << 16 ),
-        c3r | ( c3g << 8 ) | ( c3b << 16 )
+        uint32_t(cr0 | ( cg0 << 8 ) | ( cb0 << 16 )),
+        uint32_t(c2r | ( c2g << 8 ) | ( c2b << 16 )),
+        uint32_t(cr1 | ( cg1 << 8 ) | ( cb1 << 16 )),
+        uint32_t(c3r | ( c3g << 8 ) | ( c3b << 16 ))
     };
 
     const uint32_t indexes = ( block >> 32 ) & 0xFFFFFFFF;
@@ -442,10 +451,10 @@ static etcpak_force_inline void DecodeH( uint64_t block, uint32_t* dst, uint32_t
     const auto codeword = codeword_hi | codeword_lo;
 
     const uint32_t col_tab[] = {
-        clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 ),
-        clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 ),
-        clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 ),
-        clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 )
+        uint32_t(clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 )),
+        uint32_t(clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 )),
+        uint32_t(clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 )),
+        uint32_t(clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 ))
     };
 
     for( uint8_t j = 0; j < 4; j++ )
@@ -489,10 +498,10 @@ static etcpak_force_inline void DecodeHAlpha( uint64_t block, uint64_t alpha, ui
     const auto tbl = g_alpha[(alpha >> 48) & 0xF];
 
     const uint32_t col_tab[] = {
-        clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 ),
-        clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 ),
-        clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 ),
-        clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 )
+        static_cast<uint32_t>(clampu8( r0 + table59T58H[codeword] ) | ( clampu8( g0 + table59T58H[codeword] ) << 8 ) | ( clampu8( b0 + table59T58H[codeword] ) << 16 )),
+        static_cast<uint32_t>(clampu8( r0 - table59T58H[codeword] ) | ( clampu8( g0 - table59T58H[codeword] ) << 8 ) | ( clampu8( b0 - table59T58H[codeword] ) << 16 )),
+        static_cast<uint32_t>(clampu8( r1 + table59T58H[codeword] ) | ( clampu8( g1 + table59T58H[codeword] ) << 8 ) | ( clampu8( b1 + table59T58H[codeword] ) << 16 )),
+        static_cast<uint32_t>(clampu8( r1 - table59T58H[codeword] ) | ( clampu8( g1 - table59T58H[codeword] ) << 8 ) | ( clampu8( b1 - table59T58H[codeword] ) << 16 ))
     };
 
     for( uint8_t j = 0; j < 4; j++ )

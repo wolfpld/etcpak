@@ -12,8 +12,8 @@
 #include "ProcessRGB.hpp"
 #include "Tables.hpp"
 #include "Vector.hpp"
-#if defined __SSE4_1__ || defined __AVX2__ || defined _MSC_VER
-#  ifdef _MSC_VER
+#if defined __SSE4_1__ || defined __AVX2__
+#  ifdef _MSC_VER && !defined(__MINGW32__)
 #    include <intrin.h>
 #    include <Windows.h>
 #    define _bswap(x) _byteswap_ulong(x)
@@ -21,17 +21,27 @@
 #  else
 #    include <x86intrin.h>
 #  endif
-#else
-#  ifndef _MSC_VER
-#    include <byteswap.h>
-#    define _bswap(x) bswap_32(x)
-#    define _bswap64(x) bswap_64(x)
-#  endif
 #endif
 
-#ifndef _bswap
-#  define _bswap(x) __builtin_bswap32(x)
-#  define _bswap64(x) __builtin_bswap64(x)
+#if !defined(_bswap) && !defined(_bswap64)
+// Copyright 2020 github user jtbr, Released under MIT license
+// https://gist.github.com/jtbr/7a43e6281e6cca353b33ee501421860c
+static inline uint32_t _bswap(uint32_t x) {
+    return ((( x & 0xff000000u ) >> 24 ) |
+            (( x & 0x00ff0000u ) >> 8  ) |
+            (( x & 0x0000ff00u ) << 8  ) |
+            (( x & 0x000000ffu ) << 24 ));
+}
+static inline uint64_t _bswap64(uint64_t x) {
+    return ((( x & 0xff00000000000000ull ) >> 56 ) |
+            (( x & 0x00ff000000000000ull ) >> 40 ) |
+            (( x & 0x0000ff0000000000ull ) >> 24 ) |
+            (( x & 0x000000ff00000000ull ) >> 8  ) |
+            (( x & 0x00000000ff000000ull ) << 8  ) |
+            (( x & 0x0000000000ff0000ull ) << 24 ) |
+            (( x & 0x000000000000ff00ull ) << 40 ) |
+            (( x & 0x00000000000000ffull ) << 56 ));
+}
 #endif
 
 namespace
