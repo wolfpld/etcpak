@@ -1,5 +1,6 @@
 #include <array>
 #include <string.h>
+#include <limits>
 
 #ifdef __ARM_NEON
 #  include <arm_neon.h>
@@ -20,12 +21,6 @@
 #    define _bswap64(x) _byteswap_uint64(x)
 #  else
 #    include <x86intrin.h>
-#  endif
-#else
-#  ifndef _MSC_VER
-#    include <byteswap.h>
-#    define _bswap(x) bswap_32(x)
-#    define _bswap64(x) bswap_64(x)
 #  endif
 #endif
 

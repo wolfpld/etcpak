@@ -15,7 +15,7 @@
 #  include <arm_neon.h>
 #endif
 
-#ifdef __SSE4_1__
+#if defined __SSE4_1__ || defined __AVX2__ || defined _MSC_VER
 #  ifdef _MSC_VER
 #    include <intrin.h>
 #    include <Windows.h>
@@ -23,12 +23,6 @@
 #    define _bswap64(x) _byteswap_uint64(x)
 #  else
 #    include <x86intrin.h>
-#  endif
-#else
-#  ifndef _MSC_VER
-#    include <byteswap.h>
-#    define _bswap(x) bswap_32(x)
-#    define _bswap64(x) bswap_64(x)
 #  endif
 #endif
 
