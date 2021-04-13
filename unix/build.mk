@@ -1,7 +1,7 @@
 CFLAGS += -DNO_GZIP -DPNG_INTEL_SSE
 CXXFLAGS := $(CFLAGS) -std=c++11
 DEFINES +=
-INCLUDES :=
+INCLUDES := -I../zlib
 LIBS := -lpthread
 IMAGE := etcpak
 

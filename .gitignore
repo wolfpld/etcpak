@@ -4,5 +4,6 @@ build/x64
 build/*sdf
 build/*.suo
 build/*.vcxproj.user
+unix/etcpak
 *.o
 *.d
