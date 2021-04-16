@@ -72,10 +72,8 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
                         src1 += 4;
                         src2 += 4;
 
-                        __m256i px = _mm256_setr_m128i( p0, p1 );
-                        __m256i pxp = _mm256_permute4x64_epi64( px, _MM_SHUFFLE( 3, 1, 2, 0 ) );
-                        __m256i px1 = _mm256_unpackhi_epi8( pxp, _mm256_setzero_si256() );
-                        __m256i px0 = _mm256_unpacklo_epi8( pxp, _mm256_setzero_si256() );
+                        __m256i px0 = _mm256_cvtepu8_epi16( p0 );
+                        __m256i px1 = _mm256_cvtepu8_epi16( p1 );
 
                         __m256i s0 = _mm256_add_epi16( px0, px1 );
                         __m256i s1 = _mm256_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
