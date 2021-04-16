@@ -4,6 +4,15 @@
 #include "BitmapDownsampled.hpp"
 #include "Debug.hpp"
 
+#if defined __SSE4_1__ || defined __AVX2__ || defined _MSC_VER
+#  ifdef _MSC_VER
+#    include <intrin.h>
+#  else
+#    include <x86intrin.h>
+#  endif
+#endif
+
+
 BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
     : Bitmap( bmp, lines )
 {
@@ -54,6 +63,26 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
                 {
                     for( int k=0; k<m_size.x; k++ )
                     {
+#ifdef __SSE4_1__
+                        uint64_t p0, p1;
+                        memcpy( &p0, src1, 8 );
+                        memcpy( &p1, src2, 8 );
+                        src1 += 2;
+                        src2 += 2;
+
+                        __m128i px = _mm_set_epi64x( p0, p1 );
+                        __m128i px0 = _mm_unpacklo_epi8( px, _mm_setzero_si128() );
+                        __m128i px1 = _mm_unpackhi_epi8( px, _mm_setzero_si128() );
+
+                        __m128i s0 = _mm_add_epi16( px0, px1 );
+                        __m128i s1 = _mm_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+                        __m128i s2 = _mm_add_epi16( s0, s1 );
+
+                        __m128i r0 = _mm_srli_epi16( s2, 2 );
+                        __m128i r1 = _mm_packus_epi16( r0, r0 );
+
+                        *ptr++ = _mm_cvtsi128_si32( r1 );
+#else
                         int r = ( ( *src1 & 0x000000FF ) + ( *(src1+1) & 0x000000FF ) + ( *src2 & 0x000000FF ) + ( *(src2+1) & 0x000000FF ) ) / 4;
                         int g = ( ( ( *src1 & 0x0000FF00 ) + ( *(src1+1) & 0x0000FF00 ) + ( *src2 & 0x0000FF00 ) + ( *(src2+1) & 0x0000FF00 ) ) / 4 ) & 0x0000FF00;
                         int b = ( ( ( *src1 & 0x00FF0000 ) + ( *(src1+1) & 0x00FF0000 ) + ( *src2 & 0x00FF0000 ) + ( *(src2+1) & 0x00FF0000 ) ) / 4 ) & 0x00FF0000;
@@ -61,6 +90,7 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
                         *ptr++ = r | g | b | a;
                         src1 += 2;
                         src2 += 2;
+#endif
                     }
                     src1 += m_size.x * 2;
                     src2 += m_size.x * 2;
