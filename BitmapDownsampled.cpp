@@ -62,6 +62,32 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
                 for( int j=0; j<4; j++ )
                 {
                     int k = m_size.x;
+#ifdef __AVX2__
+                    while( k > 2 )
+                    {
+                        k -= 2;
+
+                        __m128i p0 = _mm_loadu_si128( (__m128i*)src1 );
+                        __m128i p1 = _mm_loadu_si128( (__m128i*)src2 );
+                        src1 += 4;
+                        src2 += 4;
+
+                        __m256i px = _mm256_setr_m128i( p0, p1 );
+                        __m256i pxp = _mm256_permute4x64_epi64( px, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+                        __m256i px1 = _mm256_unpackhi_epi8( pxp, _mm256_setzero_si256() );
+                        __m256i px0 = _mm256_unpacklo_epi8( pxp, _mm256_setzero_si256() );
+
+                        __m256i s0 = _mm256_add_epi16( px0, px1 );
+                        __m256i s1 = _mm256_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+                        __m256i s2 = _mm256_add_epi16( s0, s1 );
+
+                        __m256i r0 = _mm256_srli_epi16( s2, 2 );
+                        __m256i r1 = _mm256_packus_epi16( r0, r0 );
+
+                        *ptr++ = _mm_cvtsi128_si32( _mm256_castsi256_si128( r1 ) );
+                        *ptr++ = _mm_cvtsi128_si32( _mm256_extracti128_si256( r1, 1 ) );
+                    }
+#endif
                     while( k-- )
                     {
 #ifdef __SSE4_1__
