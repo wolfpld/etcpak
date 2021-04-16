@@ -61,7 +61,8 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
             {
                 for( int j=0; j<4; j++ )
                 {
-                    for( int k=0; k<m_size.x; k++ )
+                    int k = m_size.x;
+                    while( k-- )
                     {
 #ifdef __SSE4_1__
                         uint64_t p0, p1;
