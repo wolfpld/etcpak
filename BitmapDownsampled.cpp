@@ -51,88 +51,131 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
     else
     {
         m_linesLeft = h / 4;
-        m_load = std::async( std::launch::async, [this, &bmp, w, h]() mutable
+        if( linearize )
         {
-            auto ptr = m_data;
-            auto src1 = bmp.Data();
-            auto src2 = src1 + bmp.Size().x;
-            unsigned int lines = 0;
-            for( int i=0; i<h/4; i++ )
+            m_load = std::async( std::launch::async, [this, &bmp, w, h]() mutable
             {
-                for( int j=0; j<4; j++ )
+                auto ptr = m_data;
+                auto src1 = bmp.Data();
+                auto src2 = src1 + bmp.Size().x;
+                unsigned int lines = 0;
+                for( int i=0; i<h/4; i++ )
                 {
-                    int k = m_size.x;
-#ifdef __AVX2__
-                    while( k > 2 )
+                    for( int j=0; j<4; j++ )
                     {
-                        k -= 2;
-
-                        __m128i p0 = _mm_loadu_si128( (__m128i*)src1 );
-                        __m128i p1 = _mm_loadu_si128( (__m128i*)src2 );
-                        src1 += 4;
-                        src2 += 4;
-
-                        __m256i px0 = _mm256_cvtepu8_epi16( p0 );
-                        __m256i px1 = _mm256_cvtepu8_epi16( p1 );
-
-                        __m256i s0 = _mm256_add_epi16( px0, px1 );
-                        __m256i s1 = _mm256_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
-                        __m256i s2 = _mm256_add_epi16( s0, s1 );
-
-                        __m256i r0 = _mm256_srli_epi16( s2, 2 );
-                        __m256i r1 = _mm256_packus_epi16( r0, r0 );
-
-                        *ptr++ = _mm_cvtsi128_si32( _mm256_castsi256_si128( r1 ) );
-                        *ptr++ = _mm_cvtsi128_si32( _mm256_extracti128_si256( r1, 1 ) );
+                        int k = m_size.x;
+                        while( k-- )
+                        {
+                            int r = ( ( *src1 & 0x000000FF ) + ( *(src1+1) & 0x000000FF ) + ( *src2 & 0x000000FF ) + ( *(src2+1) & 0x000000FF ) ) / 4;
+                            int g = ( ( ( *src1 & 0x0000FF00 ) + ( *(src1+1) & 0x0000FF00 ) + ( *src2 & 0x0000FF00 ) + ( *(src2+1) & 0x0000FF00 ) ) / 4 ) & 0x0000FF00;
+                            int b = ( ( ( *src1 & 0x00FF0000 ) + ( *(src1+1) & 0x00FF0000 ) + ( *src2 & 0x00FF0000 ) + ( *(src2+1) & 0x00FF0000 ) ) / 4 ) & 0x00FF0000;
+                            int a = ( ( ( ( ( *src1 & 0xFF000000 ) >> 8 ) + ( ( *(src1+1) & 0xFF000000 ) >> 8 ) + ( ( *src2 & 0xFF000000 ) >> 8 ) + ( ( *(src2+1) & 0xFF000000 ) >> 8 ) ) / 4 ) & 0x00FF0000 ) << 8;
+                            *ptr++ = r | g | b | a;
+                            src1 += 2;
+                            src2 += 2;
+                        }
+                        src1 += m_size.x * 2;
+                        src2 += m_size.x * 2;
                     }
-#endif
-                    while( k-- )
+                    lines++;
+                    if( lines >= m_lines )
                     {
-#ifdef __SSE4_1__
-                        uint64_t p0, p1;
-                        memcpy( &p0, src1, 8 );
-                        memcpy( &p1, src2, 8 );
-                        src1 += 2;
-                        src2 += 2;
-
-                        __m128i px = _mm_set_epi64x( p0, p1 );
-                        __m128i px0 = _mm_unpacklo_epi8( px, _mm_setzero_si128() );
-                        __m128i px1 = _mm_unpackhi_epi8( px, _mm_setzero_si128() );
-
-                        __m128i s0 = _mm_add_epi16( px0, px1 );
-                        __m128i s1 = _mm_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
-                        __m128i s2 = _mm_add_epi16( s0, s1 );
-
-                        __m128i r0 = _mm_srli_epi16( s2, 2 );
-                        __m128i r1 = _mm_packus_epi16( r0, r0 );
-
-                        *ptr++ = _mm_cvtsi128_si32( r1 );
-#else
-                        int r = ( ( *src1 & 0x000000FF ) + ( *(src1+1) & 0x000000FF ) + ( *src2 & 0x000000FF ) + ( *(src2+1) & 0x000000FF ) ) / 4;
-                        int g = ( ( ( *src1 & 0x0000FF00 ) + ( *(src1+1) & 0x0000FF00 ) + ( *src2 & 0x0000FF00 ) + ( *(src2+1) & 0x0000FF00 ) ) / 4 ) & 0x0000FF00;
-                        int b = ( ( ( *src1 & 0x00FF0000 ) + ( *(src1+1) & 0x00FF0000 ) + ( *src2 & 0x00FF0000 ) + ( *(src2+1) & 0x00FF0000 ) ) / 4 ) & 0x00FF0000;
-                        int a = ( ( ( ( ( *src1 & 0xFF000000 ) >> 8 ) + ( ( *(src1+1) & 0xFF000000 ) >> 8 ) + ( ( *src2 & 0xFF000000 ) >> 8 ) + ( ( *(src2+1) & 0xFF000000 ) >> 8 ) ) / 4 ) & 0x00FF0000 ) << 8;
-                        *ptr++ = r | g | b | a;
-                        src1 += 2;
-                        src2 += 2;
-#endif
+                        lines = 0;
+                        m_sema.unlock();
                     }
-                    src1 += m_size.x * 2;
-                    src2 += m_size.x * 2;
                 }
-                lines++;
-                if( lines >= m_lines )
+
+                if( lines != 0 )
                 {
-                    lines = 0;
                     m_sema.unlock();
                 }
-            }
-
-            if( lines != 0 )
+            } );
+        }
+        else
+        {
+            m_load = std::async( std::launch::async, [this, &bmp, w, h]() mutable
             {
-                m_sema.unlock();
-            }
-        } );
+                auto ptr = m_data;
+                auto src1 = bmp.Data();
+                auto src2 = src1 + bmp.Size().x;
+                unsigned int lines = 0;
+                for( int i=0; i<h/4; i++ )
+                {
+                    for( int j=0; j<4; j++ )
+                    {
+                        int k = m_size.x;
+#ifdef __AVX2__
+                        while( k > 2 )
+                        {
+                            k -= 2;
+
+                            __m128i p0 = _mm_loadu_si128( (__m128i*)src1 );
+                            __m128i p1 = _mm_loadu_si128( (__m128i*)src2 );
+                            src1 += 4;
+                            src2 += 4;
+
+                            __m256i px0 = _mm256_cvtepu8_epi16( p0 );
+                            __m256i px1 = _mm256_cvtepu8_epi16( p1 );
+
+                            __m256i s0 = _mm256_add_epi16( px0, px1 );
+                            __m256i s1 = _mm256_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+                            __m256i s2 = _mm256_add_epi16( s0, s1 );
+
+                            __m256i r0 = _mm256_srli_epi16( s2, 2 );
+                            __m256i r1 = _mm256_packus_epi16( r0, r0 );
+
+                            *ptr++ = _mm_cvtsi128_si32( _mm256_castsi256_si128( r1 ) );
+                            *ptr++ = _mm_cvtsi128_si32( _mm256_extracti128_si256( r1, 1 ) );
+                        }
+#endif
+                        while( k-- )
+                        {
+#ifdef __SSE4_1__
+                            uint64_t p0, p1;
+                            memcpy( &p0, src1, 8 );
+                            memcpy( &p1, src2, 8 );
+                            src1 += 2;
+                            src2 += 2;
+
+                            __m128i px = _mm_set_epi64x( p0, p1 );
+                            __m128i px0 = _mm_unpacklo_epi8( px, _mm_setzero_si128() );
+                            __m128i px1 = _mm_unpackhi_epi8( px, _mm_setzero_si128() );
+
+                            __m128i s0 = _mm_add_epi16( px0, px1 );
+                            __m128i s1 = _mm_shuffle_epi32( s0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+                            __m128i s2 = _mm_add_epi16( s0, s1 );
+
+                            __m128i r0 = _mm_srli_epi16( s2, 2 );
+                            __m128i r1 = _mm_packus_epi16( r0, r0 );
+
+                            *ptr++ = _mm_cvtsi128_si32( r1 );
+#else
+                            int r = ( ( *src1 & 0x000000FF ) + ( *(src1+1) & 0x000000FF ) + ( *src2 & 0x000000FF ) + ( *(src2+1) & 0x000000FF ) ) / 4;
+                            int g = ( ( ( *src1 & 0x0000FF00 ) + ( *(src1+1) & 0x0000FF00 ) + ( *src2 & 0x0000FF00 ) + ( *(src2+1) & 0x0000FF00 ) ) / 4 ) & 0x0000FF00;
+                            int b = ( ( ( *src1 & 0x00FF0000 ) + ( *(src1+1) & 0x00FF0000 ) + ( *src2 & 0x00FF0000 ) + ( *(src2+1) & 0x00FF0000 ) ) / 4 ) & 0x00FF0000;
+                            int a = ( ( ( ( ( *src1 & 0xFF000000 ) >> 8 ) + ( ( *(src1+1) & 0xFF000000 ) >> 8 ) + ( ( *src2 & 0xFF000000 ) >> 8 ) + ( ( *(src2+1) & 0xFF000000 ) >> 8 ) ) / 4 ) & 0x00FF0000 ) << 8;
+                            *ptr++ = r | g | b | a;
+                            src1 += 2;
+                            src2 += 2;
+#endif
+                        }
+                        src1 += m_size.x * 2;
+                        src2 += m_size.x * 2;
+                    }
+                    lines++;
+                    if( lines >= m_lines )
+                    {
+                        lines = 0;
+                        m_sema.unlock();
+                    }
+                }
+
+                if( lines != 0 )
+                {
+                    m_sema.unlock();
+                }
+            } );
+        }
     }
 }
 
