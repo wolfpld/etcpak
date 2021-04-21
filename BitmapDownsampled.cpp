@@ -13,7 +13,7 @@
 #endif
 
 
-BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines )
+BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, bool linearize )
     : Bitmap( bmp, lines )
 {
     m_size.x = std::max( 1, bmp.Size().x / 2 );

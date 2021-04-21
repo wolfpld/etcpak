@@ -5,11 +5,12 @@
 #include "DataProvider.hpp"
 #include "MipMap.hpp"
 
-DataProvider::DataProvider( const char* fn, bool mipmap, bool bgr )
+DataProvider::DataProvider( const char* fn, bool mipmap, bool bgr, bool linearize )
     : m_offset( 0 )
+    , m_lines( 32 )
     , m_mipmap( mipmap )
     , m_done( false )
-    , m_lines( 32 )
+    , m_linearize( linearize )
 {
     m_bmp.emplace_back( new Bitmap( fn, m_lines, bgr ) );
     m_current = m_bmp[0].get();
@@ -64,7 +65,7 @@ DataPart DataProvider::NextPart()
         if( m_mipmap && ( m_current->Size().x != 1 || m_current->Size().y != 1 ) )
         {
             m_lines *= 2;
-            m_bmp.emplace_back( new BitmapDownsampled( *m_current, m_lines ) );
+            m_bmp.emplace_back( new BitmapDownsampled( *m_current, m_lines, m_linearize ) );
             m_current = m_bmp[m_bmp.size()-1].get();
         }
         else

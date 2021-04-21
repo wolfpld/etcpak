@@ -42,7 +42,8 @@ void Usage()
     fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
     fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
     fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
-    fprintf( stderr, "  --dxtc          use DXT1 compression\n\n" );
+    fprintf( stderr, "  --dxtc          use DXT1 compression\n" );
+    fprintf( stderr, "  --linear        input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -59,6 +60,7 @@ int main( int argc, char** argv )
     bool etc2 = false;
     bool rgba = false;
     bool dxtc = false;
+    bool linearize = true;
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
@@ -72,13 +74,15 @@ int main( int argc, char** argv )
     {
         OptEtc2,
         OptRgba,
-        OptDxtc
+        OptDxtc,
+        OptLinear
     };
 
     struct option longopts[] = {
         { "etc2", no_argument, nullptr, OptEtc2 },
         { "rgba", no_argument, nullptr, OptRgba },
         { "dxtc", no_argument, nullptr, OptDxtc },
+        { "linear", no_argument, nullptr, OptLinear },
         {}
     };
 
@@ -120,6 +124,9 @@ int main( int argc, char** argv )
             break;
         case OptDxtc:
             dxtc = true;
+            break;
+        case OptLinear:
+            linearize = false;
             break;
         default:
             break;
@@ -284,7 +291,7 @@ int main( int argc, char** argv )
     }
     else
     {
-        DataProvider dp( input, mipmap, !dxtc );
+        DataProvider dp( input, mipmap, !dxtc, linearize );
         auto num = dp.NumberOfParts();
 
         BlockData::Type type;

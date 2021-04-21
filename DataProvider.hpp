@@ -18,7 +18,7 @@ struct DataPart
 class DataProvider
 {
 public:
-    DataProvider( const char* fn, bool mipmap, bool bgr );
+    DataProvider( const char* fn, bool mipmap, bool bgr, bool linearize );
     ~DataProvider();
 
     unsigned int NumberOfParts() const;
@@ -36,6 +36,7 @@ private:
     unsigned int m_lines;
     bool m_mipmap;
     bool m_done;
+    bool m_linearize;
 };
 
 #endif

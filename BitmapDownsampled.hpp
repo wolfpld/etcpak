@@ -6,7 +6,7 @@
 class BitmapDownsampled : public Bitmap
 {
 public:
-    BitmapDownsampled( const Bitmap& bmp, unsigned int lines );
+    BitmapDownsampled( const Bitmap& bmp, unsigned int lines, bool linearize );
     ~BitmapDownsampled();
 };
 
