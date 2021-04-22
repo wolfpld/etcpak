@@ -99,10 +99,31 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                         int k = m_size.x;
                         while( k-- )
                         {
-                            int r = ( ( *src1 & 0x000000FF ) + ( *(src1+1) & 0x000000FF ) + ( *src2 & 0x000000FF ) + ( *(src2+1) & 0x000000FF ) ) / 4;
-                            int g = ( ( ( *src1 & 0x0000FF00 ) + ( *(src1+1) & 0x0000FF00 ) + ( *src2 & 0x0000FF00 ) + ( *(src2+1) & 0x0000FF00 ) ) / 4 ) & 0x0000FF00;
-                            int b = ( ( ( *src1 & 0x00FF0000 ) + ( *(src1+1) & 0x00FF0000 ) + ( *src2 & 0x00FF0000 ) + ( *(src2+1) & 0x00FF0000 ) ) / 4 ) & 0x00FF0000;
-                            int a = ( ( ( ( ( *src1 & 0xFF000000 ) >> 8 ) + ( ( *(src1+1) & 0xFF000000 ) >> 8 ) + ( ( *src2 & 0xFF000000 ) >> 8 ) + ( ( *(src2+1) & 0xFF000000 ) >> 8 ) ) / 4 ) & 0x00FF0000 ) << 8;
+                            uint32_t px0 = *src1;
+                            uint32_t px1 = *(src1+1);
+                            uint32_t px2 = *src2;
+                            uint32_t px3 = *(src2+1);
+
+                            float r0 = SrgbToLinear[px0 & 0x000000FF];
+                            float r1 = SrgbToLinear[px1 & 0x000000FF];
+                            float r2 = SrgbToLinear[px2 & 0x000000FF];
+                            float r3 = SrgbToLinear[px3 & 0x000000FF];
+
+                            float g0 = SrgbToLinear[( px0 & 0x0000FF00 ) >> 8];
+                            float g1 = SrgbToLinear[( px1 & 0x0000FF00 ) >> 8];
+                            float g2 = SrgbToLinear[( px2 & 0x0000FF00 ) >> 8];
+                            float g3 = SrgbToLinear[( px3 & 0x0000FF00 ) >> 8];
+
+                            float b0 = SrgbToLinear[( px0 & 0x00FF0000 ) >> 16];
+                            float b1 = SrgbToLinear[( px1 & 0x00FF0000 ) >> 16];
+                            float b2 = SrgbToLinear[( px2 & 0x00FF0000 ) >> 16];
+                            float b3 = SrgbToLinear[( px3 & 0x00FF0000 ) >> 16];
+
+                            uint32_t r = LinearToSrgb( ( r0+r1+r2+r3 ) / 4 );
+                            uint32_t g = LinearToSrgb( ( g0+g1+g2+g3 ) / 4 ) << 8;
+                            uint32_t b = LinearToSrgb( ( b0+b1+b2+b3 ) / 4 ) << 16;
+                            uint32_t a = ( ( ( ( ( *src1 & 0xFF000000 ) >> 8 ) + ( ( *(src1+1) & 0xFF000000 ) >> 8 ) + ( ( *src2 & 0xFF000000 ) >> 8 ) + ( ( *(src2+1) & 0xFF000000 ) >> 8 ) ) / 4 ) & 0x00FF0000 ) << 8;
+
                             *ptr++ = r | g | b | a;
                             src1 += 2;
                             src2 += 2;
