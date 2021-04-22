@@ -33,6 +33,19 @@ static const float SrgbToLinear[256] = {
 };
 
 
+static uint32_t LinearToSrgb( float v )
+{
+    if( v <= 0.0031308f )
+    {
+        return uint32_t( 255 * ( v * 12.92f ) );
+    }
+    else
+    {
+        return uint32_t( 255 * ( 1.055f * pow( v, 1.f / 2.4f ) - 0.055f ) );
+    }
+}
+
+
 BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, bool linearize )
     : Bitmap( bmp, lines )
 {
