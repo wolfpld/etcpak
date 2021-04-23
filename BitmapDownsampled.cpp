@@ -33,16 +33,18 @@ static const float SrgbToLinear[256] = {
 };
 
 
-static uint32_t LinearToSrgb( float v )
+static inline float rsqrt( float v )
 {
-    if( v <= 0.0031308f )
-    {
-        return uint32_t( 255 * ( v * 12.92f ) );
-    }
-    else
-    {
-        return uint32_t( 255 * ( 1.055f * pow( v, 1.f / 2.4f ) - 0.055f ) );
-    }
+    return 1.f / sqrt( v );
+}
+
+static inline uint32_t LinearToSrgb( float v )
+{
+    const float a = 0.00279491f;
+    const float b = 1.15907984f;
+    const float c = 0.15746343f;        // b * rsqrt( 1 + a ) - 1;
+
+    return uint32_t( 255 * ( ( b * rsqrt( v + a ) - c ) * v ) );
 }
 
 
