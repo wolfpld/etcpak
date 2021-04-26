@@ -99,6 +99,74 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                     for( int j=0; j<4; j++ )
                     {
                         int k = m_size.x;
+#ifdef __AVX2__
+                        while( k > 2 )
+                        {
+                            k -= 2;
+
+                            __m128i p0 = _mm_loadu_si128( (__m128i*)src1 );
+                            __m128i p1 = _mm_loadu_si128( (__m128i*)src2 );
+                            src1 += 4;
+                            src2 += 4;
+
+                            __m256i pxa = _mm256_cvtepu8_epi16( p0 );
+                            __m256i pxb = _mm256_cvtepu8_epi16( p1 );
+                            __m256i px0 = _mm256_unpacklo_epi16( pxa, _mm256_setzero_si256() );
+                            __m256i px1 = _mm256_unpackhi_epi16( pxa, _mm256_setzero_si256() );
+                            __m256i px2 = _mm256_unpacklo_epi16( pxb, _mm256_setzero_si256() );
+                            __m256i px3 = _mm256_unpackhi_epi16( pxb, _mm256_setzero_si256() );
+
+                            __m256 f0 = _mm256_cvtepi32_ps( px0 );
+                            __m256 f1 = _mm256_cvtepi32_ps( px1 );
+                            __m256 f2 = _mm256_cvtepi32_ps( px2 );
+                            __m256 f3 = _mm256_cvtepi32_ps( px3 );
+
+                            __m256 m0 = _mm256_mul_ps( f0, _mm256_set1_ps( 0.003921568f ) );
+                            __m256 m1 = _mm256_mul_ps( f1, _mm256_set1_ps( 0.003921568f ) );
+                            __m256 m2 = _mm256_mul_ps( f2, _mm256_set1_ps( 0.003921568f ) );
+                            __m256 m3 = _mm256_mul_ps( f3, _mm256_set1_ps( 0.003921568f ) );
+
+                            __m256 l00 = _mm256_fmadd_ps( m0, _mm256_set1_ps( 0.305306011f ), _mm256_set1_ps( 0.682171111f ) );
+                            __m256 l01 = _mm256_fmadd_ps( m1, _mm256_set1_ps( 0.305306011f ), _mm256_set1_ps( 0.682171111f ) );
+                            __m256 l02 = _mm256_fmadd_ps( m2, _mm256_set1_ps( 0.305306011f ), _mm256_set1_ps( 0.682171111f ) );
+                            __m256 l03 = _mm256_fmadd_ps( m3, _mm256_set1_ps( 0.305306011f ), _mm256_set1_ps( 0.682171111f ) );
+
+                            __m256 l10 = _mm256_fmadd_ps( m0, l00, _mm256_set1_ps( 0.012522878f ) );
+                            __m256 l11 = _mm256_fmadd_ps( m1, l01, _mm256_set1_ps( 0.012522878f ) );
+                            __m256 l12 = _mm256_fmadd_ps( m2, l02, _mm256_set1_ps( 0.012522878f ) );
+                            __m256 l13 = _mm256_fmadd_ps( m3, l03, _mm256_set1_ps( 0.012522878f ) );
+
+                            __m256 l20 = _mm256_mul_ps( m0, l10 );
+                            __m256 l21 = _mm256_mul_ps( m1, l11 );
+                            __m256 l22 = _mm256_mul_ps( m2, l12 );
+                            __m256 l23 = _mm256_mul_ps( m3, l13 );
+
+                            __m256 s0 = _mm256_blend_ps( l20, m0, 8 );
+                            __m256 s1 = _mm256_blend_ps( l21, m1, 8 );
+                            __m256 s2 = _mm256_blend_ps( l22, m2, 8 );
+                            __m256 s3 = _mm256_blend_ps( l23, m3, 8 );
+
+                            __m256 a0 = _mm256_add_ps( s0, s1 );
+                            __m256 a1 = _mm256_add_ps( s2, s3 );
+                            __m256 a2 = _mm256_add_ps( a0, a1 );
+
+                            __m256 v = _mm256_mul_ps( a2, _mm256_set1_ps( 0.25f ) );
+                            __m256 r0 = _mm256_add_ps( v, _mm256_set1_ps( 0.00279491f ) );
+                            __m256 r1 = _mm256_rsqrt_ps( r0 );
+                            __m256 r2 = _mm256_mul_ps( r1, _mm256_set1_ps( 1.15907984f ) );
+                            __m256 r3 = _mm256_sub_ps( r2, _mm256_set1_ps( 0.15746343f ) );
+                            __m256 r4 = _mm256_mul_ps( r3, v );
+
+                            __m256 b0 = _mm256_blend_ps( r4, v, 8 );
+                            __m256 b1 = _mm256_mul_ps( b0, _mm256_set1_ps( 255 ) );
+                            __m256i b2 = _mm256_cvtps_epi32( b1 );
+                            __m256i b3 = _mm256_packus_epi32( b2, b2 );
+                            __m256i b4 = _mm256_packus_epi16( b3, b3 );
+
+                            *ptr++ = _mm_cvtsi128_si32( _mm256_castsi256_si128( b4 ) );
+                            *ptr++ = _mm_cvtsi128_si32( _mm256_extracti128_si256( b4, 1 ) );
+                        }
+#endif
                         while( k-- )
                         {
 #ifdef __SSE4_1__
