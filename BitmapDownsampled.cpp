@@ -99,9 +99,9 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                     for( int j=0; j<4; j++ )
                     {
                         int k = m_size.x;
-#ifdef __SSE4_1__
                         while( k-- )
                         {
+#ifdef __SSE4_1__
                             uint32_t px0 = *src1;
                             uint32_t px1 = *(src1+1);
                             uint32_t px2 = *src2;
@@ -157,10 +157,7 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                             *ptr++ = _mm_cvtsi128_si32( b4 );
                             src1 += 2;
                             src2 += 2;
-                        }
 #else
-                        while( k-- )
-                        {
                             uint32_t px0 = *src1;
                             uint32_t px1 = *(src1+1);
                             uint32_t px2 = *src2;
@@ -189,8 +186,8 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                             *ptr++ = r | g | b | a;
                             src1 += 2;
                             src2 += 2;
-                        }
 #endif
+                        }
                         src1 += m_size.x * 2;
                         src2 += m_size.x * 2;
                     }
