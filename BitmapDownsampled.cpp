@@ -99,6 +99,66 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                     for( int j=0; j<4; j++ )
                     {
                         int k = m_size.x;
+#ifdef __SSE4_1__
+                        while( k-- )
+                        {
+                            uint32_t px0 = *src1;
+                            uint32_t px1 = *(src1+1);
+                            uint32_t px2 = *src2;
+                            uint32_t px3 = *(src2+1);
+
+                            float p0[4];
+                            float p1[4];
+                            float p2[4];
+                            float p3[4];
+
+                            p0[0] = SrgbToLinear[px0 & 0x000000FF];
+                            p0[1] = SrgbToLinear[( px0 & 0x0000FF00 ) >> 8];
+                            p0[2] = SrgbToLinear[( px0 & 0x00FF0000 ) >> 16];
+                            p0[3] = px0 >> 24;
+
+                            p1[0] = SrgbToLinear[px1 & 0x000000FF];
+                            p1[1] = SrgbToLinear[( px1 & 0x0000FF00 ) >> 8];
+                            p1[2] = SrgbToLinear[( px1 & 0x00FF0000 ) >> 16];
+                            p1[3] = px1 >> 24;
+
+                            p2[0] = SrgbToLinear[px2 & 0x000000FF];
+                            p2[1] = SrgbToLinear[( px2 & 0x0000FF00 ) >> 8];
+                            p2[2] = SrgbToLinear[( px2 & 0x00FF0000 ) >> 16];
+                            p2[3] = px2 >> 24;
+
+                            p3[0] = SrgbToLinear[px3 & 0x000000FF];
+                            p3[1] = SrgbToLinear[( px3 & 0x0000FF00 ) >> 8];
+                            p3[2] = SrgbToLinear[( px3 & 0x00FF0000 ) >> 16];
+                            p3[3] = px3 >> 24;
+
+                            __m128 s0 = _mm_loadu_ps( p0 );
+                            __m128 s1 = _mm_loadu_ps( p1 );
+                            __m128 s2 = _mm_loadu_ps( p2 );
+                            __m128 s3 = _mm_loadu_ps( p3 );
+
+                            __m128 a0 = _mm_add_ps( s0, s1 );
+                            __m128 a1 = _mm_add_ps( s2, s3 );
+                            __m128 a2 = _mm_add_ps( a0, a1 );
+
+                            __m128 v = _mm_mul_ps( a2, _mm_set_ps1( 0.25f ) );
+                            __m128 r0 = _mm_add_ps( v, _mm_set_ps1( 0.00279491f ) );
+                            __m128 r1 = _mm_rsqrt_ps( r0 );
+                            __m128 r2 = _mm_mul_ps( r1, _mm_set_ps1( 1.15907984f ) );
+                            __m128 r3 = _mm_sub_ps( r2, _mm_set_ps1( 0.15746343f ) );
+                            __m128 r4 = _mm_mul_ps( r3, v );
+
+                            __m128 b0 = _mm_blend_ps( r4, v, 8 );
+                            __m128 b1 = _mm_mul_ps( b0, _mm_set_ps1( 255 ) );
+                            __m128i b2 = _mm_cvtps_epi32( b1 );
+                            __m128i b3 = _mm_packus_epi32( b2, b2 );
+                            __m128i b4 = _mm_packus_epi16( b3, b3 );
+
+                            *ptr++ = _mm_cvtsi128_si32( b4 );
+                            src1 += 2;
+                            src2 += 2;
+                        }
+#else
                         while( k-- )
                         {
                             uint32_t px0 = *src1;
@@ -130,6 +190,7 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                             src1 += 2;
                             src2 += 2;
                         }
+#endif
                         src1 += m_size.x * 2;
                         src2 += m_size.x * 2;
                     }
