@@ -141,10 +141,10 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                             __m256 l22 = _mm256_mul_ps( m2, l12 );
                             __m256 l23 = _mm256_mul_ps( m3, l13 );
 
-                            __m256 s0 = _mm256_blend_ps( l20, m0, 8 );
-                            __m256 s1 = _mm256_blend_ps( l21, m1, 8 );
-                            __m256 s2 = _mm256_blend_ps( l22, m2, 8 );
-                            __m256 s3 = _mm256_blend_ps( l23, m3, 8 );
+                            __m256 s0 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( l20 ), _mm256_castps_si256( m0 ), 8 ) );
+                            __m256 s1 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( l21 ), _mm256_castps_si256( m1 ), 8 ) );
+                            __m256 s2 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( l22 ), _mm256_castps_si256( m2 ), 8 ) );
+                            __m256 s3 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( l23 ), _mm256_castps_si256( m3 ), 8 ) );
 
                             __m256 a0 = _mm256_add_ps( s0, s1 );
                             __m256 a1 = _mm256_add_ps( s2, s3 );
@@ -157,7 +157,7 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                             __m256 r3 = _mm256_sub_ps( r2, _mm256_set1_ps( 0.15746343f ) );
                             __m256 r4 = _mm256_mul_ps( r3, v );
 
-                            __m256 b0 = _mm256_blend_ps( r4, v, 8 );
+                            __m256 b0 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( r4 ), _mm256_castps_si256( v ), 8 ) );
                             __m256 b1 = _mm256_mul_ps( b0, _mm256_set1_ps( 255 ) );
                             __m256i b2 = _mm256_cvtps_epi32( b1 );
                             __m256i b3 = _mm256_packus_epi32( b2, b2 );
