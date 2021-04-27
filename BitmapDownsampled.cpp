@@ -153,11 +153,10 @@ BitmapDownsampled::BitmapDownsampled( const Bitmap& bmp, unsigned int lines, boo
                             __m256 v = _mm256_mul_ps( a2, _mm256_set1_ps( 0.25f ) );
                             __m256 r0 = _mm256_add_ps( v, _mm256_set1_ps( 0.00279491f ) );
                             __m256 r1 = _mm256_rsqrt_ps( r0 );
-                            __m256 r2 = _mm256_mul_ps( r1, _mm256_set1_ps( 1.15907984f ) );
-                            __m256 r3 = _mm256_sub_ps( r2, _mm256_set1_ps( 0.15746343f ) );
-                            __m256 r4 = _mm256_mul_ps( r3, v );
+                            __m256 r2 = _mm256_fmadd_ps( r1, _mm256_set1_ps( 1.15907984f ), _mm256_set1_ps( -0.15746343f ) );
+                            __m256 r3 = _mm256_mul_ps( r2, v );
 
-                            __m256 b0 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( r4 ), _mm256_castps_si256( v ), 0x88 ) );
+                            __m256 b0 = _mm256_castsi256_ps( _mm256_blend_epi32( _mm256_castps_si256( r3 ), _mm256_castps_si256( v ), 0x88 ) );
                             __m256 b1 = _mm256_mul_ps( b0, _mm256_set1_ps( 255 ) );
                             __m256i b2 = _mm256_cvtps_epi32( b1 );
                             __m256i b3 = _mm256_packus_epi32( b2, b2 );
