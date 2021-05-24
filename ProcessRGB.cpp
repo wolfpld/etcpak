@@ -2076,7 +2076,6 @@ static etcpak_force_inline void CalculateLuma( const uint8_t* src, Luma& luma )
     // min/max calculation
     luma.min = hMin( luma_8bit, luma.minIdx ) * 0.00392156f;
     luma.max = hMax( luma_8bit, luma.maxIdx ) * 0.00392156f;
-    float luma_range = luma.max - luma.min;
 #else
     for( int i = 0; i < 16; ++i )
     {
