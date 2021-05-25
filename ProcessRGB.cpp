@@ -2099,7 +2099,7 @@ static etcpak_force_inline uint8_t SelectModeETC2( const Luma& luma )
 #ifdef __AVX2__
     const float lumaRange = ( luma.max - luma.min );
 #else
-    const float lumaRange = ( luma.max - luma.min ) / 255.f;
+    const float lumaRange = ( luma.max - luma.min ) * ( 1.f / 255.f );
 #endif
     // filters a very-low-contrast block
     if( lumaRange <= ecmd_threshold[0] )
