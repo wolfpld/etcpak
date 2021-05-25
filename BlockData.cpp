@@ -221,7 +221,7 @@ BlockData::~BlockData()
     }
 }
 
-void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither )
+void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither, bool useHeuristics )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset;
 
@@ -229,7 +229,7 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     {
         if( m_type != Etc1 )
         {
-            CompressEtc2Alpha( src, dst, blocks, width );
+            CompressEtc2Alpha( src, dst, blocks, width, useHeuristics );
         }
         else
         {
@@ -251,7 +251,7 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             }
             break;
         case Etc2_RGB:
-            CompressEtc2Rgb( src, dst, blocks, width );
+            CompressEtc2Rgb( src, dst, blocks, width, useHeuristics );
             break;
         case Dxt1:
             if( dither )
@@ -270,14 +270,14 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     }
 }
 
-void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width )
+void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
 
     switch( m_type )
     {
     case Etc2_RGBA:
-        CompressEtc2Rgba( src, dst, blocks, width );
+        CompressEtc2Rgba( src, dst, blocks, width, useHeuristics );
         break;
     case Dxt5:
         CompressDxt5( src, dst, blocks, width );

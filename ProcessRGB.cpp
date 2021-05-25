@@ -31,9 +31,9 @@
 
 // thresholds for the early compression-mode decision scheme
 // default: 0.03, 0.09, and 0.38
-//extern float ecmd_threshold[3];
 float ecmd_threshold[3] = { 0.03f, 0.09f, 0.38f };
 
+static const uint8_t ModeUndecided = 0;
 static const uint8_t ModePlanar = 0x1;
 static const uint8_t ModeTH = 0x2;
 
@@ -2141,19 +2141,22 @@ static etcpak_force_inline uint8_t SelectModeETC2( const Luma& luma )
     return 0;
 }
 
-static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
+static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool useHeuristics )
 {
 #ifdef __AVX2__
     uint64_t d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
 
-    Luma luma;
-    CalculateLuma( src, luma );
-    const uint8_t mode = SelectModeETC2( luma );
-
+    uint8_t mode = ModeUndecided;
+    if( useHeuristics )
+    {
+        Luma luma;
+        CalculateLuma( src, luma );
+        mode = SelectModeETC2( luma );
+    }
     auto plane = Planar_AVX2( src, mode );
 
-    if( mode == ModePlanar ) return plane.plane;
+    if( useHeuristics && mode == ModePlanar ) return plane.plane;
 
     alignas(32) v4i a[8];
 
@@ -2191,9 +2194,13 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src )
     uint64_t d = CheckSolid( src );
     if (d != 0) return d;
 
-    Luma luma;
-    CalculateLuma( src, luma );
-    const uint8_t mode = SelectModeETC2( luma );
+    uint8_t mode = ModeUndecided;
+    if( useHeuristics )
+    {
+        Luma luma;
+        CalculateLuma( src, luma );
+        mode = SelectModeETC2( luma );
+    }
 
 #ifdef __ARM_NEON
     auto result = Planar_NEON( src, mode );
@@ -2999,7 +3006,7 @@ void CompressEtc1Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, siz
     while( --blocks );
 }
 
-void CompressEtc2Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+void CompressEtc2Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )
 {
     int w = 0;
     uint32_t buf[4*4];
@@ -3053,7 +3060,7 @@ void CompressEtc2Alpha( const uint32_t* src, uint64_t* dst, uint32_t blocks, siz
             src += width * 3;
             w = 0;
         }
-        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
+        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf, useHeuristics );
     }
     while( --blocks );
 }
@@ -3155,7 +3162,7 @@ void CompressEtc1RgbDither( const uint32_t* src, uint64_t* dst, uint32_t blocks,
     while( --blocks );
 }
 
-void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )
 {
     int w = 0;
     uint32_t buf[4*4];
@@ -3194,12 +3201,12 @@ void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_
             src += width * 3;
             w = 0;
         }
-        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf );
+        *dst++ = ProcessRGB_ETC2( (uint8_t*)buf, useHeuristics );
     }
     while( --blocks );
 }
 
-void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width )
+void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )
 {
     int w = 0;
     uint32_t rgba[4*4];
@@ -3267,7 +3274,7 @@ void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size
             w = 0;
         }
         *dst++ = ProcessAlpha_ETC2( alpha );
-        *dst++ = ProcessRGB_ETC2( (uint8_t*)rgba );
+        *dst++ = ProcessRGB_ETC2( (uint8_t*)rgba, useHeuristics );
     }
     while( --blocks );
 }
