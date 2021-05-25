@@ -33,17 +33,18 @@ void Usage()
 {
     fprintf( stderr, "Usage: etcpak [options] input.png {output.pvr}\n" );
     fprintf( stderr, "  Options:\n" );
-    fprintf( stderr, "  -v              view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
-    fprintf( stderr, "  -s              display image quality measurements\n" );
-    fprintf( stderr, "  -b              benchmark mode\n" );
-    fprintf( stderr, "  -M              switch benchmark to multi-threaded mode\n" );
-    fprintf( stderr, "  -m              generate mipmaps\n" );
-    fprintf( stderr, "  -d              enable dithering\n" );
-    fprintf( stderr, "  -a alpha.pvr    save alpha channel in a separate file\n" );
-    fprintf( stderr, "  --etc2          enable ETC2 mode\n" );
-    fprintf( stderr, "  --rgba          enable ETC2 RGBA mode\n" );
-    fprintf( stderr, "  --dxtc          use DXT1 compression\n" );
-    fprintf( stderr, "  --linear        input data is in linear space (disable sRGB conversion for mips)\n\n" );
+    fprintf( stderr, "  -v                     view mode (loads pvr/ktx file, decodes it and saves to png)\n" );
+    fprintf( stderr, "  -s                     display image quality measurements\n" );
+    fprintf( stderr, "  -b                     benchmark mode\n" );
+    fprintf( stderr, "  -M                     switch benchmark to multi-threaded mode\n" );
+    fprintf( stderr, "  -m                     generate mipmaps\n" );
+    fprintf( stderr, "  -d                     enable dithering\n" );
+    fprintf( stderr, "  -a alpha.pvr           save alpha channel in a separate file\n" );
+    fprintf( stderr, "  --etc1                 use ETC1 mode (ETC2 is used by default)\n" );
+    fprintf( stderr, "  --rgba                 enable RGBA in ETC2 mode (RGB is used by default\n" );
+    fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
+    fprintf( stderr, "  --dxtc                 use DXT1 compression\n" );
+    fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -57,10 +58,11 @@ int main( int argc, char** argv )
     bool benchMt = false;
     bool mipmap = false;
     bool dither = false;
-    bool etc2 = false;
+    bool etc2 = true;
     bool rgba = false;
     bool dxtc = false;
     bool linearize = true;
+    bool useHeuristics = true;
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
@@ -72,17 +74,19 @@ int main( int argc, char** argv )
 
     enum Options
     {
-        OptEtc2,
+        OptEtc1,
         OptRgba,
         OptDxtc,
-        OptLinear
+        OptLinear,
+        OptNoHeuristics
     };
 
     struct option longopts[] = {
-        { "etc2", no_argument, nullptr, OptEtc2 },
+        { "etc1", no_argument, nullptr, OptEtc1 },
         { "rgba", no_argument, nullptr, OptRgba },
         { "dxtc", no_argument, nullptr, OptDxtc },
         { "linear", no_argument, nullptr, OptLinear },
+        { "disable-heuristics", no_argument, nullptr, OptNoHeuristics },
         {}
     };
 
@@ -115,8 +119,8 @@ int main( int argc, char** argv )
         case 'd':
             dither = true;
             break;
-        case OptEtc2:
-            etc2 = true;
+        case OptEtc1:
+            etc2 = false;
             break;
         case OptRgba:
             rgba = true;
@@ -128,6 +132,8 @@ int main( int argc, char** argv )
         case OptLinear:
             linearize = false;
             break;
+        case OptNoHeuristics:
+            useHeuristics = false;
         default:
             break;
         }
@@ -218,8 +224,8 @@ int main( int argc, char** argv )
                         for( int j=0; j<parts; j++ )
                         {
                             const auto lines = std::min( 32, linesLeft );
-                            taskDispatch.Queue( [bd, ptr, width, lines, offset] {
-                                bd->ProcessRGBA( ptr, width * lines / 4, offset, width );
+                            taskDispatch.Queue( [bd, ptr, width, lines, offset, useHeuristics] {
+                                bd->ProcessRGBA( ptr, width * lines / 4, offset, width, useHeuristics );
                             } );
                             linesLeft -= lines;
                             ptr += width * lines;
@@ -231,8 +237,8 @@ int main( int argc, char** argv )
                         for( int j=0; j<parts; j++ )
                         {
                             const auto lines = std::min( 32, linesLeft );
-                            taskDispatch.Queue( [bd, ptr, width, lines, offset, channel, dither] {
-                                bd->Process( ptr, width * lines / 4, offset, width, channel, dither );
+                            taskDispatch.Queue( [bd, ptr, width, lines, offset, channel, dither, useHeuristics] {
+                                bd->Process( ptr, width * lines / 4, offset, width, channel, dither, useHeuristics );
                             } );
                             linesLeft -= lines;
                             ptr += width * lines;
@@ -260,11 +266,11 @@ int main( int argc, char** argv )
                     const auto localStart = GetTime();
                     if( rgba || type == BlockData::Dxt5 )
                     {
-                        bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x );
+                        bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, useHeuristics );
                     }
                     else
                     {
-                        bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, channel, dither );
+                        bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, channel, dither, useHeuristics );
                     }
                     const auto localEnd = GetTime();
                     timeData[i] = localEnd - localStart;
@@ -336,22 +342,22 @@ int main( int argc, char** argv )
 
             if( type == BlockData::Etc2_RGBA || type == BlockData::Dxt5 )
             {
-                TaskDispatch::Queue( [part, i, &bd, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither, useHeuristics]()
                 {
-                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width );
+                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics );
                 } );
             }
             else
             {
-                TaskDispatch::Queue( [part, i, &bd, &dither]()
+                TaskDispatch::Queue( [part, i, &bd, &dither, useHeuristics]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics );
                 } );
                 if( bda )
                 {
-                    TaskDispatch::Queue( [part, i, &bda]()
+                    TaskDispatch::Queue( [part, i, &bda, useHeuristics]()
                     {
-                        bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false );
+                        bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, useHeuristics );
                     } );
                 }
             }
