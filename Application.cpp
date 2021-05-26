@@ -127,6 +127,7 @@ int main( int argc, char** argv )
             etc2 = true;
             break;
         case OptDxtc:
+            etc2 = false;
             dxtc = true;
             break;
         case OptLinear:
