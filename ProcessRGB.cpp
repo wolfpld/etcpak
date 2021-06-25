@@ -1,7 +1,6 @@
 #include <array>
 #include <string.h>
 #include <limits>
-
 #ifdef __ARM_NEON
 #  include <arm_neon.h>
 #endif
@@ -43,6 +42,10 @@ struct Luma
     float max, min;
     uint8_t minIdx = 255, maxIdx = 255;
     __m128i luma8;
+#elif defined __ARM_NEON
+    float max, min;
+    uint8_t minIdx = 255, maxIdx = 255;
+    uint8x16_t luma8;
 #else
     uint8_t max, min, maxIdx, minIdx;
     uint8_t val[16];
@@ -2012,6 +2015,43 @@ static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 // horizontal min/max functions. https://stackoverflow.com/questions/22256525/horizontal-minimum-and-maximum-using-sse
 // if an error occurs in GCC, please change the value of -march in CFLAGS to a specific value for your CPU (e.g., skylake).
 static inline int16_t hMax( __m128i buffer, uint8_t& idx )
+#elif defined __ARM_NEON
+static inline int16_t hMax( uint8x16_t buffer, uint8_t& idx )
+{
+    const uint8_t max = vmaxvq_u8( buffer );
+    const uint16x8_t vmax = vdupq_n_u16( max );
+    uint8x16x2_t buff_wide = vzipq_u8( buffer, uint8x16_t() );
+    uint16x8_t lowbuf16 = vreinterpretq_u16_u8( buff_wide.val[0] );
+    uint16x8_t hibuf16 = vreinterpretq_u16_u8( buff_wide.val[1] );
+    uint16x8_t low_eqmask = vceqq_u16( lowbuf16, vmax );
+    uint16x8_t hi_eqmask = vceqq_u16( hibuf16, vmax );
+
+    static const uint16_t mask_lsb[] = {
+	    0x1, 0x2, 0x4, 0x8,
+	    0x10, 0x20, 0x40, 0x80 };
+
+    static const uint16_t mask_msb[] = {
+	    0x100, 0x200, 0x400, 0x800,
+	    0x1000, 0x2000, 0x4000, 0x8000 };
+
+    uint16x8_t vmask_lsb = vld1q_u16( mask_lsb );
+    uint16x8_t vmask_msb = vld1q_u16( mask_msb );
+    uint16x8_t pos_lsb = vandq_u16( vmask_lsb, low_eqmask );
+    uint16x8_t pos_msb = vandq_u16( vmask_msb, hi_eqmask );
+    pos_lsb = vpaddq_u16( pos_lsb, pos_lsb );
+    pos_lsb = vpaddq_u16( pos_lsb, pos_lsb );
+    pos_lsb = vpaddq_u16( pos_lsb, pos_lsb );
+    uint64_t idx_lane1 = vgetq_lane_u64( vreinterpretq_u64_u16( pos_lsb ), 0 );
+    pos_msb = vpaddq_u16( pos_msb, pos_msb );
+    pos_msb = vpaddq_u16( pos_msb, pos_msb );
+    pos_msb = vpaddq_u16( pos_msb, pos_msb );
+    uint32_t idx_lane2 = vgetq_lane_u32( vreinterpretq_u32_u16( pos_msb ), 0 );
+    idx = idx_lane1 != 0 ? __builtin_ctz( idx_lane1 ) : __builtin_ctz( idx_lane2 );
+
+    return max;
+}
+#endif
+#ifdef __AVX2__
 {
     __m128i tmp1 = _mm_sub_epi8( _mm_set1_epi8( (char)( 255 ) ), buffer );
     __m128i tmp2 = _mm_min_epu8( tmp1, _mm_srli_epi16( tmp1, 8 ) );
@@ -2022,8 +2062,47 @@ static inline int16_t hMax( __m128i buffer, uint8_t& idx )
 
     return result;
 }
+#endif
 
+#ifdef __AVX2__
 static inline int16_t hMin( __m128i buffer, uint8_t& idx )
+#elif defined __ARM_NEON
+static inline int16_t hMin( uint8x16_t buffer, uint8_t& idx )
+{
+    const uint8_t min = vminvq_u8( buffer );
+    const uint16x8_t vmin = vdupq_n_u16( min );
+    uint8x16x2_t buff_wide = vzipq_u8( buffer, uint8x16_t() );
+    uint16x8_t lowbuf16 = vreinterpretq_u16_u8( buff_wide.val[0] );
+    uint16x8_t hibuf16 = vreinterpretq_u16_u8( buff_wide.val[1] );
+    uint16x8_t low_eqmask = vceqq_u16( lowbuf16, vmin );
+    uint16x8_t hi_eqmask = vceqq_u16( hibuf16, vmin );
+
+    static const uint16_t mask_lsb[] = {
+	    0x1, 0x2, 0x4, 0x8,
+	    0x10, 0x20, 0x40, 0x80 };
+
+    static const uint16_t mask_msb[] = {
+	    0x100, 0x200, 0x400, 0x800,
+	    0x1000, 0x2000, 0x4000, 0x8000 };
+
+    uint16x8_t vmask_lsb = vld1q_u16( mask_lsb );
+    uint16x8_t vmask_msb = vld1q_u16( mask_msb );
+    uint16x8_t pos_lsb = vandq_u16( vmask_lsb, low_eqmask );
+    uint16x8_t pos_msb = vandq_u16( vmask_msb, hi_eqmask );
+    pos_lsb = vpaddq_u16( pos_lsb, pos_lsb );
+    pos_lsb = vpaddq_u16( pos_lsb, pos_lsb );
+    pos_lsb = vpaddq_u16( pos_lsb, pos_lsb );
+    uint64_t idx_lane1 = vgetq_lane_u64( vreinterpretq_u64_u16( pos_lsb ), 0 );
+    pos_msb = vpaddq_u16( pos_msb, pos_msb );
+    pos_msb = vpaddq_u16( pos_msb, pos_msb );
+    pos_msb = vpaddq_u16( pos_msb, pos_msb );
+    uint32_t idx_lane2 = vgetq_lane_u32( vreinterpretq_u32_u16( pos_msb ), 0 );
+    idx = idx_lane1 != 0 ? __builtin_ctz( idx_lane1 ) : __builtin_ctz( idx_lane2 );
+
+    return min;
+}
+#endif
+#ifdef __AVX2__
 {
     __m128i tmp2 = _mm_min_epu8( buffer, _mm_srli_epi16( buffer, 8 ) );
     __m128i tmp3 = _mm_minpos_epu16( tmp2 );
@@ -2076,6 +2155,46 @@ static etcpak_force_inline void CalculateLuma( const uint8_t* src, Luma& luma )
     // min/max calculation
     luma.min = hMin( luma_8bit, luma.minIdx ) * 0.00392156f;
     luma.max = hMax( luma_8bit, luma.maxIdx ) * 0.00392156f;
+#elif defined __ARM_NEON
+    //load pixel data into 4 rows
+    uint8x16_t px0 = vld1q_u8( src + 0 );
+    uint8x16_t px1 = vld1q_u8( src + 16 );
+    uint8x16_t px2 = vld1q_u8( src + 32 );
+    uint8x16_t px3 = vld1q_u8( src + 48 );
+
+    uint8x16x2_t px0z1 = vzipq_u8( px0, px1 );
+    uint8x16x2_t px2z3 = vzipq_u8( px2, px3 );
+    uint8x16x2_t px01 = vzipq_u8( px0z1.val[0], px0z1.val[1] );
+    uint8x16x2_t rgb01 = vzipq_u8( px01.val[0], px01.val[1] );
+    uint8x16x2_t px23 = vzipq_u8( px2z3.val[0], px2z3.val[1] );
+    uint8x16x2_t rgb23 = vzipq_u8( px23.val[0], px23.val[1] );
+
+    uint8x16_t rr = vreinterpretq_u8_u64( vzip1q_u64( vreinterpretq_u64_u8( rgb01.val[0] ), vreinterpretq_u64_u8( rgb23.val[0] ) ) );
+    uint8x16_t gg = vreinterpretq_u8_u64( vzip2q_u64( vreinterpretq_u64_u8( rgb01.val[0] ), vreinterpretq_u64_u8( rgb23.val[0] ) ) );
+    uint8x16_t bb = vreinterpretq_u8_u64( vzip1q_u64( vreinterpretq_u64_u8( rgb01.val[1] ), vreinterpretq_u64_u8( rgb23.val[1] ) ) );
+
+    uint8x16x2_t red = vzipq_u8( rr, uint8x16_t() );
+    uint8x16x2_t grn = vzipq_u8( gg, uint8x16_t() );
+    uint8x16x2_t blu = vzipq_u8( bb, uint8x16_t() );
+    uint16x8_t red0 = vmulq_n_u16( vreinterpretq_u16_u8( red.val[0] ), 14 );
+    uint16x8_t red1 = vmulq_n_u16( vreinterpretq_u16_u8( red.val[1] ), 14 );
+    uint16x8_t grn0 = vmulq_n_u16( vreinterpretq_u16_u8( grn.val[0] ), 76 );
+    uint16x8_t grn1 = vmulq_n_u16( vreinterpretq_u16_u8( grn.val[1] ), 76 );
+    uint16x8_t blu0 = vmulq_n_u16( vreinterpretq_u16_u8( blu.val[0] ), 38 );
+    uint16x8_t blu1 = vmulq_n_u16( vreinterpretq_u16_u8( blu.val[1] ), 38 );
+
+    //calculate luma for rows 0,1 and 2,3
+    uint16x8_t lum_r01 = vaddq_u16( vaddq_u16( red0, grn0 ), blu0 );
+    uint16x8_t lum_r23 = vaddq_u16( vaddq_u16( red1, grn1 ), blu1 );
+
+    //divide luma values with right shift and narrow results to 8bit
+    uint8x8_t lum_r01_d = vshrn_n_u16( lum_r01, 7 );
+    uint8x8_t lum_r02_d = vshrn_n_u16( lum_r23, 7 );
+
+    luma.luma8 = vcombine_u8( lum_r01_d, lum_r02_d );
+    //find min and max luma value
+    luma.min = hMin( luma.luma8, luma.minIdx ) * 0.00392156f;
+    luma.max = hMax( luma.luma8, luma.maxIdx ) * 0.00392156f;
 #else
     for( int i = 0; i < 16; ++i )
     {
@@ -2096,7 +2215,7 @@ static etcpak_force_inline void CalculateLuma( const uint8_t* src, Luma& luma )
 
 static etcpak_force_inline uint8_t SelectModeETC2( const Luma& luma )
 {
-#ifdef __AVX2__
+#if defined __AVX2__  || defined __ARM_NEON
     const float lumaRange = ( luma.max - luma.min );
 #else
     const float lumaRange = ( luma.max - luma.min ) * ( 1.f / 255.f );
@@ -2146,6 +2265,10 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 #ifdef __AVX2__
     uint64_t d = CheckSolid_AVX2( src );
     if( d != 0 ) return d;
+#else
+    uint64_t d = CheckSolid( src );
+    if (d != 0) return d;
+#endif
 
     uint8_t mode = ModeUndecided;
     if( useHeuristics )
@@ -2154,6 +2277,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
         CalculateLuma( src, luma );
         mode = SelectModeETC2( luma );
     }
+#ifdef __AVX2__
     auto plane = Planar_AVX2( src, mode );
 
     if( useHeuristics && mode == ModePlanar ) return plane.plane;
@@ -2191,17 +2315,6 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 
     return EncodeSelectors_AVX2( d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error );
 #else
-    uint64_t d = CheckSolid( src );
-    if (d != 0) return d;
-
-    uint8_t mode = ModeUndecided;
-    if( useHeuristics )
-    {
-        Luma luma;
-        CalculateLuma( src, luma );
-        mode = SelectModeETC2( luma );
-    }
-
 #ifdef __ARM_NEON
     auto result = Planar_NEON( src, mode );
 #else
