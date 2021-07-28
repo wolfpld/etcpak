@@ -44,7 +44,7 @@ struct Luma
     uint8_t minIdx = 255, maxIdx = 255;
     __m128i luma8;
 #else
-    uint8_t max, min, maxIdx, minIdx;
+    uint8_t max = 0, min = 255, maxIdx = 0, minIdx = 0;
     uint8_t val[16];
 #endif
 };
