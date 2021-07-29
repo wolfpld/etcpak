@@ -2015,6 +2015,16 @@ static etcpak_force_inline uint64_t ProcessRGB( const uint8_t* src )
 // horizontal min/max functions. https://stackoverflow.com/questions/22256525/horizontal-minimum-and-maximum-using-sse
 // if an error occurs in GCC, please change the value of -march in CFLAGS to a specific value for your CPU (e.g., skylake).
 static inline int16_t hMax( __m128i buffer, uint8_t& idx )
+{
+    __m128i tmp1 = _mm_sub_epi8( _mm_set1_epi8( (char)( 255 ) ), buffer );
+    __m128i tmp2 = _mm_min_epu8( tmp1, _mm_srli_epi16( tmp1, 8 ) );
+    __m128i tmp3 = _mm_minpos_epu16( tmp2 );
+    uint8_t result = 255 - (uint8_t)_mm_cvtsi128_si32( tmp3 );
+    __m128i mask = _mm_cmpeq_epi8( buffer, _mm_set1_epi8( result ) );
+    idx = _tzcnt_u32( _mm_movemask_epi8( mask ) );
+
+    return result;
+}
 #elif defined __ARM_NEON
 static inline int16_t hMax( uint8x16_t buffer, uint8_t& idx )
 {
@@ -2051,21 +2061,17 @@ static inline int16_t hMax( uint8x16_t buffer, uint8_t& idx )
     return max;
 }
 #endif
-#ifdef __AVX2__
-{
-    __m128i tmp1 = _mm_sub_epi8( _mm_set1_epi8( (char)( 255 ) ), buffer );
-    __m128i tmp2 = _mm_min_epu8( tmp1, _mm_srli_epi16( tmp1, 8 ) );
-    __m128i tmp3 = _mm_minpos_epu16( tmp2 );
-    uint8_t result = 255 - (uint8_t)_mm_cvtsi128_si32( tmp3 );
-    __m128i mask = _mm_cmpeq_epi8( buffer, _mm_set1_epi8( result ) );
-    idx = _tzcnt_u32( _mm_movemask_epi8( mask ) );
-
-    return result;
-}
-#endif
 
 #ifdef __AVX2__
 static inline int16_t hMin( __m128i buffer, uint8_t& idx )
+{
+    __m128i tmp2 = _mm_min_epu8( buffer, _mm_srli_epi16( buffer, 8 ) );
+    __m128i tmp3 = _mm_minpos_epu16( tmp2 );
+    uint8_t result = (uint8_t)_mm_cvtsi128_si32( tmp3 );
+    __m128i mask = _mm_cmpeq_epi8( buffer, _mm_set1_epi8( result ) );
+    idx = _tzcnt_u32( _mm_movemask_epi8( mask ) );
+    return result;
+}
 #elif defined __ARM_NEON
 static inline int16_t hMin( uint8x16_t buffer, uint8_t& idx )
 {
@@ -2100,16 +2106,6 @@ static inline int16_t hMin( uint8x16_t buffer, uint8_t& idx )
     idx = idx_lane1 != 0 ? __builtin_ctz( idx_lane1 ) : __builtin_ctz( idx_lane2 );
 
     return min;
-}
-#endif
-#ifdef __AVX2__
-{
-    __m128i tmp2 = _mm_min_epu8( buffer, _mm_srli_epi16( buffer, 8 ) );
-    __m128i tmp3 = _mm_minpos_epu16( tmp2 );
-    uint8_t result = (uint8_t)_mm_cvtsi128_si32( tmp3 );
-    __m128i mask = _mm_cmpeq_epi8( buffer, _mm_set1_epi8( result ) );
-    idx = _tzcnt_u32( _mm_movemask_epi8( mask ) );
-    return result;
 }
 #endif
 
