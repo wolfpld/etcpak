@@ -67,10 +67,16 @@ struct Plane
     uint64_t error;
     __m256i sum4;
 };
+#endif
 
+#if defined __AVX2__ || defined __ARM_NEON
 struct Channels
 {
+#ifdef __AVX2__
     __m128i r8, g8, b8;
+#elif defined __ARM_NEON
+    uint8x16x2_t r, g, b;
+#endif
 };
 #endif
 
@@ -787,7 +793,7 @@ static etcpak_force_inline __m128i r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cv
     return _mm_shuffle_epi8(cohv5, _mm_setr_epi8(6, 5, 4, -1, 2, 1, 0, -1, 10, 9, 8, -1, -1, -1, -1, -1));
 }
 
-static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, const uint8_t mode )
+static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, uint8_t& mode, bool useHeuristics )
 {
     __m128i t0 = _mm_sad_epu8( ch.r8, _mm_setzero_si128() );
     __m128i t1 = _mm_sad_epu8( ch.g8, _mm_setzero_si128() );
@@ -811,16 +817,10 @@ static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, const uint8_t 
     __m256i srb = _mm256_or_si256( sr1, sb0 );
     __m256i srgb = _mm256_or_si256( srb, sg1 );
 
-    if( mode != ModePlanar )
+    if( mode != ModePlanar && useHeuristics )
     {
         Plane plane;
         plane.sum4 = _mm256_permute4x64_epi64( srgb, _MM_SHUFFLE( 2, 3, 0, 1 ) );
-        /*plane.planar_mode_expected = false;
-        plane.th_mode_expected = th_mode_expected;
-        plane.r8 = r8;
-        plane.g8 = g8;
-        plane.b8 = b8;
-        plane.luma8 = luma_8bit;*/
         return plane;
     }
 
@@ -893,7 +893,7 @@ static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, const uint8_t 
 
     // Error calculation
     uint64_t error = 0;
-    if( mode != ModePlanar )
+    if( !useHeuristics )
     {
         auto ro0 = ( rgbho >> 48 ) & 0x3F;
         auto go0 = ( rgbho >> 40 ) & 0x7F;
@@ -1007,7 +1007,15 @@ static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, const uint8_t 
     Plane plane;
 
     plane.plane = result;
-    plane.error = error;
+    if( useHeuristics )
+    {
+        plane.error = 0;
+        mode = ModePlanar;
+    }
+    else
+    {
+        plane.error = error;
+    }
     plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
 
     return plane;
@@ -1757,7 +1765,7 @@ static etcpak_force_inline uint8_t convert7(float f)
     return (i + 9 - ((i + 9) >> 8) - ((i + 6) >> 8)) >> 2;
 }
 
-static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar( const uint8_t* src, const uint8_t mode )
+static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar( const uint8_t* src, const uint8_t mode, bool useHeuristics )
 {
     int32_t r = 0;
     int32_t g = 0;
@@ -1832,7 +1840,7 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar( const uint8_t* 
 
     // Error calculation
     uint64_t error = 0;
-    if( ModePlanar != mode )
+    if( ModePlanar != mode && useHeuristics )
     {
         auto ro0 = coR;
         auto go0 = coG;
@@ -1970,7 +1978,7 @@ static etcpak_force_inline int16x4_t convert7_NEON( int32x4_t x )
     return vshr_n_s16( vsub_s16( vsub_s16( p9, vshr_n_s16( p9, 8 ) ), vshr_n_s16( p6, 8 ) ), 2 );
 }
 
-static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON( const uint8_t* src, const uint8_t mode )
+static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON( const uint8_t* src, const uint8_t mode, bool useHeuristics )
 {
     uint8x16x4_t srcBlock = vld4q_u8( src );
 
@@ -2015,7 +2023,7 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON( const uint
     int16x4_t c_hvox_g_8 = vorr_s16( vshr_n_s16( c_hvox_g_7, 6 ), vshl_n_s16( c_hvox_g_7, 1 ) );
 
     uint64_t error = 0;
-    if( mode != ModePlanar )
+    if( mode != ModePlanar && useHeuristics )
     {
         int16x4_t rec_gxbr_o = vext_s16( c_hvox_g_8, vget_high_s16( c_hvoo_br_8 ), 3 );
 
@@ -2266,8 +2274,13 @@ uint32_t compressBlockTH( uint8_t *src, Luma& l, uint32_t& compressed1, uint32_t
 #endif
 {
 #ifdef __AVX2__
-    alignas(8) uint8_t luma[16] = { 0, };
+    alignas( 8 ) uint8_t luma[16] = { 0, };
     _mm_storeu_si128 ( (__m128i* )luma, l.luma8 );
+#elif defined __ARM_NEON
+    alignas( 8 ) uint8_t luma[16] = { 0 };
+    vst1q_u8( luma, l.luma8 );
+#else
+    uint8_t* luma = &l.val;
 #endif
 
     uint8_t pixIdx[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -2468,7 +2481,7 @@ uint32_t compressBlockTH( uint8_t *src, Luma& l, uint32_t& compressed1, uint32_t
         compressed1 |= ( bestDist >> 1 ) & 0x3;
     }
 
-    bestPixIndices = indexConversion (bestPixIndices );
+    bestPixIndices = indexConversion( bestPixIndices );
     compressed2 = 0;
     compressed2 = ( compressed2 & ~( ( 0x2 << 31 ) - 1 ) ) | ( bestPixIndices & ( ( 2 << 31 ) - 1 ) );
 
@@ -2882,31 +2895,12 @@ static etcpak_force_inline void CalculateLuma( const uint8_t* src, Luma& luma )
     luma.max = hMax( luma_8bit, luma.maxIdx ) * 0.00392156f;
 #elif defined __ARM_NEON
     //load pixel data into 4 rows
-    uint8x16_t px0 = vld1q_u8( src + 0 );
-    uint8x16_t px1 = vld1q_u8( src + 16 );
-    uint8x16_t px2 = vld1q_u8( src + 32 );
-    uint8x16_t px3 = vld1q_u8( src + 48 );
-
-    uint8x16x2_t px0z1 = vzipq_u8( px0, px1 );
-    uint8x16x2_t px2z3 = vzipq_u8( px2, px3 );
-    uint8x16x2_t px01 = vzipq_u8( px0z1.val[0], px0z1.val[1] );
-    uint8x16x2_t rgb01 = vzipq_u8( px01.val[0], px01.val[1] );
-    uint8x16x2_t px23 = vzipq_u8( px2z3.val[0], px2z3.val[1] );
-    uint8x16x2_t rgb23 = vzipq_u8( px23.val[0], px23.val[1] );
-
-    uint8x16_t rr = vreinterpretq_u8_u64( vzip1q_u64( vreinterpretq_u64_u8( rgb01.val[0] ), vreinterpretq_u64_u8( rgb23.val[0] ) ) );
-    uint8x16_t gg = vreinterpretq_u8_u64( vzip2q_u64( vreinterpretq_u64_u8( rgb01.val[0] ), vreinterpretq_u64_u8( rgb23.val[0] ) ) );
-    uint8x16_t bb = vreinterpretq_u8_u64( vzip1q_u64( vreinterpretq_u64_u8( rgb01.val[1] ), vreinterpretq_u64_u8( rgb23.val[1] ) ) );
-
-    uint8x16x2_t red = vzipq_u8( rr, uint8x16_t() );
-    uint8x16x2_t grn = vzipq_u8( gg, uint8x16_t() );
-    uint8x16x2_t blu = vzipq_u8( bb, uint8x16_t() );
-    uint16x8_t red0 = vmulq_n_u16( vreinterpretq_u16_u8( red.val[0] ), 14 );
-    uint16x8_t red1 = vmulq_n_u16( vreinterpretq_u16_u8( red.val[1] ), 14 );
-    uint16x8_t grn0 = vmulq_n_u16( vreinterpretq_u16_u8( grn.val[0] ), 76 );
-    uint16x8_t grn1 = vmulq_n_u16( vreinterpretq_u16_u8( grn.val[1] ), 76 );
-    uint16x8_t blu0 = vmulq_n_u16( vreinterpretq_u16_u8( blu.val[0] ), 38 );
-    uint16x8_t blu1 = vmulq_n_u16( vreinterpretq_u16_u8( blu.val[1] ), 38 );
+    uint16x8_t red0 = vmulq_n_u16( vreinterpretq_u16_u8( ch.r.val[0] ), 14 );
+    uint16x8_t red1 = vmulq_n_u16( vreinterpretq_u16_u8( ch.r.val[1] ), 14 );
+    uint16x8_t grn0 = vmulq_n_u16( vreinterpretq_u16_u8( ch.g.val[0] ), 76 );
+    uint16x8_t grn1 = vmulq_n_u16( vreinterpretq_u16_u8( ch.g.val[1] ), 76 );
+    uint16x8_t blu0 = vmulq_n_u16( vreinterpretq_u16_u8( ch.b.val[0] ), 38 );
+    uint16x8_t blu1 = vmulq_n_u16( vreinterpretq_u16_u8( ch.b.val[1] ), 38 );
 
     //calculate luma for rows 0,1 and 2,3
     uint16x8_t lum_r01 = vaddq_u16( vaddq_u16( red0, grn0 ), blu0 );
@@ -2982,7 +2976,7 @@ static etcpak_force_inline uint8_t SelectModeETC2( const Luma& luma )
     {
         return ModeTH;
     }
-    return 0;
+    return ModeUndecided;
 }
 
 static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool useHeuristics )
@@ -3005,7 +2999,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
         mode = SelectModeETC2( luma );
     }
 
-    auto plane = Planar_AVX2( ch, mode );
+    auto plane = Planar_AVX2( ch, mode, useHeuristics );
     if( useHeuristics && mode == ModePlanar ) return plane.plane;
 
     alignas( 32 ) v4i a[8];
@@ -3072,15 +3066,16 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 
     return EncodeSelectors_AVX2( d, terr, tsel, ( idx % 2 ) == 1, plane.plane, plane.error );
 #else
+    Channels ch = GetChannels( src );
     if( useHeuristics )
     {
-        CalculateLuma( src, luma );
+        CalculateLuma( ch, luma );
         mode = SelectModeETC2( luma );
     }
 #ifdef __ARM_NEON
-    auto result = Planar_NEON( src, mode );
+    auto result = Planar_NEON( src, mode, useHeuristics );
 #else
-    auto result = Planar( src, mode );
+    auto result = Planar( src, mode, useHeuristics );
 #endif
     if( result.second == 0 ) return result.first;
 
@@ -3098,6 +3093,33 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
     uint16_t tsel[16][8];
     auto id = g_id[idx];
     FindBestFit( terr, tsel, a, id, src );
+
+    if( useHeuristics )
+    {
+        if( mode == ModeTH )
+        {
+            uint32_t compressed[4] = { 0, 0, 0, 0 };
+            bool tMode = false;
+
+            result.second = compressBlockTH( (uint8_t*)src, luma, compressed[0], compressed[1], tMode );
+            if( tMode )
+            {
+                stuff59bits( compressed[0], compressed[1], compressed[2], compressed[3] );
+            }
+            else
+            {
+                stuff58bits( compressed[0], compressed[1], compressed[2], compressed[3] );
+            }
+
+            result.first = (uint32_t)_bswap( compressed[2] );
+            result.first |= static_cast<uint64_t>( _bswap( compressed[3] ) ) << 32;
+        }
+        else
+        {
+            result.first = 0;
+            result.second = MaxError;
+        }
+    }
 
     return EncodeSelectors( d, terr, tsel, id, result.first, result.second );
 #endif
