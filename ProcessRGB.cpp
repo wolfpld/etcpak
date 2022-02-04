@@ -82,18 +82,17 @@ struct Channels
 
 namespace
 {
-
-static etcpak_force_inline uint8_t clamp( uint16_t min, uint16_t val, uint16_t max )
+static etcpak_force_inline uint8_t clamp( uint8_t min, int16_t val, uint8_t max )
 {
     return val < min ? min : ( val > max ? max : val );
 }
 
-static etcpak_force_inline uint8_t clampMin( int16_t val, int16_t min )
+static etcpak_force_inline uint8_t clampMin( uint8_t min, int16_t val )
 {
     return val < min ? min : val;
 }
 
-static etcpak_force_inline uint8_t clampMax( uint16_t val, uint8_t max )
+static etcpak_force_inline uint8_t clampMax( int16_t val, uint8_t max )
 {
     return val > max ? max : val;
 }
