@@ -50,7 +50,7 @@ struct Luma
     float max, min;
     uint8_t minIdx = 255, maxIdx = 255;
     __m128i luma8;
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
     float max, min;
     uint8_t minIdx = 255, maxIdx = 255;
     uint8x16_t luma8;
@@ -1950,7 +1950,7 @@ static etcpak_force_inline int16x8_t Planar_NEON_SumWide( uint8x16_t src )
     uint16x4_t accu2 = vpadd_u16( accu4, accu4 );
     uint16x4_t accu1 = vpadd_u16( accu2, accu2 );
     return vreinterpretq_s16_u16( vcombine_u16( accu1, accu1 ) );
-#else 
+#else
     return vdupq_n_s16( vaddvq_u16( accu8 ) );
 #endif
 }
@@ -2275,11 +2275,11 @@ uint32_t compressBlockTH( uint8_t *src, Luma& l, uint32_t& compressed1, uint32_t
 #ifdef __AVX2__
     alignas( 8 ) uint8_t luma[16] = { 0, };
     _mm_storeu_si128 ( (__m128i* )luma, l.luma8 );
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
     alignas( 8 ) uint8_t luma[16] = { 0 };
     vst1q_u8( luma, l.luma8 );
 #else
-    uint8_t* luma = &l.val;
+    uint8_t* luma = l.val;
 #endif
 
     uint8_t pixIdx[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -2589,7 +2589,7 @@ static inline int16_t hMax( __m128i buffer, uint8_t& idx )
 
     return result;
 }
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
 static inline int16_t hMax( uint8x16_t buffer, uint8_t& idx )
 {
     const uint8_t max = vmaxvq_u8( buffer );
@@ -2636,7 +2636,7 @@ static inline int16_t hMin( __m128i buffer, uint8_t& idx )
     idx = _tzcnt_u32( _mm_movemask_epi8( mask ) );
     return result;
 }
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
 static inline int16_t hMin( uint8x16_t buffer, uint8_t& idx )
 {
     const uint8_t min = vminvq_u8( buffer );
@@ -2839,7 +2839,7 @@ static etcpak_force_inline Channels GetChannels( const uint8_t* src )
     ch.b8 = _mm_unpacklo_epi64( rg0, rg1 );
     ch.g8 = _mm_unpackhi_epi64( rg0, rg1 );
     ch.r8 = _mm_unpacklo_epi64( b0, b1 );
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
     //load pixel data into 4 rows
     uint8x16_t px0 = vld1q_u8( src + 0 );
     uint8x16_t px1 = vld1q_u8( src + 16 );
@@ -2866,7 +2866,7 @@ static etcpak_force_inline Channels GetChannels( const uint8_t* src )
 #endif
     return ch;
 }
-#if defined __AVX2__ || defined __ARM_NEON
+#if defined __AVX2__ || (defined __ARM_NEON && defined __aarch64__)
 static etcpak_force_inline void CalculateLuma( Channels& ch, Luma& luma )
 #else
 static etcpak_force_inline void CalculateLuma( const uint8_t* src, Luma& luma )
@@ -2892,7 +2892,7 @@ static etcpak_force_inline void CalculateLuma( const uint8_t* src, Luma& luma )
     // min/max calculation
     luma.min = hMin( luma_8bit, luma.minIdx ) * 0.00392156f;
     luma.max = hMax( luma_8bit, luma.maxIdx ) * 0.00392156f;
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
     //load pixel data into 4 rows
     uint16x8_t red0 = vmulq_n_u16( vreinterpretq_u16_u8( ch.r.val[0] ), 14 );
     uint16x8_t red1 = vmulq_n_u16( vreinterpretq_u16_u8( ch.r.val[1] ), 14 );
@@ -3065,10 +3065,14 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 
     return EncodeSelectors_AVX2( d, terr, tsel, ( idx % 2 ) == 1, plane.plane, plane.error );
 #else
-    Channels ch = GetChannels( src );
     if( useHeuristics )
     {
+#ifdef defined __ARM_NEON && defined __aarch64__
+        Channels ch = GetChannels( src );
         CalculateLuma( ch, luma );
+#else
+        CalculateLuma( src, luma );
+#endif
         mode = SelectModeETC2( luma );
     }
 #ifdef __ARM_NEON
