@@ -69,12 +69,12 @@ struct Plane
 };
 #endif
 
-#if defined __AVX2__ || defined __ARM_NEON
+#if defined __AVX2__ || (defined __ARM_NEON && defined __aarch64__)
 struct Channels
 {
 #ifdef __AVX2__
     __m128i r8, g8, b8;
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && defined __aarch64__
     uint8x16x2_t r, g, b;
 #endif
 };
@@ -2816,6 +2816,7 @@ static inline void stuff58bits( unsigned int thumbH58W1, unsigned int thumbH58W2
     thumbHW2 = thumbH58W2;
 }
 
+#if defined __AVX2__ || (defined __ARM_NEON && defined __aarch64__)
 static etcpak_force_inline Channels GetChannels( const uint8_t* src )
 {
     Channels ch;
@@ -2866,6 +2867,8 @@ static etcpak_force_inline Channels GetChannels( const uint8_t* src )
 #endif
     return ch;
 }
+#endif
+
 #if defined __AVX2__ || (defined __ARM_NEON && defined __aarch64__)
 static etcpak_force_inline void CalculateLuma( Channels& ch, Luma& luma )
 #else
