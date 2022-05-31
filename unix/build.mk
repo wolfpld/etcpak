@@ -29,7 +29,7 @@ all: $(IMAGE)
 	rm -f $@.$$$$
 
 %.o: %.c
-	$(CC) -c $(INCLUDES) $(CFLAGS) $(DEFINES) $< -o $@
+	$(CC) -c -DHAVE_UNISTD_H $(INCLUDES) $(CFLAGS) $(DEFINES) $< -o $@
 
 %.d : %.c
 	@echo Resolving dependencies of $<
