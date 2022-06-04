@@ -1,5 +1,5 @@
-# etcpak 0.7 #
-(Updated 2020-05-27)
+# etcpak 1.0 #
+(Updated 2022-06-04)
 
 ## The fastest ETC compressor on the planet ##
 
@@ -7,45 +7,51 @@ etcpak is an extremely fast [Ericsson Texture Compression](http://en.wikipedia.o
 
 ## Compression times ##
 
-Benchmark performed on an AMD Ryzen 9 3900X, using a real-life RGBA 16K × 16K atlas. Tests were performed using a single CPU core.
+Benchmark performed on an AMD Ryzen 9 5950X, using a real-life RGBA 16K × 16K atlas.
 
-ETC1: **370.3 Mpx/s**  
-ETC1 + dithering: **278.8 Mpx/s**  
-ETC1 alpha: **568.1 Mpx/s**  
-ETC2 RGB: **188.6 Mpx/s**  
-ETC2 RGBA: **140.8 Mpx/s**  
-DXT1: **2372 Mpx/s**  
-DXT5: **1167 Mps/s**
+ETC1: ST: **407 Mpx/s**, MT: **6730 Mpx/s**  
+ETC2: ST: **222 Mpx/s**, MT: **3338 Mpx/s**  
+DXT1: ST: **2688 Mpx/s**, MT: **8748 Mpx/s**  
+DXT5: ST: **1281 Mpx/s**, MT: **6667 Mpx/s**
+
+The same benchmark performed on Intel i7 1185G7:
+
+ETC1: ST: **463 Mpx/s**, MT: **2189 Mpx/s**  
+ETC2: ST: **229 Mpx/s**, MT: **1003 Mpx/s**  
+DXT1: ST: **2647 Mpx/s**, MT: **9173 Mpx/s**  
+DXT5: ST: **1294 Mpx/s**, MT: **5517 Mpx/s**
 
 ARM benchmark performed on Odroid C2, using the same atlas:
 
-ETC1: **23.6 Mpx/s**  
-ETC1 + dithering: **23.4 Mpx/s**  
-ETC1 alpha: **36.6 Mpx/s**  
-ETC2 RGB: **12.1 Mpx/s**  
-ETC2 RGBA: **2.83 Mpx/s**  
-DXT1: **120.2 Mpx/s**  
-DXT5: **83.3 Mps/s**
+ETC1: ST: **23.6 Mpx/s**, MT: **90.6 Mpx/s**  
+ETC2: ST: **12.3 Mpx/s**, MT: **48.4 Mpx/s**  
+DXT1: ST: **93.2 Mpx/s**, MT: **346 Mpx/s**  
+DXT5: ST: **68.5 Mpx/s**, MT: **256 Mpx/s**
 
 [Why there's no image quality metrics? / Quality comparison.](http://i.imgur.com/FxlmUOF.png)
 
 ## Decompression times ##
 
-etcpak can also decompress ETC1, ETC2 (no T or H blocks), DXT1 and DXT5 textures. Timings on Ryzen:
+etcpak can also decompress ETC1, ETC2, DXT1 and DXT5 textures. Timings on Ryzen 5950X (all single-threaded):
 
-ETC1: **332.5 Mpx/s**  
-ETC2 RGB: **470.1 Mpx/s**  
-ETC2 RGBA: **340.8 Mpx/s**  
-DXT1: **682.7 Mpx/s**  
-DXT5: **518.9 Mpx/s**
+ETC1: **385 Mpx/s**  
+ETC2: **358 Mpx/s**  
+DXT1: **653 Mpx/s**  
+DXT5: **515 Mpx/s**
 
-ARM timings:
+i7 1185G7:
 
-ETC1: **60 Mpx/s**  
-ETC2 RGB: **88.5 Mpx/s**  
-ETC2 RGBA: **64.2 Mpx/s**  
-DXT1: **120.2 Mpx/s**  
-DXT5: **83.3 Mpx/s**
+ETC1: **344 Mpx/s**  
+ETC2: **324 Mpx/s**  
+DXT1: **1012 Mpx/s**  
+DXT5: **720 Mpx/s**
+
+Odroid C2:
+
+ETC1: **48.9 Mpx/s**  
+ETC2: **44.4 Mpx/s**  
+DXT1: **104 Mpx/s**  
+DXT5: **84.5 Mpx/s**
 
 To give some perspective here, Nvidia in-driver ETC2 decoder can do only 42.5 Mpx/s.
 
