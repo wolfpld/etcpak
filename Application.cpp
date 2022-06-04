@@ -43,7 +43,7 @@ void Usage()
     fprintf( stderr, "  --etc1                 use ETC1 mode (ETC2 is used by default)\n" );
     fprintf( stderr, "  --rgba                 enable RGBA in ETC2 mode (RGB is used by default\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
-    fprintf( stderr, "  --dxtc                 use DXT1 compression\n" );
+    fprintf( stderr, "  --dxtc                 use DXT1/DXT5 compression\n" );
     fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
