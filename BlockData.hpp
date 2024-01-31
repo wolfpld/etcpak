@@ -22,7 +22,9 @@ public:
         Etc2_RGB,
         Etc2_RGBA,
         Dxt1,
-        Dxt5
+        Dxt5,
+        Bc4,
+        Bc5
     };
 
     BlockData( const char* fn );
@@ -42,6 +44,8 @@ private:
     etcpak_no_inline BitmapPtr DecodeRGBA();
     etcpak_no_inline BitmapPtr DecodeDxt1();
     etcpak_no_inline BitmapPtr DecodeDxt5();
+    etcpak_no_inline BitmapPtr DecodeBc4();
+    etcpak_no_inline BitmapPtr DecodeBc5();
 
     uint8_t* m_data;
     v2i m_size;

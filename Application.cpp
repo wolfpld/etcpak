@@ -43,7 +43,9 @@ void Usage()
     fprintf( stderr, "  --etc1                 use ETC1 mode (ETC2 is used by default)\n" );
     fprintf( stderr, "  --rgba                 enable RGBA in ETC2 mode (RGB is used by default)\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
-    fprintf( stderr, "  --dxtc                 use DXT1/DXT5 compression\n" );
+    fprintf( stderr, "  --dxtc                 use BC1/BC3 compression\n" );
+    fprintf( stderr, "  --ronly                use Red channel compression (use with --dxtc for BC4)\n" );
+    fprintf( stderr, "  --rgonly               use RedGreen channel compression (use with --dxtc for BC5)\n" );
     fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
@@ -61,6 +63,8 @@ int main( int argc, char** argv )
     bool etc2 = true;
     bool rgba = false;
     bool dxtc = false;
+    bool ronly = false;
+    bool rgonly = false;
     bool linearize = true;
     bool useHeuristics = true;
     const char* alpha = nullptr;
@@ -77,6 +81,8 @@ int main( int argc, char** argv )
         OptEtc1,
         OptRgba,
         OptDxtc,
+        OptROnly,
+        OptRGOnly,
         OptLinear,
         OptNoHeuristics
     };
@@ -85,6 +91,8 @@ int main( int argc, char** argv )
         { "etc1", no_argument, nullptr, OptEtc1 },
         { "rgba", no_argument, nullptr, OptRgba },
         { "dxtc", no_argument, nullptr, OptDxtc },
+        { "ronly", no_argument, nullptr, OptROnly },
+        { "rgonly", no_argument, nullptr, OptRGOnly },
         { "linear", no_argument, nullptr, OptLinear },
         { "disable-heuristics", no_argument, nullptr, OptNoHeuristics },
         {}
@@ -129,6 +137,14 @@ int main( int argc, char** argv )
         case OptDxtc:
             etc2 = false;
             dxtc = true;
+            break;
+        case OptROnly:
+            rgonly = false;
+            ronly = true;
+            break;
+        case OptRGOnly:
+            ronly = false;
+            rgonly = true;
             break;
         case OptLinear:
             linearize = false;
@@ -212,7 +228,12 @@ int main( int argc, char** argv )
                     else channel = Channels::RGB;
                     if( rgba ) type = BlockData::Etc2_RGBA;
                     else if( etc2 ) type = BlockData::Etc2_RGB;
-                    else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+                    else if( dxtc )
+                    {
+                        if( ronly ) type = BlockData::Bc4;
+                        else if( rgonly ) type = BlockData::Bc5;
+                        else type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+                    }
                     else type = BlockData::Etc1;
                     auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
                     auto ptr = bmp->Data();
@@ -261,7 +282,12 @@ int main( int argc, char** argv )
                     else channel = Channels::RGB;
                     if( rgba ) type = BlockData::Etc2_RGBA;
                     else if( etc2 ) type = BlockData::Etc2_RGB;
-                    else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+                    else if( dxtc )
+                    {
+                        if( ronly ) type = BlockData::Bc4;
+                        else if( rgonly ) type = BlockData::Bc5;
+                        else type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+                    }
                     else type = BlockData::Etc1;
                     auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
                     const auto localStart = GetTime();
@@ -315,13 +341,24 @@ int main( int argc, char** argv )
         }
         else if( dxtc )
         {
-            if( dp.Alpha() )
+            if( ronly )
             {
-                type = BlockData::Dxt5;
+                type = BlockData::Bc4;
+            }
+            else if( rgonly )
+            {
+                type = BlockData::Bc5;
             }
             else
             {
-                type = BlockData::Dxt1;
+                if( dp.Alpha() )
+                {
+                    type = BlockData::Dxt5;
+                }
+                else
+                {
+                    type = BlockData::Dxt1;
+                }
             }
         }
         else

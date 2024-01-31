@@ -57,6 +57,12 @@ BlockData::BlockData( const char* fn )
         case 11:
             m_type = Dxt5;
             break;
+        case 12:
+            m_type = Bc4;
+            break;
+        case 13:
+            m_type = Bc5;
+            break;
         case 22:
             m_type = Etc2_RGB;
             break;
@@ -129,6 +135,12 @@ static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FIL
     case BlockData::Dxt5:
         *dst++ = 11;
         break;
+    case BlockData::Bc4:
+        *dst++ = 12;
+        break;
+    case BlockData::Bc5:
+        *dst++ = 13;
+        break;
     default:
         assert( false );
         break;
@@ -182,7 +194,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Dxt5 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
@@ -202,7 +214,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Dxt5 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = new uint8_t[m_maplen];
@@ -262,6 +274,13 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             {
                 CompressDxt1( src, dst, blocks, width );
             }
+            break;
+        case Bc4:
+            CompressBc4( src, dst, blocks, width );
+            break;
+        case Bc5:
+            dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
+            CompressBc5( src, dst, blocks, width );
             break;
         default:
             assert( false );
@@ -704,6 +723,10 @@ BitmapPtr BlockData::Decode()
         return DecodeDxt1();
     case Dxt5:
         return DecodeDxt5();
+    case Bc4:
+        return DecodeBc4();
+    case Bc5:
+        return DecodeBc5();
     default:
         assert( false );
         return nullptr;
@@ -1252,6 +1275,192 @@ static etcpak_force_inline void DecodeDxt5Part( uint64_t a, uint64_t d, uint32_t
     dst[3] = dict[idx & 0x3] | adict[aidx & 0x7];
 }
 
+static etcpak_force_inline void DecodeBc4Part( uint64_t a, uint32_t* dst, uint32_t w )
+{
+    uint8_t* ain = (uint8_t*)&a;
+    uint8_t a0, a1;
+    uint64_t aidx = 0;
+    memcpy( &a0, ain, 1 );
+    memcpy( &a1, ain+1, 1 );
+    memcpy( &aidx, ain+2, 6 );
+
+    uint32_t adict[8];
+    adict[0] = a0;
+    adict[1] = a1;
+    if(a0 > a1)
+    {
+        adict[2] = ( (6*a0+1*a1)/7 );
+        adict[3] = ( (5*a0+2*a1)/7 );
+        adict[4] = ( (4*a0+3*a1)/7 );
+        adict[5] = ( (3*a0+4*a1)/7 );
+        adict[6] = ( (2*a0+5*a1)/7 );
+        adict[7] = ( (1*a0+6*a1)/7 );
+    }
+    else
+    {
+        adict[2] = ( (4*a0+1*a1)/5 );
+        adict[3] = ( (3*a0+2*a1)/5 );
+        adict[4] = ( (2*a0+3*a1)/5 );
+        adict[5] = ( (1*a0+4*a1)/5 );
+        adict[6] = 0;
+        adict[7] = 0xFF;
+    }
+
+    dst[0] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[1] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[2] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[3] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst += w;
+
+    dst[0] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[1] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[2] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[3] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst += w;
+
+    dst[0] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[1] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[2] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[3] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst += w;
+
+    dst[0] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[1] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[2] = adict[aidx & 0x7] | 0xFF000000;
+    aidx >>= 3;
+    dst[3] = adict[aidx & 0x7] | 0xFF000000;
+}
+
+static etcpak_force_inline void DecodeBc5Part( uint64_t r, uint64_t g, uint32_t* dst, uint32_t w )
+{
+    uint8_t* rin = (uint8_t*)&r;
+    uint8_t r0, r1;
+    uint64_t ridx = 0;
+    memcpy( &r0, rin, 1 );
+    memcpy( &r1, rin+1, 1 );
+    memcpy( &ridx, rin+2, 6 );
+
+    uint8_t* gin = (uint8_t*)&g;
+    uint8_t g0, g1;
+    uint64_t gidx = 0;
+    memcpy( &g0, gin, 1 );
+    memcpy( &g1, gin+1, 1 );
+    memcpy( &gidx, gin+2, 6 );
+
+    uint32_t rdict[8];
+    rdict[0] = r0;
+    rdict[1] = r1;
+    if(r0 > r1)
+    {
+        rdict[2] = ( (6*r0+1*r1)/7 );
+        rdict[3] = ( (5*r0+2*r1)/7 );
+        rdict[4] = ( (4*r0+3*r1)/7 );
+        rdict[5] = ( (3*r0+4*r1)/7 );
+        rdict[6] = ( (2*r0+5*r1)/7 );
+        rdict[7] = ( (1*r0+6*r1)/7 );
+    }
+    else
+    {
+        rdict[2] = ( (4*r0+1*r1)/5 );
+        rdict[3] = ( (3*r0+2*r1)/5 );
+        rdict[4] = ( (2*r0+3*r1)/5 );
+        rdict[5] = ( (1*r0+4*r1)/5 );
+        rdict[6] = 0;
+        rdict[7] = 0xFF;
+    }
+
+    uint32_t gdict[8];
+    gdict[0] = g0 << 8;
+    gdict[1] = g1 << 8;
+    if(g0 > g1)
+    {
+        gdict[2] = ( (6*g0+1*g1)/7 ) << 8;
+        gdict[3] = ( (5*g0+2*g1)/7 ) << 8;
+        gdict[4] = ( (4*g0+3*g1)/7 ) << 8;
+        gdict[5] = ( (3*g0+4*g1)/7 ) << 8;
+        gdict[6] = ( (2*g0+5*g1)/7 ) << 8;
+        gdict[7] = ( (1*g0+6*g1)/7 ) << 8;
+    }
+    else
+    {
+        gdict[2] = ( (4*g0+1*g1)/5 ) << 8;
+        gdict[3] = ( (3*g0+2*g1)/5 ) << 8;
+        gdict[4] = ( (2*g0+3*g1)/5 ) << 8;
+        gdict[5] = ( (1*g0+4*g1)/5 ) << 8;
+        gdict[6] = 0;
+        gdict[7] = 0xFF00;
+    }
+
+    dst[0] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[1] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[2] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[3] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst += w;
+
+    dst[0] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[1] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[2] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[3] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst += w;
+
+    dst[0] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[1] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[2] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[3] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst += w;
+
+    dst[0] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[1] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[2] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+    dst[3] = rdict[ridx & 0x7] | gdict[gidx & 0x7] | 0xFF000000;
+    ridx >>= 3;
+    gidx >>= 3;
+}
+
 BitmapPtr BlockData::DecodeDxt1()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
@@ -1287,6 +1496,49 @@ BitmapPtr BlockData::DecodeDxt5()
             uint64_t a = *src++;
             uint64_t d = *src++;
             DecodeDxt5Part( a, d, dst, m_size.x );
+            dst += 4;
+        }
+        dst += m_size.x*3;
+    }
+
+    return ret;
+}
+
+BitmapPtr BlockData::DecodeBc4()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
+
+    for( int y=0; y<m_size.y/4; y++ )
+    {
+        for( int x=0; x<m_size.x/4; x++ )
+        {
+            uint64_t r = *src++;
+            DecodeBc4Part( r, dst, m_size.x );
+            dst += 4;
+        }
+        dst += m_size.x*3;
+    }
+
+    return ret;
+}
+
+BitmapPtr BlockData::DecodeBc5()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
+
+    for( int y=0; y<m_size.y/4; y++ )
+    {
+        for( int x=0; x<m_size.x/4; x++ )
+        {
+            uint64_t r = *src++;
+            uint64_t g = *src++;
+            DecodeBc5Part( r, g, dst, m_size.x );
             dst += 4;
         }
         dst += m_size.x*3;
