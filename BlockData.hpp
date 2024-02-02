@@ -21,6 +21,8 @@ public:
         Etc1,
         Etc2_RGB,
         Etc2_RGBA,
+        Etc2_R11,
+        Etc2_RG11,
         Dxt1,
         Dxt5,
         Bc4,
@@ -42,6 +44,8 @@ public:
 private:
     etcpak_no_inline BitmapPtr DecodeRGB();
     etcpak_no_inline BitmapPtr DecodeRGBA();
+    etcpak_no_inline BitmapPtr DecodeR();
+    etcpak_no_inline BitmapPtr DecodeRG();
     etcpak_no_inline BitmapPtr DecodeDxt1();
     etcpak_no_inline BitmapPtr DecodeDxt5();
     etcpak_no_inline BitmapPtr DecodeBc4();

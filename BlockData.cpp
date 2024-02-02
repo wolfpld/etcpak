@@ -69,6 +69,12 @@ BlockData::BlockData( const char* fn )
         case 23:
             m_type = Etc2_RGBA;
             break;
+        case 25:
+            m_type = Etc2_R11;
+            break;
+        case 26:
+            m_type = Etc2_RG11;
+            break;
         default:
             assert( false );
             break;
@@ -88,6 +94,12 @@ BlockData::BlockData( const char* fn )
             break;
         case 0x9278:
             m_type = Etc2_RGBA;
+            break;
+        case 0x9270:
+            m_type = Etc2_R11;
+            break;
+        case 0x9272:
+            m_type = Etc2_RG11;
             break;
         default:
             assert( false );
@@ -128,6 +140,12 @@ static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FIL
         break;
     case BlockData::Etc2_RGBA:
         *dst++ = 23;
+        break;
+    case BlockData::Etc2_R11:
+        *dst++ = 25;
+        break;
+    case BlockData::Etc2_RG11:
+        *dst++ = 26;
         break;
     case BlockData::Dxt1:
         *dst++ = 7;
@@ -194,7 +212,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
@@ -214,7 +232,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = new uint8_t[m_maplen];
@@ -264,6 +282,13 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             break;
         case Etc2_RGB:
             CompressEtc2Rgb( src, dst, blocks, width, useHeuristics );
+            break;
+        case Etc2_R11:
+            CompressEacR( src, dst, blocks, width );
+            break;
+        case Etc2_RG11:
+            dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
+            CompressEacRg( src, dst, blocks, width );
             break;
         case Dxt1:
             if( dither )
@@ -719,6 +744,10 @@ BitmapPtr BlockData::Decode()
         return DecodeRGB();
     case Etc2_RGBA:
         return DecodeRGBA();
+    case Etc2_R11:
+        return DecodeR();
+    case Etc2_RG11:
+        return DecodeRG();
     case Dxt1:
         return DecodeDxt1();
     case Dxt5:
@@ -1024,6 +1053,53 @@ static etcpak_force_inline void DecodeRGBAPart( uint64_t d, uint64_t alpha, uint
     }
 }
 
+static etcpak_force_inline void DecodeRPart( uint64_t r, uint32_t* dst, uint32_t w )
+{
+    r = _bswap64( r );
+
+    const int32_t base = ( r >> 56 )*8+4;
+    const int32_t mul = ( r >> 52 ) & 0xF;
+    const auto atbl = g_alpha[( r >> 48 ) & 0xF];
+
+    for( int i=0; i<4; i++ )
+    {
+        for ( int j=0; j<4; j++ )
+        {
+            const auto amod = atbl[(r >> ( 45 - j*3 - i*12 )) & 0x7];
+            const uint32_t rc = clampu8( ( base + amod * g_alpha11Mul[mul] )/8 );
+            dst[j*w+i] = rc | 0xFF000000;
+        }
+    }
+}
+
+static etcpak_force_inline void DecodeRGPart( uint64_t r, uint64_t g, uint32_t* dst, uint32_t w )
+{
+    r = _bswap64( r );
+    g = _bswap64( g );
+
+    const int32_t rbase = ( r >> 56 )*8+4;
+    const int32_t rmul = ( r >> 52 ) & 0xF;
+    const auto rtbl = g_alpha[( r >> 48 ) & 0xF];
+
+    const int32_t gbase = ( g >> 56 )*8+4;
+    const int32_t gmul = ( g >> 52 ) & 0xF;
+    const auto gtbl = g_alpha[( g >> 48 ) & 0xF];
+
+    for( int i=0; i<4; i++ )
+    {
+        for( int j=0; j<4; j++ )
+        {
+            const auto rmod = rtbl[(r >> ( 45 - j*3 - i*12 )) & 0x7];
+            const uint32_t rc = clampu8( ( rbase + rmod * g_alpha11Mul[rmul] )/8 );
+
+            const auto gmod = gtbl[(g >> ( 45 - j*3 - i*12 )) & 0x7];
+            const uint32_t gc = clampu8( ( gbase + gmod * g_alpha11Mul[gmul] )/8 );
+
+            dst[j*w+i] = rc | (gc << 8) | 0xFF000000;
+        }
+    }
+}
+
 BitmapPtr BlockData::DecodeRGB()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
@@ -1059,6 +1135,49 @@ BitmapPtr BlockData::DecodeRGBA()
             uint64_t a = *src++;
             uint64_t d = *src++;
             DecodeRGBAPart( d, a, dst, m_size.x );
+            dst += 4;
+        }
+        dst += m_size.x*3;
+    }
+
+    return ret;
+}
+
+etcpak_no_inline BitmapPtr BlockData::DecodeR()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
+
+    for( int y=0; y < m_size.y/4; y++ )
+    {
+        for( int x=0; x < m_size.x/4; x++ )
+        {
+            uint64_t r = *src++;
+            DecodeRPart( r, dst, m_size.x );
+            dst += 4;
+        }
+        dst += m_size.x*3;
+    }
+
+    return ret;
+}
+
+etcpak_no_inline BitmapPtr BlockData::DecodeRG()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
+
+    for( int y=0; y < m_size.y/4; y++ )
+    {
+        for( int x=0; x < m_size.x/4; x++ )
+        {
+            uint64_t r = *src++;
+            uint64_t g = *src++;
+            DecodeRGPart( r, g, dst, m_size.x );
             dst += 4;
         }
         dst += m_size.x*3;
