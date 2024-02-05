@@ -44,8 +44,8 @@ void Usage()
     fprintf( stderr, "  --rgba                 enable RGBA in ETC2 mode (RGB is used by default)\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
     fprintf( stderr, "  --dxtc                 use BC1/BC3 compression\n" );
-    fprintf( stderr, "  --ronly                use Red channel compression (use with --dxtc for BC4)\n" );
-    fprintf( stderr, "  --rgonly               use RedGreen channel compression (use with --dxtc for BC5)\n" );
+    fprintf( stderr, "  --ronly                use Red channel compression (use with --dxtc for BC4, otherwise defaults to ETC2_R11)\n" );
+    fprintf( stderr, "  --rgonly               use RedGreen channel compression (use with --dxtc for BC5, otherwise defaults to ETC2_RG11)\n" );
     fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
@@ -227,7 +227,12 @@ int main( int argc, char** argv )
                     if( alpha ) channel = Channels::Alpha;
                     else channel = Channels::RGB;
                     if( rgba ) type = BlockData::Etc2_RGBA;
-                    else if( etc2 ) type = BlockData::Etc2_RGB;
+                    else if( etc2 )
+                    {
+                        if( ronly ) type = BlockData::Etc2_R11;
+                        else if( rgonly ) type = BlockData::Etc2_RG11;
+                        else type = BlockData::Etc2_RGB;
+                    }
                     else if( dxtc )
                     {
                         if( ronly ) type = BlockData::Bc4;
@@ -281,7 +286,12 @@ int main( int argc, char** argv )
                     if( alpha ) channel = Channels::Alpha;
                     else channel = Channels::RGB;
                     if( rgba ) type = BlockData::Etc2_RGBA;
-                    else if( etc2 ) type = BlockData::Etc2_RGB;
+                    else if( etc2 )
+                    {
+                        if( ronly ) type = BlockData::Etc2_R11;
+                        else if( rgonly ) type = BlockData::Etc2_RG11;
+                        else type = BlockData::Etc2_RGB;
+                    }
                     else if( dxtc )
                     {
                         if( ronly ) type = BlockData::Bc4;
@@ -330,13 +340,24 @@ int main( int argc, char** argv )
         BlockData::Type type;
         if( etc2 )
         {
-            if( rgba && dp.Alpha() )
+            if( ronly )
             {
-                type = BlockData::Etc2_RGBA;
+                type = BlockData::Etc2_R11;
+            }
+            else if( rgonly )
+            {
+                type = BlockData::Etc2_RG11;
             }
             else
             {
-                type = BlockData::Etc2_RGB;
+                if( rgba && dp.Alpha() )
+                {
+                    type = BlockData::Etc2_RGBA;
+                }
+                else
+                {
+                    type = BlockData::Etc2_RGB;
+                }
             }
         }
         else if( dxtc )
