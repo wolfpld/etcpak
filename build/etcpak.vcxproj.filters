@@ -132,9 +132,6 @@
     <ClCompile Include="..\libpng\palette_neon_intrinsics.c">
       <Filter>libpng</Filter>
     </ClCompile>
-    <ClCompile Include="..\zlib\inffas8664.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
     <ClCompile Include="..\getopt\getopt.c">
       <Filter>getopt</Filter>
     </ClCompile>
@@ -225,13 +222,5 @@
     </ClInclude>
     <ClInclude Include="..\ForceInline.hpp" />
     <ClInclude Include="..\ProcessDxtc.hpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="..\zlib\gvmat64.obj">
-      <Filter>zlib</Filter>
-    </Object>
-    <Object Include="..\zlib\inffasx64.obj">
-      <Filter>zlib</Filter>
-    </Object>
   </ItemGroup>
 </Project>
