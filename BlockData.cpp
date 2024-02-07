@@ -1143,7 +1143,7 @@ BitmapPtr BlockData::DecodeRGBA()
     return ret;
 }
 
-etcpak_no_inline BitmapPtr BlockData::DecodeR()
+BitmapPtr BlockData::DecodeR()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
@@ -1164,7 +1164,7 @@ etcpak_no_inline BitmapPtr BlockData::DecodeR()
     return ret;
 }
 
-etcpak_no_inline BitmapPtr BlockData::DecodeRG()
+BitmapPtr BlockData::DecodeRG()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
