@@ -19,21 +19,6 @@ sources = [
     'Timing.cpp'
 ]
 
-zlib = [
-    'zlib/adler32.c',
-    'zlib/compress.c',
-    'zlib/crc32.c',
-    'zlib/deflate.c',
-    'zlib/gzlib.c',
-    'zlib/infback.c',
-    'zlib/inffast.c',
-    'zlib/inflate.c',
-    'zlib/inftrees.c',
-    'zlib/trees.c',
-    'zlib/uncompr.c',
-    'zlib/zutil.c'
-]
-
 libpng = [
     'libpng/arm_init.c',
     'libpng/filter_neon_intrinsics.c',
@@ -64,9 +49,11 @@ lz4 = [
 compiler = meson.get_compiler('cpp')
 
 tracy = dependency('tracy', static: true)
+zlib_ng = dependency('zlib-ng', static: true)
 
 deps = [
-    tracy
+    tracy,
+    zlib_ng
 ]
 
 if get_option('tracy_enable')
@@ -97,9 +84,7 @@ endif
 
 executable('etcpak',
     sources,
-    zlib,
     libpng,
     lz4,
-    include_directories: ['zlib'],
     dependencies: deps
 )
