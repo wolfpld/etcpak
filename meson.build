@@ -1,4 +1,4 @@
-project('etcpak', 'c', 'cpp', default_options: ['cpp_std=c++20'])
+project('etcpak', 'c', 'cpp', default_options: ['cpp_std=c++20', 'b_lto=true'])
 
 sources = [
     'Application.cpp',
@@ -73,6 +73,25 @@ if get_option('tracy_enable')
     add_project_arguments('-DTRACY_ENABLE', language: ['c', 'cpp'])
     if get_option('buildtype') != 'debugoptimized'
         message('Profiling builds should set --buildtype=debugoptimized')
+    endif
+endif
+
+add_project_arguments(['-DNO_GZIP', '-DPNG_INTEL_SSE'], language: ['c', 'cpp'])
+
+if get_option('buildtype') != 'debug'
+    add_project_arguments('-DNDEBUG', language: ['c', 'cpp'])
+endif
+
+if compiler.get_id() == 'msvc'
+    add_project_arguments(['-DNOMINMAX', '-D__SSE4_1__', '-D__AVX2__', '/arch:AVX2', '/GL'], language: ['c', 'cpp'])
+    add_project_link_arguments('/LTCG:incremental', language: ['c', 'cpp'])
+    sources += [ 'getopt/getopt.c' ]
+else
+    cpu = host_machine.cpu_family()
+    if cpu == 'arm' or cpu == 'aarch64'
+        add_project_arguments('-mcpu=native', language: ['c', 'cpp'])
+    else
+        add_project_arguments('-march=native', language: ['c', 'cpp'])
     endif
 endif
 
