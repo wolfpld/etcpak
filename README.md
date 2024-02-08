@@ -7,19 +7,19 @@ etcpak is an extremely fast [Ericsson Texture Compression](http://en.wikipedia.o
 
 ## Compression times ##
 
-Benchmark performed on an AMD Ryzen 9 5950X, using a real-life RGBA 16K × 16K atlas.
+Benchmark performed on an AMD Ryzen 9 7950X, using a real-life RGBA 16K × 16K atlas.
 
-ETC1: ST: **407 Mpx/s**, MT: **6730 Mpx/s**  
-ETC2: ST: **222 Mpx/s**, MT: **3338 Mpx/s**  
-DXT1: ST: **2688 Mpx/s**, MT: **8748 Mpx/s**  
-DXT5: ST: **1281 Mpx/s**, MT: **6667 Mpx/s**
+ETC1: ST: **797 Mpx/s**, MT: **9613 Mpx/s**  
+ETC2: ST: **335 Mpx/s**, MT: **6016 Mpx/s**  
+DXT1: ST: **4819 Mpx/s**, MT: **10174 Mpx/s**  
+DXT5: ST: **2287 Mpx/s**, MT: **8038 Mpx/s**
 
 The same benchmark performed on Intel i7 1185G7:
 
-ETC1: ST: **463 Mpx/s**, MT: **2189 Mpx/s**  
-ETC2: ST: **229 Mpx/s**, MT: **1003 Mpx/s**  
-DXT1: ST: **2647 Mpx/s**, MT: **9173 Mpx/s**  
-DXT5: ST: **1294 Mpx/s**, MT: **5517 Mpx/s**
+ETC1: ST: **516 Mpx/s**, MT: **2223 Mpx/s**  
+ETC2: ST: **238 Mpx/s**, MT: **984 Mpx/s**  
+DXT1: ST: **2747 Mpx/s**, MT: **9054 Mpx/s**  
+DXT5: ST: **1331 Mpx/s**, MT: **5483 Mpx/s**
 
 ARM benchmark performed on Odroid C2, using the same atlas:
 
@@ -32,19 +32,19 @@ DXT5: ST: **68.5 Mpx/s**, MT: **256 Mpx/s**
 
 ## Decompression times ##
 
-etcpak can also decompress ETC1, ETC2, DXT1 and DXT5 textures. Timings on Ryzen 5950X (all single-threaded):
+etcpak can also decompress ETC1, ETC2, DXT1 and DXT5 textures. Timings on Ryzen 7950X (all single-threaded):
 
-ETC1: **385 Mpx/s**  
-ETC2: **358 Mpx/s**  
-DXT1: **653 Mpx/s**  
-DXT5: **515 Mpx/s**
+ETC1: **604 Mpx/s**  
+ETC2: **599 Mpx/s**  
+DXT1: **1489 Mpx/s**  
+DXT5: **1077 Mpx/s**
 
 i7 1185G7:
 
-ETC1: **344 Mpx/s**  
-ETC2: **324 Mpx/s**  
-DXT1: **1012 Mpx/s**  
-DXT5: **720 Mpx/s**
+ETC1: **383 Mpx/s**  
+ETC2: **378 Mpx/s**  
+DXT1: **1033 Mpx/s**  
+DXT5: **788 Mpx/s**
 
 Odroid C2:
 
@@ -59,22 +59,18 @@ To give some perspective here, Nvidia in-driver ETC2 decoder can do only 42.5 Mp
 
 Original image:
 
-![](http://1.bp.blogspot.com/-kqFgRVL0uKY/UbSclN-fZdI/AAAAAAAAAxU/Fy87I8P4Yxs/s1600/kodim23.png)
+![](examples/kodim23.png)
 
 Compressed image:
 
 ETC1:
-![](http://i.imgur.com/xmdht4u.png "ETC1 mode")
+
+![](examples/etc1.png "ETC1 mode")
+
 ETC2:
-![](http://i.imgur.com/v7Dw2Yz.png "ETC2 mode")
 
-## More information ##
+![](examples/etc2.png "ETC2 mode")
 
-[etcpak 0.6](http://zgredowo.blogspot.com/2018/07/etcpak-06.html)  
-[etcpak 0.5](http://zgredowo.blogspot.com/2016/01/etcpak-05.html)  
-[etcpak 0.4](http://zgredowo.blogspot.com/2016/01/etcpak-04.html)  
-[etcpak 0.3](http://zgredowo.blogspot.com/2014/05/etcpak-03.html)  
-[etcpak 0.2.2](http://zgredowo.blogspot.com/2014/03/etcpack-022.html)  
-[etcpak 0.2.1](http://zgredowo.blogspot.com/2013/08/etcpak-021.html)   
-[etcpak 0.2](http://zgredowo.blogspot.com/2013/07/etcpak-02.html)  
-[etcpak 0.1](http://zgredowo.blogspot.com/2013/06/fastest-etc-compressor-on-planet.html)
+DXT1:
+
+![](examples/dxtc.png "DXT1 mode")
