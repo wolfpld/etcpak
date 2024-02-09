@@ -7,3 +7,4 @@ build/*.vcxproj.user
 unix/etcpak
 *.o
 *.d
+.cache
