@@ -187,7 +187,6 @@ int main( int argc, char** argv )
         {
             auto start = GetTime();
             auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max(), bgr );
-            auto data = bmp->Data();
             auto end = GetTime();
             printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
@@ -297,20 +296,20 @@ int main( int argc, char** argv )
 
             if( codec == BlockData::Etc2_RGBA || codec == BlockData::Dxt5 )
             {
-                TaskDispatch::Queue( [part, i, &bd, &dither, useHeuristics]()
+                TaskDispatch::Queue( [part, &bd, useHeuristics]()
                 {
                     bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics );
                 } );
             }
             else
             {
-                TaskDispatch::Queue( [part, i, &bd, &dither, useHeuristics]()
+                TaskDispatch::Queue( [part, &bd, &dither, useHeuristics]()
                 {
                     bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics );
                 } );
                 if( bda )
                 {
-                    TaskDispatch::Queue( [part, i, &bda, useHeuristics]()
+                    TaskDispatch::Queue( [part, &bda, useHeuristics]()
                     {
                         bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, useHeuristics );
                     } );
