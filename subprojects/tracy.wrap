@@ -2,6 +2,3 @@
 url = https://github.com/wolfpld/tracy.git
 revision = head
 depth = 1
-
-[provide]
-tracy = tracy_dep
