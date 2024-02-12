@@ -23,8 +23,8 @@ public:
         Etc2_RGBA,
         Etc2_R11,
         Etc2_RG11,
-        Dxt1,
-        Dxt5,
+        Bc1,
+        Bc3,
         Bc4,
         Bc5
     };
@@ -46,8 +46,8 @@ private:
     etcpak_no_inline BitmapPtr DecodeRGBA();
     etcpak_no_inline BitmapPtr DecodeR();
     etcpak_no_inline BitmapPtr DecodeRG();
-    etcpak_no_inline BitmapPtr DecodeDxt1();
-    etcpak_no_inline BitmapPtr DecodeDxt5();
+    etcpak_no_inline BitmapPtr DecodeBc1();
+    etcpak_no_inline BitmapPtr DecodeBc3();
     etcpak_no_inline BitmapPtr DecodeBc4();
     etcpak_no_inline BitmapPtr DecodeBc5();
 

@@ -117,8 +117,8 @@ int main( int argc, char** argv )
             else if( strcmp( optarg, "etc2_rg" ) == 0 ) codec = BlockData::Etc2_RG11;
             else if( strcmp( optarg, "etc2_rgb" ) == 0 ) codec = BlockData::Etc2_RGB;
             else if( strcmp( optarg, "etc2_rgba" ) == 0 ) codec = BlockData::Etc2_RGBA;
-            else if( strcmp( optarg, "bc1" ) == 0 ) codec = BlockData::Dxt1;
-            else if( strcmp( optarg, "bc3" ) == 0 ) codec = BlockData::Dxt5;
+            else if( strcmp( optarg, "bc1" ) == 0 ) codec = BlockData::Bc1;
+            else if( strcmp( optarg, "bc3" ) == 0 ) codec = BlockData::Bc3;
             else if( strcmp( optarg, "bc4" ) == 0 ) codec = BlockData::Bc4;
             else if( strcmp( optarg, "bc5" ) == 0 ) codec = BlockData::Bc5;
             else
@@ -162,7 +162,7 @@ int main( int argc, char** argv )
         output = argv[optind+1];
     }
 
-    const bool bgr = !( codec == BlockData::Dxt1 || codec == BlockData::Dxt5 || codec == BlockData::Bc4 || codec == BlockData::Bc5 );
+    const bool bgr = !( codec == BlockData::Bc1 || codec == BlockData::Bc3 || codec == BlockData::Bc4 || codec == BlockData::Bc5 );
 
     if( benchmark )
     {
@@ -206,7 +206,7 @@ int main( int argc, char** argv )
                     const auto localStart = GetTime();
                     auto linesLeft = bmp->Size().y / 4;
                     size_t offset = 0;
-                    if( codec == BlockData::Etc2_RGBA || codec == BlockData::Dxt5 )
+                    if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
                     {
                         for( int j=0; j<parts; j++ )
                         {
@@ -246,7 +246,7 @@ int main( int argc, char** argv )
                     else channel = Channels::RGB;
                     auto bd = std::make_shared<BlockData>( bmp->Size(), false, codec );
                     const auto localStart = GetTime();
-                    if( codec == BlockData::Etc2_RGBA || codec == BlockData::Dxt5 )
+                    if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
                     {
                         bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, useHeuristics );
                     }
@@ -294,7 +294,7 @@ int main( int argc, char** argv )
         {
             auto part = dp.NextPart();
 
-            if( codec == BlockData::Etc2_RGBA || codec == BlockData::Dxt5 )
+            if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
             {
                 TaskDispatch::Queue( [part, &bd, useHeuristics]()
                 {

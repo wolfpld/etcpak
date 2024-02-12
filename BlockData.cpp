@@ -52,10 +52,10 @@ BlockData::BlockData( const char* fn )
             m_type = Etc1;
             break;
         case 7:
-            m_type = Dxt1;
+            m_type = Bc1;
             break;
         case 11:
-            m_type = Dxt5;
+            m_type = Bc3;
             break;
         case 12:
             m_type = Bc4;
@@ -147,10 +147,10 @@ static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FIL
     case BlockData::Etc2_RG11:
         *dst++ = 26;
         break;
-    case BlockData::Dxt1:
+    case BlockData::Bc1:
         *dst++ = 7;
         break;
-    case BlockData::Dxt5:
+    case BlockData::Bc3:
         *dst++ = 11;
         break;
     case BlockData::Bc4:
@@ -212,7 +212,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Bc3 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
@@ -232,7 +232,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Dxt5 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Bc3 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = new uint8_t[m_maplen];
@@ -290,14 +290,14 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
             CompressEacRg( src, dst, blocks, width );
             break;
-        case Dxt1:
+        case Bc1:
             if( dither )
             {
-                CompressDxt1Dither( src, dst, blocks, width );
+                CompressBc1Dither( src, dst, blocks, width );
             }
             else
             {
-                CompressDxt1( src, dst, blocks, width );
+                CompressBc1( src, dst, blocks, width );
             }
             break;
         case Bc4:
@@ -323,8 +323,8 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
     case Etc2_RGBA:
         CompressEtc2Rgba( src, dst, blocks, width, useHeuristics );
         break;
-    case Dxt5:
-        CompressDxt5( src, dst, blocks, width );
+    case Bc3:
+        CompressBc3( src, dst, blocks, width );
         break;
     default:
         assert( false );
@@ -748,10 +748,10 @@ BitmapPtr BlockData::Decode()
         return DecodeR();
     case Etc2_RG11:
         return DecodeRG();
-    case Dxt1:
-        return DecodeDxt1();
-    case Dxt5:
-        return DecodeDxt5();
+    case Bc1:
+        return DecodeBc1();
+    case Bc3:
+        return DecodeBc3();
     case Bc4:
         return DecodeBc4();
     case Bc5:
@@ -1186,7 +1186,7 @@ BitmapPtr BlockData::DecodeRG()
     return ret;
 }
 
-static etcpak_force_inline void DecodeDxt1Part( uint64_t d, uint32_t* dst, uint32_t w )
+static etcpak_force_inline void DecodeBc1Part( uint64_t d, uint32_t* dst, uint32_t w )
 {
     uint8_t* in = (uint8_t*)&d;
     uint16_t c0, c1;
@@ -1268,7 +1268,7 @@ static etcpak_force_inline void DecodeDxt1Part( uint64_t d, uint32_t* dst, uint3
     memcpy( dst+3, dict + (idx & 0x3), 4 );
 }
 
-static etcpak_force_inline void DecodeDxt5Part( uint64_t a, uint64_t d, uint32_t* dst, uint32_t w )
+static etcpak_force_inline void DecodeBc3Part( uint64_t a, uint64_t d, uint32_t* dst, uint32_t w )
 {
     uint8_t* ain = (uint8_t*)&a;
     uint8_t a0, a1;
@@ -1580,7 +1580,7 @@ static etcpak_force_inline void DecodeBc5Part( uint64_t r, uint64_t g, uint32_t*
     gidx >>= 3;
 }
 
-BitmapPtr BlockData::DecodeDxt1()
+BitmapPtr BlockData::DecodeBc1()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
@@ -1592,7 +1592,7 @@ BitmapPtr BlockData::DecodeDxt1()
         for( int x=0; x<m_size.x/4; x++ )
         {
             uint64_t d = *src++;
-            DecodeDxt1Part( d, dst, m_size.x );
+            DecodeBc1Part( d, dst, m_size.x );
             dst += 4;
         }
         dst += m_size.x*3;
@@ -1601,7 +1601,7 @@ BitmapPtr BlockData::DecodeDxt1()
     return ret;
 }
 
-BitmapPtr BlockData::DecodeDxt5()
+BitmapPtr BlockData::DecodeBc3()
 {
     auto ret = std::make_shared<Bitmap>( m_size );
 
@@ -1614,7 +1614,7 @@ BitmapPtr BlockData::DecodeDxt5()
         {
             uint64_t a = *src++;
             uint64_t d = *src++;
-            DecodeDxt5Part( a, d, dst, m_size.x );
+            DecodeBc3Part( a, d, dst, m_size.x );
             dst += 4;
         }
         dst += m_size.x*3;
