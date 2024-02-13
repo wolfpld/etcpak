@@ -13,6 +13,8 @@
 #include "ForceInline.hpp"
 #include "Vector.hpp"
 
+struct bc7enc_compress_block_params;
+
 class BlockData
 {
 public:
@@ -26,7 +28,8 @@ public:
         Bc1,
         Bc3,
         Bc4,
-        Bc5
+        Bc5,
+        Bc7
     };
 
     BlockData( const char* fn );
@@ -37,7 +40,7 @@ public:
     BitmapPtr Decode();
 
     void Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither, bool useHeuristics );
-    void ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics );
+    void ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics, const bc7enc_compress_block_params* params );
 
     const v2i& Size() const { return m_size; }
 

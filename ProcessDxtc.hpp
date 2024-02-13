@@ -11,4 +11,8 @@ void CompressBc3( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t wi
 void CompressBc4( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
 void CompressBc5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width );
 
+struct bc7enc_compress_block_params;
+
+void CompressBc7( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, const bc7enc_compress_block_params* params );
+
 #endif

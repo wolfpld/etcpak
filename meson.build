@@ -2,6 +2,7 @@ project('etcpak', 'c', 'cpp', default_options: ['cpp_std=c++20', 'b_lto=true'])
 
 sources = [
     'Application.cpp',
+    'bc7enc.cpp',
     'Bitmap.cpp',
     'BitmapDownsampled.cpp',
     'BlockData.cpp',

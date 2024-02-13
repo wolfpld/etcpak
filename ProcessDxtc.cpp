@@ -1,3 +1,4 @@
+#include "bc7enc.h"
 #include "Dither.hpp"
 #include "ForceInline.hpp"
 #include "ProcessDxtc.hpp"
@@ -1083,4 +1084,30 @@ void CompressBc5( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t wi
         *ptr++ = ProcessAlpha( &rg[16] );
 #endif
     } while( --blocks );
+}
+
+void CompressBc7( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, const bc7enc_compress_block_params* params )
+{
+    int i = 0;
+    auto ptr = dst;
+    do
+    {
+        uint32_t rgba[4*4];
+
+        auto tmp = (char*)rgba;
+        memcpy( tmp,        src + width * 0, 4*4 );
+        memcpy( tmp + 4*4,  src + width * 1, 4*4 );
+        memcpy( tmp + 8*4,  src + width * 2, 4*4 );
+        memcpy( tmp + 12*4, src + width * 3, 4*4 );
+        src += 4;
+        if( ++i == width/4 )
+        {
+            src += width * 3;
+            i = 0;
+        }
+
+        bc7enc_compress_block( ptr, rgba, params );
+        ptr += 2;
+    }
+    while( --blocks );
 }

@@ -11,6 +11,7 @@
 #  include <getopt.h>
 #endif
 
+#include "bc7enc.h"
 #include "Bitmap.hpp"
 #include "BlockData.hpp"
 #include "DataProvider.hpp"
@@ -39,7 +40,7 @@ void Usage()
     fprintf( stderr, "  -m                     generate mipmaps\n" );
     fprintf( stderr, "  -d                     enable dithering\n" );
     fprintf( stderr, "  -c codec               use specified codec (defaults to etc2_rgb)\n" );
-    fprintf( stderr, "                         [etc1, etc2_r, etc2_rg, etc2_rgb, etc2_rgba, bc1, bc3, bc4, bc5]\n" );
+    fprintf( stderr, "                         [etc1, etc2_r, etc2_rg, etc2_rgb, etc2_rgba, bc1, bc3, bc4, bc5, bc7]\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
     fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
@@ -116,6 +117,7 @@ int main( int argc, char** argv )
             else if( strcmp( optarg, "bc3" ) == 0 ) codec = BlockData::Bc3;
             else if( strcmp( optarg, "bc4" ) == 0 ) codec = BlockData::Bc4;
             else if( strcmp( optarg, "bc5" ) == 0 ) codec = BlockData::Bc5;
+            else if( strcmp( optarg, "bc7" ) == 0 ) codec = BlockData::Bc7;
             else
             {
                 fprintf( stderr, "Unknown codec: %s\n", optarg );
@@ -157,8 +159,15 @@ int main( int argc, char** argv )
         output = argv[optind+1];
     }
 
-    const bool bgr = !( codec == BlockData::Bc1 || codec == BlockData::Bc3 || codec == BlockData::Bc4 || codec == BlockData::Bc5 );
-    const bool rgba = ( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 );
+    const bool bgr = !( codec == BlockData::Bc1 || codec == BlockData::Bc3 || codec == BlockData::Bc4 || codec == BlockData::Bc5 || codec == BlockData::Bc7 );
+    const bool rgba = ( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 || codec == BlockData::Bc7 );
+
+    bc7enc_compress_block_params bc7params;
+    if( codec == BlockData::Bc7 )
+    {
+        bc7enc_compress_block_init();
+        bc7enc_compress_block_params_init( &bc7params );
+    }
 
     if( benchmark )
     {
@@ -206,8 +215,8 @@ int main( int argc, char** argv )
                         for( int j=0; j<parts; j++ )
                         {
                             const auto lines = std::min( 32, linesLeft );
-                            taskDispatch.Queue( [bd, ptr, width, lines, offset, useHeuristics] {
-                                bd->ProcessRGBA( ptr, width * lines / 4, offset, width, useHeuristics );
+                            taskDispatch.Queue( [bd, ptr, width, lines, offset, useHeuristics, &bc7params] {
+                                bd->ProcessRGBA( ptr, width * lines / 4, offset, width, useHeuristics, &bc7params );
                             } );
                             linesLeft -= lines;
                             ptr += width * lines;
@@ -240,7 +249,7 @@ int main( int argc, char** argv )
                     const auto localStart = GetTime();
                     if( rgba )
                     {
-                        bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, useHeuristics );
+                        bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, useHeuristics, &bc7params );
                     }
                     else
                     {
@@ -283,9 +292,9 @@ int main( int argc, char** argv )
 
             if( rgba )
             {
-                TaskDispatch::Queue( [part, &bd, useHeuristics]()
+                TaskDispatch::Queue( [part, &bd, useHeuristics, &bc7params]()
                 {
-                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics );
+                    bd->ProcessRGBA( part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics, &bc7params );
                 } );
             }
             else

@@ -63,6 +63,9 @@ BlockData::BlockData( const char* fn )
         case 13:
             m_type = Bc5;
             break;
+        case 15:
+            m_type = Bc7;
+            break;
         case 22:
             m_type = Etc2_RGB;
             break;
@@ -159,6 +162,9 @@ static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FIL
     case BlockData::Bc5:
         *dst++ = 13;
         break;
+    case BlockData::Bc7:
+        *dst++ = 15;
+        break;
     default:
         assert( false );
         break;
@@ -212,7 +218,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Bc3 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Bc3 || type == Bc5 || type == Bc7 || type == Etc2_RG11 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type );
@@ -232,7 +238,7 @@ BlockData::BlockData( const v2i& size, bool mipmap, Type type )
         m_maplen += AdjustSizeForMipmaps( size, levels );
     }
 
-    if( type == Etc2_RGBA || type == Bc3 || type == Bc5 || type == Etc2_RG11 ) m_maplen *= 2;
+    if( type == Etc2_RGBA || type == Bc3 || type == Bc5 || type == Bc7 || type == Etc2_RG11 ) m_maplen *= 2;
 
     m_maplen += m_dataOffset;
     m_data = new uint8_t[m_maplen];
@@ -300,7 +306,7 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
     }
 }
 
-void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics )
+void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics, const bc7enc_compress_block_params* params )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
 
@@ -311,6 +317,9 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
         break;
     case Bc3:
         CompressBc3( src, dst, blocks, width );
+        break;
+    case Bc7:
+        CompressBc7( src, dst, blocks, width, params );
         break;
     default:
         assert( false );
