@@ -32,8 +32,14 @@ public:
         Bc7
     };
 
+    enum Format
+    {
+        Pvr,
+        Dds
+    };
+
     BlockData( const char* fn );
-    BlockData( const char* fn, const v2i& size, bool mipmap, Type type );
+    BlockData( const char* fn, const v2i& size, bool mipmap, Type type, Format format );
     BlockData( const v2i& size, bool mipmap, Type type );
     ~BlockData();
 

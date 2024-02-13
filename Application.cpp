@@ -41,6 +41,8 @@ void Usage()
     fprintf( stderr, "  -d                     enable dithering\n" );
     fprintf( stderr, "  -c codec               use specified codec (defaults to etc2_rgb)\n" );
     fprintf( stderr, "                         [etc1, etc2_r, etc2_rg, etc2_rgb, etc2_rgba, bc1, bc3, bc4, bc5, bc7]\n" );
+    fprintf( stderr, "  -h header              use specified header for output file (defaults to pvr)\n" );
+    fprintf( stderr, "                         [pvr, dds]\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
     fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
@@ -61,6 +63,7 @@ int main( int argc, char** argv )
     bool linearize = true;
     bool useHeuristics = true;
     auto codec = BlockData::Type::Etc2_RGB;
+    auto header = BlockData::Format::Pvr;
     unsigned int cpus = System::CPUCores();
 
     if( argc < 3 )
@@ -82,7 +85,7 @@ int main( int argc, char** argv )
     };
 
     int c;
-    while( ( c = getopt_long( argc, argv, "vsbMmdc:", longopts, nullptr ) ) != -1 )
+    while( ( c = getopt_long( argc, argv, "vsbMmdc:h:", longopts, nullptr ) ) != -1 )
     {
         switch( c )
         {
@@ -121,6 +124,15 @@ int main( int argc, char** argv )
             else
             {
                 fprintf( stderr, "Unknown codec: %s\n", optarg );
+                return 1;
+            }
+            break;
+        case 'h':
+            if( strcmp( optarg, "pvr" ) == 0 ) header = BlockData::Pvr;
+            else if( strcmp( optarg, "dds" ) == 0 ) header = BlockData::Dds;
+            else
+            {
+                fprintf( stderr, "Unknown header: %s\n", optarg );
                 return 1;
             }
             break;
@@ -285,7 +297,7 @@ int main( int argc, char** argv )
 
         TaskDispatch taskDispatch( cpus );
 
-        auto bd = std::make_shared<BlockData>( output, dp.Size(), mipmap, codec );
+        auto bd = std::make_shared<BlockData>( output, dp.Size(), mipmap, codec, header );
         for( int i=0; i<num; i++ )
         {
             auto part = dp.NextPart();
