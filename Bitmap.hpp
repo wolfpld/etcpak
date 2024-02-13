@@ -9,12 +9,6 @@
 #include "Semaphore.hpp"
 #include "Vector.hpp"
 
-enum class Channels
-{
-    RGB,
-    Alpha
-};
-
 class Bitmap
 {
 public:

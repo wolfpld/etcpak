@@ -251,66 +251,52 @@ BlockData::~BlockData()
     }
 }
 
-void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither, bool useHeuristics )
+void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither, bool useHeuristics )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset;
 
-    if( type == Channels::Alpha )
+    switch( m_type )
     {
-        if( m_type != Etc1 )
+    case Etc1:
+        if( dither )
         {
-            CompressEtc2Alpha( src, dst, blocks, width, useHeuristics );
+            CompressEtc1RgbDither( src, dst, blocks, width );
         }
         else
         {
-            CompressEtc1Alpha( src, dst, blocks, width );
+            CompressEtc1Rgb( src, dst, blocks, width );
         }
-    }
-    else
-    {
-        switch( m_type )
+        break;
+    case Etc2_RGB:
+        CompressEtc2Rgb( src, dst, blocks, width, useHeuristics );
+        break;
+    case Etc2_R11:
+        CompressEacR( src, dst, blocks, width );
+        break;
+    case Etc2_RG11:
+        dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
+        CompressEacRg( src, dst, blocks, width );
+        break;
+    case Bc1:
+        if( dither )
         {
-        case Etc1:
-            if( dither )
-            {
-                CompressEtc1RgbDither( src, dst, blocks, width );
-            }
-            else
-            {
-                CompressEtc1Rgb( src, dst, blocks, width );
-            }
-            break;
-        case Etc2_RGB:
-            CompressEtc2Rgb( src, dst, blocks, width, useHeuristics );
-            break;
-        case Etc2_R11:
-            CompressEacR( src, dst, blocks, width );
-            break;
-        case Etc2_RG11:
-            dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
-            CompressEacRg( src, dst, blocks, width );
-            break;
-        case Bc1:
-            if( dither )
-            {
-                CompressBc1Dither( src, dst, blocks, width );
-            }
-            else
-            {
-                CompressBc1( src, dst, blocks, width );
-            }
-            break;
-        case Bc4:
-            CompressBc4( src, dst, blocks, width );
-            break;
-        case Bc5:
-            dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
-            CompressBc5( src, dst, blocks, width );
-            break;
-        default:
-            assert( false );
-            break;
+            CompressBc1Dither( src, dst, blocks, width );
         }
+        else
+        {
+            CompressBc1( src, dst, blocks, width );
+        }
+        break;
+    case Bc4:
+        CompressBc4( src, dst, blocks, width );
+        break;
+    case Bc5:
+        dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
+        CompressBc5( src, dst, blocks, width );
+        break;
+    default:
+        assert( false );
+        break;
     }
 }
 

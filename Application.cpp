@@ -38,7 +38,6 @@ void Usage()
     fprintf( stderr, "  -M                     switch benchmark to multi-threaded mode\n" );
     fprintf( stderr, "  -m                     generate mipmaps\n" );
     fprintf( stderr, "  -d                     enable dithering\n" );
-    fprintf( stderr, "  -a alpha.pvr           save alpha channel in a separate file\n" );
     fprintf( stderr, "  -c codec               use specified codec (defaults to etc2_rgb)\n" );
     fprintf( stderr, "                         [etc1, etc2_r, etc2_rg, etc2_rgb, etc2_rgba, bc1, bc3, bc4, bc5]\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
@@ -61,7 +60,6 @@ int main( int argc, char** argv )
     bool linearize = true;
     bool useHeuristics = true;
     auto codec = BlockData::Type::Etc2_RGB;
-    const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
     if( argc < 3 )
@@ -83,7 +81,7 @@ int main( int argc, char** argv )
     };
 
     int c;
-    while( ( c = getopt_long( argc, argv, "va:sbMmdc:", longopts, nullptr ) ) != -1 )
+    while( ( c = getopt_long( argc, argv, "vsbMmdc:", longopts, nullptr ) ) != -1 )
     {
         switch( c )
         {
@@ -92,9 +90,6 @@ int main( int argc, char** argv )
             return 1;
         case 'v':
             viewMode = true;
-            break;
-        case 'a':
-            alpha = optarg;
             break;
         case 's':
             stats = true;
@@ -199,7 +194,6 @@ int main( int argc, char** argv )
 
                 for( int i=0; i<NumTasks; i++ )
                 {
-                    Channels channel = alpha ? Channels::Alpha : Channels::RGB;
                     auto bd = std::make_shared<BlockData>( bmp->Size(), false, codec );
                     auto ptr = bmp->Data();
                     const auto width = bmp->Size().x;
@@ -224,8 +218,8 @@ int main( int argc, char** argv )
                         for( int j=0; j<parts; j++ )
                         {
                             const auto lines = std::min( 32, linesLeft );
-                            taskDispatch.Queue( [bd, ptr, width, lines, offset, channel, dither, useHeuristics] {
-                                bd->Process( ptr, width * lines / 4, offset, width, channel, dither, useHeuristics );
+                            taskDispatch.Queue( [bd, ptr, width, lines, offset, dither, useHeuristics] {
+                                bd->Process( ptr, width * lines / 4, offset, width, dither, useHeuristics );
                             } );
                             linesLeft -= lines;
                             ptr += width * lines;
@@ -241,9 +235,6 @@ int main( int argc, char** argv )
             {
                 for( int i=0; i<NumTasks; i++ )
                 {
-                    Channels channel;
-                    if( alpha ) channel = Channels::Alpha;
-                    else channel = Channels::RGB;
                     auto bd = std::make_shared<BlockData>( bmp->Size(), false, codec );
                     const auto localStart = GetTime();
                     if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
@@ -252,7 +243,7 @@ int main( int argc, char** argv )
                     }
                     else
                     {
-                        bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, channel, dither, useHeuristics );
+                        bd->Process( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, dither, useHeuristics );
                     }
                     const auto localEnd = GetTime();
                     timeData[i] = localEnd - localStart;
@@ -285,11 +276,6 @@ int main( int argc, char** argv )
         TaskDispatch taskDispatch( cpus );
 
         auto bd = std::make_shared<BlockData>( output, dp.Size(), mipmap, codec );
-        BlockDataPtr bda;
-        if( alpha && dp.Alpha() && codec != BlockData::Etc2_RGBA )
-        {
-            bda = std::make_shared<BlockData>( alpha, dp.Size(), mipmap, codec );
-        }
         for( int i=0; i<num; i++ )
         {
             auto part = dp.NextPart();
@@ -305,15 +291,8 @@ int main( int argc, char** argv )
             {
                 TaskDispatch::Queue( [part, &bd, &dither, useHeuristics]()
                 {
-                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics );
+                    bd->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, dither, useHeuristics );
                 } );
-                if( bda )
-                {
-                    TaskDispatch::Queue( [part, &bda, useHeuristics]()
-                    {
-                        bda->Process( part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, useHeuristics );
-                    } );
-                }
             }
         }
 
