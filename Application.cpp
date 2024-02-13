@@ -158,6 +158,7 @@ int main( int argc, char** argv )
     }
 
     const bool bgr = !( codec == BlockData::Bc1 || codec == BlockData::Bc3 || codec == BlockData::Bc4 || codec == BlockData::Bc5 );
+    const bool rgba = ( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 );
 
     if( benchmark )
     {
@@ -200,7 +201,7 @@ int main( int argc, char** argv )
                     const auto localStart = GetTime();
                     auto linesLeft = bmp->Size().y / 4;
                     size_t offset = 0;
-                    if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
+                    if( rgba )
                     {
                         for( int j=0; j<parts; j++ )
                         {
@@ -237,7 +238,7 @@ int main( int argc, char** argv )
                 {
                     auto bd = std::make_shared<BlockData>( bmp->Size(), false, codec );
                     const auto localStart = GetTime();
-                    if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
+                    if( rgba )
                     {
                         bd->ProcessRGBA( bmp->Data(), bmp->Size().x * bmp->Size().y / 16, 0, bmp->Size().x, useHeuristics );
                     }
@@ -280,7 +281,7 @@ int main( int argc, char** argv )
         {
             auto part = dp.NextPart();
 
-            if( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 )
+            if( rgba )
             {
                 TaskDispatch::Queue( [part, &bd, useHeuristics]()
                 {
