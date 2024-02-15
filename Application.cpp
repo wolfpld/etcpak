@@ -204,6 +204,7 @@ int main( int argc, char** argv )
         {
             auto start = GetTime();
             auto bmp = std::make_shared<Bitmap>( input, std::numeric_limits<unsigned int>::max(), bgr );
+            bmp->Data();
             auto end = GetTime();
             printf( "Image load time: %0.3f ms\n", ( end - start ) / 1000.f );
 
