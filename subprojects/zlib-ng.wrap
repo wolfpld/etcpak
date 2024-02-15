@@ -3,7 +3,7 @@ url = https://github.com/zlib-ng/zlib-ng.git
 revision = head
 depth = 1
 method = cmake
-diff_files = zlib-ng-compat.patch
+diff_files = zlib-ng-compat.patch, zlib-ng-avx-512.patch
 
 [provide]
 zlib-ng = zlibstatic_dep
