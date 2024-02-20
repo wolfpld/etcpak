@@ -7,6 +7,17 @@
 #include <limits.h>
 #include <algorithm>
 
+#if defined __SSE4_1__ || defined __AVX2__ || defined _MSC_VER
+#  ifdef _MSC_VER
+#    include <intrin.h>
+#    include <Windows.h>
+#    define _bswap(x) _byteswap_ulong(x)
+#    define _bswap64(x) _byteswap_uint64(x)
+#  else
+#    include <x86intrin.h>
+#  endif
+#endif
+
 // Helpers
 static inline int32_t clampi(int32_t value, int32_t low, int32_t high) { if (value < low) value = low; else if (value > high) value = high;	return value; }
 static inline float clampf(float value, float low, float high) { if (value < low) value = low; else if (value > high) value = high;	return value; }
@@ -504,6 +515,47 @@ static inline color_rgba scale_color(const color_rgba *pC, const color_cell_comp
 
 static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const color_rgba *pE2, bool perceptual, const uint32_t weights[4])
 {
+#ifdef __AVX2__
+	uint32_t e1, e2;
+	memcpy( &e1, pE1, 4 );
+	memcpy( &e2, pE2, 4 );
+
+	__m128i vE1 = _mm_cvtepu8_epi32( _mm_cvtsi32_si128( e1 ) );
+	__m128i vE2 = _mm_cvtepu8_epi32( _mm_cvtsi32_si128( e2 ) );
+	__m256i vE = _mm256_inserti128_si256( _mm256_castsi128_si256( vE1 ), vE2, 1 );
+
+	__m128i vDelta;
+
+	if (perceptual)
+	{
+		__m256i vPercWeights = _mm256_set_epi32( 0, 37, 366, 109, 0, 37, 366, 109 );
+		__m256i vL1 = _mm256_mullo_epi32( vE, vPercWeights );
+		__m256i vL2 = _mm256_hadd_epi32( vL1, vL1 );
+		__m256i vL3 = _mm256_hadd_epi32( vL2, vL2 );
+		__m256i vCrb1 = _mm256_slli_epi32( vE, 9 );
+		__m256i vCrb2 = _mm256_sub_epi32( vCrb1, vL3 );
+		__m256i vL4 = _mm256_and_epi32( vL3, _mm256_set_epi32( 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0xFFFFFFFF ) );
+		__m256i vCrb3 = _mm256_and_epi32( vCrb2, _mm256_set_epi32( 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF ) );
+		__m256i vCrb4 = _mm256_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
+		__m256i vD1 = _mm256_or_epi32( vL4, vCrb4 );
+		__m128i vD2 = _mm256_castsi256_si128( vD1 );
+		__m128i vD3 = _mm256_extracti128_si256( vD1, 1 );
+		__m128i vD4 = _mm_sub_epi32( vD2, vD3 );
+		vDelta = _mm_srai_epi32( vD4, 8 );
+	}
+	else
+	{
+		vDelta = _mm_sub_epi32(vE1, vE2);
+	}
+
+	__m128i vWeights = _mm_loadu_si128( (const __m128i*)weights );
+	__m128i vDelta2 = _mm_mullo_epi32( vDelta, vDelta );
+	__m128i vDelta3 = _mm_mullo_epi32( vDelta2, vWeights );
+	__m128i vDelta4 = _mm_hadd_epi32( vDelta3, vDelta3 );
+	__m128i vDelta5 = _mm_hadd_epi32( vDelta4, vDelta4 );
+
+	return _mm_cvtsi128_si32( vDelta5 );
+#else
 	int dr, dg, db;
 
 	if (perceptual)
@@ -526,6 +578,7 @@ static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const c
 	}
 
 	return weights[0] * (uint32_t)(dr * dr) + weights[1] * (uint32_t)(dg * dg) + weights[2] * (uint32_t)(db * db);
+#endif
 }
 
 static inline uint64_t compute_color_distance_rgba(const color_rgba *pE1, const color_rgba *pE2, bool perceptual, const uint32_t weights[4])
