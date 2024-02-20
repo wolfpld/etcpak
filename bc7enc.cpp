@@ -530,14 +530,16 @@ static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const c
 	{
 		__m256i vPercWeights = _mm256_set_epi32( 0, 37, 366, 109, 0, 37, 366, 109 );
 		__m256i vL1 = _mm256_mullo_epi32( vE, vPercWeights );
-		__m256i vL2 = _mm256_hadd_epi32( vL1, vL1 );
-		__m256i vL3 = _mm256_hadd_epi32( vL2, vL2 );
+		__m256i vL2 = _mm256_shuffle_epi32( vL1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+		__m256i vL3 = _mm256_add_epi32( vL1, vL2 );
+		__m256i vL4 = _mm256_shuffle_epi32( vL3, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+		__m256i vL5 = _mm256_add_epi32( vL3, vL4 );
+		__m256i vL6 = _mm256_blend_epi32( _mm256_setzero_si256(), vL5, 0x11 );
 		__m256i vCrb1 = _mm256_slli_epi32( vE, 9 );
-		__m256i vCrb2 = _mm256_sub_epi32( vCrb1, vL3 );
-		__m256i vL4 = _mm256_and_epi32( vL3, _mm256_set_epi32( 0, 0, 0, 0xFFFFFFFF, 0, 0, 0, 0xFFFFFFFF ) );
+		__m256i vCrb2 = _mm256_sub_epi32( vCrb1, vL5 );
 		__m256i vCrb3 = _mm256_and_epi32( vCrb2, _mm256_set_epi32( 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF ) );
 		__m256i vCrb4 = _mm256_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
-		__m256i vD1 = _mm256_or_epi32( vL4, vCrb4 );
+		__m256i vD1 = _mm256_or_epi32( vL6, vCrb4 );
 		__m128i vD2 = _mm256_castsi256_si128( vD1 );
 		__m128i vD3 = _mm256_extracti128_si256( vD1, 1 );
 		__m128i vD4 = _mm_sub_epi32( vD2, vD3 );
@@ -551,10 +553,12 @@ static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const c
 	__m128i vWeights = _mm_loadu_si128( (const __m128i*)weights );
 	__m128i vDelta2 = _mm_mullo_epi32( vDelta, vDelta );
 	__m128i vDelta3 = _mm_mullo_epi32( vDelta2, vWeights );
-	__m128i vDelta4 = _mm_hadd_epi32( vDelta3, vDelta3 );
-	__m128i vDelta5 = _mm_hadd_epi32( vDelta4, vDelta4 );
+	__m128i vDelta4 = _mm_shuffle_epi32( vDelta3, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m128i vDelta5 = _mm_add_epi32( vDelta3, vDelta4 );
+	__m128i vDelta6 = _mm_shuffle_epi32( vDelta5, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m128i vDelta7 = _mm_add_epi32( vDelta5, vDelta6 );
 
-	return _mm_cvtsi128_si32( vDelta5 );
+	return _mm_cvtsi128_si32( vDelta7 );
 #else
 	int dr, dg, db;
 
