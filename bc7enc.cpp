@@ -537,9 +537,9 @@ static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const c
 		__m256i vL6 = _mm256_blend_epi32( _mm256_setzero_si256(), vL5, 0x11 );
 		__m256i vCrb1 = _mm256_slli_epi32( vE, 9 );
 		__m256i vCrb2 = _mm256_sub_epi32( vCrb1, vL5 );
-		__m256i vCrb3 = _mm256_and_epi32( vCrb2, _mm256_set_epi32( 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF ) );
+		__m256i vCrb3 = _mm256_and_si256( vCrb2, _mm256_set_epi32( 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF ) );
 		__m256i vCrb4 = _mm256_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
-		__m256i vD1 = _mm256_or_epi32( vL6, vCrb4 );
+		__m256i vD1 = _mm256_or_si256( vL6, vCrb4 );
 		__m128i vD2 = _mm256_castsi256_si128( vD1 );
 		__m128i vD3 = _mm256_extracti128_si256( vD1, 1 );
 		__m128i vD4 = _mm_sub_epi32( vD2, vD3 );
