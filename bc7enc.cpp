@@ -1858,10 +1858,14 @@ static uint32_t estimate_partition(const color_rgba *pPixels, const bc7enc_compr
 		const uint8_t *pPartition = &g_bc7_partition2[partition * 16];
 
 		color_rgba subset_colors[2][16];
-		uint32_t subset_total_colors[2] = { 0, 0 };
+		color_rgba* subset_ptr[] = { subset_colors[0], subset_colors[1] };
 		for (uint32_t index = 0; index < 16; index++)
-			subset_colors[pPartition[index]][subset_total_colors[pPartition[index]]++] = pPixels[index];
-						
+			if(pPartition[index] == 0)
+				*subset_ptr[0]++ = pPixels[index];
+			else
+				*subset_ptr[1]++ = pPixels[index];
+		uint32_t subset_total_colors[2] = { uint32_t(subset_ptr[0] - subset_colors[0]), uint32_t(subset_ptr[1] - subset_colors[1]) };
+
 		uint64_t total_subset_err = 0;
 		for (uint32_t subset = 0; (subset < 2) && (total_subset_err < best_err); subset++)
 		{
