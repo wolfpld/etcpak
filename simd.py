@@ -22,15 +22,15 @@ class Simd128Printer:
         elif index == 2:
             return self.valobj.CreateValueFromExpression('u16x8', 'uint16_t x[8] = {' + str(self.v0 & 0xFFFF) + ',' + str((self.v0 >> 16) & 0xFFFF) + ',' + str((self.v0 >> 32) & 0xFFFF) + ',' + str(self.v0 >> 48) + ',' + str(self.v1 & 0xFFFF) + ',' + str((self.v1 >> 16) & 0xFFFF) + ',' + str((self.v1 >> 32) & 0xFFFF) + ',' + str(self.v1 >> 48) + '}; x')
         elif index == 3:
-            return self.valobj.CreateValueFromExpression('i16x8', 'int16_t x[8] = {' + str(self.v0 & 0xFFFF) + ',' + str((self.v0 >> 16) & 0xFFFF) + ',' + str((self.v0 >> 32) & 0xFFFF) + ',' + str(self.v0 >> 48) + ',' + str(self.v1 & 0xFFFF) + ',' + str((self.v1 >> 16) & 0xFFFF) + ',' + str((self.v1 >> 32) & 0xFFFF) + ',' + str(self.v1 >> 48) + '}; x')
+            return self.valobj.CreateValueFromExpression('i16x8', 'int16_t x[8] = {(int16_t)' + str(self.v0 & 0xFFFF) + ',(int16_t)' + str((self.v0 >> 16) & 0xFFFF) + ',(int16_t)' + str((self.v0 >> 32) & 0xFFFF) + ',(int16_t)' + str(self.v0 >> 48) + ',(int16_t)' + str(self.v1 & 0xFFFF) + ',(int16_t)' + str((self.v1 >> 16) & 0xFFFF) + ',(int16_t)' + str((self.v1 >> 32) & 0xFFFF) + ',(int16_t)' + str(self.v1 >> 48) + '}; x')
         elif index == 4:
             return self.valobj.CreateValueFromExpression('u32x4', 'uint32_t x[4] = {' + str(self.v0 & 0xFFFFFFFF) + ',' + str(self.v0 >> 32) + ',' + str(self.v1 & 0xFFFFFFFF) + ',' + str(self.v1 >> 32) + '}; x')
         elif index == 5:
-            return self.valobj.CreateValueFromExpression('i32x4', 'int32_t x[4] = {' + str(self.v0 & 0xFFFFFFFF) + ',' + str(self.v0 >> 32) + ',' + str(self.v1 & 0xFFFFFFFF) + ',' + str(self.v1 >> 32) + '}; x')
+            return self.valobj.CreateValueFromExpression('i32x4', 'int32_t x[4] = {(int32_t)' + str(self.v0 & 0xFFFFFFFF) + ',(int32_t)' + str(self.v0 >> 32) + ',(int32_t)' + str(self.v1 & 0xFFFFFFFF) + ',(int32_t)' + str(self.v1 >> 32) + '}; x')
         elif index == 6:
             return self.valobj.CreateValueFromExpression('u64x2', 'uint64_t x[2] = {' + str(self.v0) + ',' + str(self.v1) + '}; x')
         elif index == 7:
-            return self.valobj.CreateValueFromExpression('i64x2', 'int64_t x[2] = {' + str(self.v0) + ',' + str(self.v1) + '}; x')
+            return self.valobj.CreateValueFromExpression('i64x2', 'int64_t x[2] = {(int64_t)' + str(self.v0) + ',(int64_t)' + str(self.v1) + '}; x')
         else:
             return None
 
@@ -58,15 +58,15 @@ class Simd256Printer:
         elif index == 2:
             return self.valobj.CreateValueFromExpression('u16x16', 'uint16_t x[16] = {' + str(self.v0 & 0xFFFF) + ',' + str((self.v0 >> 16) & 0xFFFF) + ',' + str((self.v0 >> 32) & 0xFFFF) + ',' + str(self.v0 >> 48) + ',' + str(self.v1 & 0xFFFF) + ',' + str((self.v1 >> 16) & 0xFFFF) + ',' + str((self.v1 >> 32) & 0xFFFF) + ',' + str(self.v1 >> 48) + ',' + str(self.v2 & 0xFFFF) + ',' + str((self.v2 >> 16) & 0xFFFF) + ',' + str((self.v2 >> 32) & 0xFFFF) + ',' + str(self.v2 >> 48) + ',' + str(self.v3 & 0xFFFF) + ',' + str((self.v3 >> 16) & 0xFFFF) + ',' + str((self.v3 >> 32) & 0xFFFF) + ',' + str(self.v3 >> 48) + '}; x')
         elif index == 3:
-            return self.valobj.CreateValueFromExpression('i16x16', 'int16_t x[16] = {' + str(self.v0 & 0xFFFF) + ',' + str((self.v0 >> 16) & 0xFFFF) + ',' + str((self.v0 >> 32) & 0xFFFF) + ',' + str(self.v0 >> 48) + ',' + str(self.v1 & 0xFFFF) + ',' + str((self.v1 >> 16) & 0xFFFF) + ',' + str((self.v1 >> 32) & 0xFFFF) + ',' + str(self.v1 >> 48) + ',' + str(self.v2 & 0xFFFF) + ',' + str((self.v2 >> 16) & 0xFFFF) + ',' + str((self.v2 >> 32) & 0xFFFF) + ',' + str(self.v2 >> 48) + ',' + str(self.v3 & 0xFFFF) + ',' + str((self.v3 >> 16) & 0xFFFF) + ',' + str((self.v3 >> 32) & 0xFFFF) + ',' + str(self.v3 >> 48) + '}; x')
+            return self.valobj.CreateValueFromExpression('i16x16', 'int16_t x[16] = {(int16_t)' + str(self.v0 & 0xFFFF) + ',(int16_t)' + str((self.v0 >> 16) & 0xFFFF) + ',(int16_t)' + str((self.v0 >> 32) & 0xFFFF) + ',(int16_t)' + str(self.v0 >> 48) + ',(int16_t)' + str(self.v1 & 0xFFFF) + ',(int16_t)' + str((self.v1 >> 16) & 0xFFFF) + ',(int16_t)' + str((self.v1 >> 32) & 0xFFFF) + ',(int16_t)' + str(self.v1 >> 48) + ',(int16_t)' + str(self.v2 & 0xFFFF) + ',(int16_t)' + str((self.v2 >> 16) & 0xFFFF) + ',(int16_t)' + str((self.v2 >> 32) & 0xFFFF) + ',(int16_t)' + str(self.v2 >> 48) + ',(int16_t)' + str(self.v3 & 0xFFFF) + ',(int16_t)' + str((self.v3 >> 16) & 0xFFFF) + ',(int16_t)' + str((self.v3 >> 32) & 0xFFFF) + ',(int16_t)' + str(self.v3 >> 48) + '}; x')
         elif index == 4:
             return self.valobj.CreateValueFromExpression('u32x8', 'uint32_t x[8] = {' + str(self.v0 & 0xFFFFFFFF) + ',' + str(self.v0 >> 32) + ',' + str(self.v1 & 0xFFFFFFFF) + ',' + str(self.v1 >> 32) + ',' + str(self.v2 & 0xFFFFFFFF) + ',' + str(self.v2 >> 32) + ',' + str(self.v3 & 0xFFFFFFFF) + ',' + str(self.v3 >> 32) + '}; x')
         elif index == 5:
-            return self.valobj.CreateValueFromExpression('i32x8', 'int32_t x[8] = {' + str(self.v0 & 0xFFFFFFFF) + ',' + str(self.v0 >> 32) + ',' + str(self.v1 & 0xFFFFFFFF) + ',' + str(self.v1 >> 32) + ',' + str(self.v2 & 0xFFFFFFFF) + ',' + str(self.v2 >> 32) + ',' + str(self.v3 & 0xFFFFFFFF) + ',' + str(self.v3 >> 32) + '}; x')
+            return self.valobj.CreateValueFromExpression('i32x8', 'int32_t x[8] = {(int32_t)' + str(self.v0 & 0xFFFFFFFF) + ',(int32_t)' + str(self.v0 >> 32) + ',(int32_t)' + str(self.v1 & 0xFFFFFFFF) + ',(int32_t)' + str(self.v1 >> 32) + ',(int32_t)' + str(self.v2 & 0xFFFFFFFF) + ',(int32_t)' + str(self.v2 >> 32) + ',(int32_t)' + str(self.v3 & 0xFFFFFFFF) + ',(int32_t)' + str(self.v3 >> 32) + '}; x')
         elif index == 6:
             return self.valobj.CreateValueFromExpression('u64x4', 'uint64_t x[4] = {' + str(self.v0) + ',' + str(self.v1) + ',' + str(self.v2) + ',' + str(self.v3) + '}; x')
         elif index == 7:
-            return self.valobj.CreateValueFromExpression('i64x4', 'int64_t x[4] = {' + str(self.v0) + ',' + str(self.v1) + ',' + str(self.v2) + ',' + str(self.v3) + '}; x')
+            return self.valobj.CreateValueFromExpression('i64x4', 'int64_t x[4] = {(int64_t)' + str(self.v0) + ',(int64_t)' + str(self.v1) + ',(int64_t)' + str(self.v2) + ',(int64_t)' + str(self.v3) + '}; x')
         else:
             return None
 
