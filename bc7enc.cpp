@@ -1739,14 +1739,11 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	}
 
 	// Compute dots and thresholds
-	const int ar = highColor.m_c[0] - lowColor.m_c[0];
-	const int ag = highColor.m_c[1] - lowColor.m_c[1];
-	const int ab = highColor.m_c[2] - lowColor.m_c[2];
-	const int aa = highColor.m_c[3] - lowColor.m_c[3];
+	int a[4] = { highColor.m_c[0] - lowColor.m_c[0], highColor.m_c[1] - lowColor.m_c[1], highColor.m_c[2] - lowColor.m_c[2], highColor.m_c[3] - lowColor.m_c[3] };
 
 	int dots[4];
 	for (uint32_t i = 0; i < N; i++)
-		dots[i] = weightedColors[i].m_c[0] * ar + weightedColors[i].m_c[1] * ag + weightedColors[i].m_c[2] * ab + weightedColors[i].m_c[3] * aa;
+		dots[i] = weightedColors[i].m_c[0] * a[0] + weightedColors[i].m_c[1] * a[1] + weightedColors[i].m_c[2] * a[2] + weightedColors[i].m_c[3] * a[3];
 
 	int thresh[4 - 1];
 	for (uint32_t i = 0; i < (N - 1); i++)
@@ -1769,7 +1766,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 		{
 			const color_rgba* pC = &pPixels[i];
 
-			int d = ar * pC->m_c[0] + ag * pC->m_c[1] + ab * pC->m_c[2] + aa * pC->m_c[3];
+			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2] + a[3] * pC->m_c[3];
 
 			// Find approximate selector
 			uint32_t s = 0;
@@ -1804,7 +1801,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 		{
 			const color_rgba* pC = &pPixels[i];
 
-			int d = ar * pC->m_c[0] + ag * pC->m_c[1] + ab * pC->m_c[2] + aa * pC->m_c[3];
+			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2] + a[3] * pC->m_c[3];
 
 			// Find approximate selector
 			uint32_t s = 0;
