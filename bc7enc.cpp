@@ -1697,11 +1697,27 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	__m128i vMax6 = _mm_max_epu8( vMax4, vMax5 );
 	__m128i vMin6 = _mm_min_epu8( vMin4, vMin5 );
 
-	uint32_t rMax = _mm_cvtsi128_si32( vMax6 );
-	uint32_t rMin = _mm_cvtsi128_si32( vMin6 );
-	color_rgba lowColor, highColor;
-	memcpy( &highColor, &rMax, sizeof( rMax ) );
-	memcpy( &lowColor, &rMin, sizeof( rMin ) );
+	__m256i vMin7 = _mm256_cvtepu8_epi16( vMin6 );
+
+	__m128i vBc7Weights2a = _mm_loadu_si128( (const __m128i *)g_bc7_weights2 );
+	__m128i vBc7Weights2b = _mm_shuffle_epi8( vBc7Weights2a, _mm_set_epi8( 12, 12, 12, 12, 8, 8, 8, 8, 4, 4, 4, 4, 0, 0, 0, 0 ) );
+	__m256i vBc7Weights2c = _mm256_cvtepu8_epi16( vBc7Weights2b );
+
+	__m128i vLerpSub128 = _mm_subs_epu8( vMax6, vMin6 );
+	__m256i vLerpSub = _mm256_cvtepu8_epi16( vLerpSub128 );
+	__m256i vLerpMul = _mm256_mullo_epi16( vLerpSub, vBc7Weights2c );
+	__m256i vLerpSum = _mm256_adds_epu16( vLerpMul, _mm256_slli_epi16( vMin7, 6 ) );
+	__m256i vLerpAdd = _mm256_adds_epu16( vLerpSum, _mm256_set1_epi16( 32 ) );
+	__m256i vLerp = _mm256_srli_epi16( vLerpAdd, 6 );
+	__m128i vLerp128 = _mm_packus_epi16( _mm256_castsi256_si128( vLerp ), _mm256_extracti128_si256( vLerp, 1 ) );
+
+	color_rgba weightedColors[4];
+	_mm_storeu_si128( ( __m128i * )weightedColors, vLerp128 );
+
+	const uint32_t N = 4;
+	uint8_t a[4];
+	uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
+	memcpy( a, &lerp, 4 );
 #else
 	// Find RGB bounds as an approximation of the block's principle axis
 	uint32_t lr = 255, lg = 255, lb = 255, la = 255;
@@ -1722,7 +1738,6 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 	color_rgba lowColor; color_quad_u8_set(&lowColor, lr, lg, lb, la);
 	color_rgba highColor; color_quad_u8_set(&highColor, hr, hg, hb, ha);
-#endif
 
 	// Place endpoints at bbox diagonals and compute interpolated colors 
 	const uint32_t N = 4;
@@ -1740,6 +1755,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 	// Compute dots and thresholds
 	int a[4] = { highColor.m_c[0] - lowColor.m_c[0], highColor.m_c[1] - lowColor.m_c[1], highColor.m_c[2] - lowColor.m_c[2], highColor.m_c[3] - lowColor.m_c[3] };
+#endif
 
 	int dots[4];
 	for (uint32_t i = 0; i < N; i++)
