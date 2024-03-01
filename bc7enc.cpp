@@ -1711,13 +1711,26 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	__m256i vLerp = _mm256_srli_epi16( vLerpAdd, 6 );
 	__m128i vLerp128 = _mm_packus_epi16( _mm256_castsi256_si128( vLerp ), _mm256_extracti128_si256( vLerp, 1 ) );
 
+	__m256i vDots0 = _mm256_madd_epi16( vLerp, vLerpSub );
+	__m256i vDots1 = _mm256_hadd_epi32( vDots0, vDots0 );
+	__m256i vDots2 = _mm256_permute4x64_epi64( vDots1, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+	__m128i vDots3 = _mm256_castsi256_si128( vDots2 );
+	__m128i vDots4 = _mm_shuffle_epi32( vDots3, _MM_SHUFFLE( 3, 3, 2, 1 ) );
+
+	__m128i vThresh0 = _mm_add_epi32( vDots3, vDots4 );
+	__m128i vThresh1 = _mm_add_epi32( vThresh0, _mm_set1_epi32( 1 ) );
+	__m128i vThresh = _mm_srai_epi32( vThresh1, 1 );
+
 	color_rgba weightedColors[4];
-	_mm_storeu_si128( ( __m128i * )weightedColors, vLerp128 );
+	_mm_storeu_si128( (__m128i *)weightedColors, vLerp128 );
 
 	const uint32_t N = 4;
 	uint8_t a[4];
 	uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
 	memcpy( a, &lerp, 4 );
+
+	int thresh[4];
+	_mm_storeu_si128( (__m128i *)thresh, vThresh );
 #else
 	// Find RGB bounds as an approximation of the block's principle axis
 	uint32_t lr = 255, lg = 255, lb = 255, la = 255;
@@ -1755,7 +1768,6 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 	// Compute dots and thresholds
 	int a[4] = { highColor.m_c[0] - lowColor.m_c[0], highColor.m_c[1] - lowColor.m_c[1], highColor.m_c[2] - lowColor.m_c[2], highColor.m_c[3] - lowColor.m_c[3] };
-#endif
 
 	int dots[4];
 	for (uint32_t i = 0; i < N; i++)
@@ -1764,6 +1776,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	int thresh[4 - 1];
 	for (uint32_t i = 0; i < (N - 1); i++)
 		thresh[i] = (dots[i] + dots[i + 1] + 1) >> 1;
+#endif
 
 	uint64_t total_err = 0;
 	if (perceptual)
