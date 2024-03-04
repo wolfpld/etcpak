@@ -1712,12 +1712,10 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	__m128i vLerp128 = _mm_packus_epi16( _mm256_castsi256_si128( vLerp ), _mm256_extracti128_si256( vLerp, 1 ) );
 
 	__m256i vDots0 = _mm256_madd_epi16( vLerp, vLerpSub );
-	__m256i vDots1 = _mm256_hadd_epi32( vDots0, vDots0 );
-	__m256i vDots2 = _mm256_permute4x64_epi64( vDots1, _MM_SHUFFLE( 3, 1, 2, 0 ) );
-	__m128i vDots3 = _mm256_castsi256_si128( vDots2 );
-	__m128i vDots4 = _mm_shuffle_epi32( vDots3, _MM_SHUFFLE( 3, 3, 2, 1 ) );
+	__m128i vDots1 = _mm_hadd_epi32( _mm256_castsi256_si128( vDots0 ), _mm256_extracti128_si256( vDots0, 1 ) );
+	__m128i vDots2 = _mm_shuffle_epi32( vDots1, _MM_SHUFFLE( 3, 3, 2, 1 ) );
 
-	__m128i vThresh0 = _mm_add_epi32( vDots3, vDots4 );
+	__m128i vThresh0 = _mm_add_epi32( vDots1, vDots2 );
 	__m128i vThresh1 = _mm_add_epi32( vThresh0, _mm_set1_epi32( 1 ) );
 	__m128i vThresh = _mm_srai_epi32( vThresh1, 1 );
 
