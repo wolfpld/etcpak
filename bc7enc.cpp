@@ -1637,6 +1637,8 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, const colo
 
 static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba * pPixels, bool perceptual, uint32_t pweights[4], uint64_t best_err_so_far)
 {
+	uint64_t total_err = 0;
+
 #ifdef __AVX2__
 	__m128i vMax2, vMin2;
 
@@ -1729,6 +1731,61 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 	int thresh[4];
 	_mm_storeu_si128( (__m128i *)thresh, vThresh );
+
+	if (perceptual)
+	{
+		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
+		__m256i vL0 = _mm256_madd_epi16( vLerp, vPercWeights );
+		__m256i vL1 = _mm256_shuffle_epi32( vL0, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+		__m256i vL2 = _mm256_add_epi32( vL0, vL1 );
+		__m256i vL3 = _mm256_shuffle_epi32( vL2, _MM_SHUFFLE( 2, 0, 2, 0 ) );
+		__m128i vL = _mm_blend_epi32( _mm256_castsi256_si128( vL3 ), _mm256_extracti128_si256( vL3, 1 ), 0xC );
+
+		__m256i vRB0 = _mm256_blend_epi16( vLerp, _mm256_setzero_si256(), 0xAA );
+		__m256i vRB1 = _mm256_slli_epi32( vRB0, 9 );
+		__m256i vRB2 = _mm256_sub_epi32( vRB1, vL2 );
+		__m256i vRB3 = _mm256_permutevar8x32_epi32( vRB2, _mm256_set_epi32( 7, 5, 3, 1, 6, 4, 2, 0 ) );
+
+		// Transform block's interpolated colors to YCbCr
+		int l1[4], cr1[4], cb1[4];
+
+		_mm_storeu_si128( (__m128i *)l1, vL );
+		_mm_storeu_si128( (__m128i *)cr1, _mm256_castsi256_si128( vRB3 ) );
+		_mm_storeu_si128( (__m128i *)cb1, _mm256_extracti128_si256( vRB3, 1 ) );
+
+		for (uint32_t i = 0; i < num_pixels; i++)
+		{
+			const color_rgba* pC = &pPixels[i];
+
+			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2] + a[3] * pC->m_c[3];
+
+			// Find approximate selector
+			uint32_t s = 0;
+			if (d >= thresh[2])
+				s = 3;
+			else if (d >= thresh[1])
+				s = 2;
+			else if (d >= thresh[0])
+				s = 1;
+
+			// Compute error
+			const int l2 = pC->m_c[0] * 109 + pC->m_c[1] * 366 + pC->m_c[2] * 37;
+			const int cr2 = ((int)pC->m_c[0] << 9) - l2;
+			const int cb2 = ((int)pC->m_c[2] << 9) - l2;
+
+			const int dl = (l1[s] - l2) >> 8;
+			const int dcr = (cr1[s] - cr2) >> 8;
+			const int dcb = (cb1[s] - cb2) >> 8;
+
+			const int dca = (int)pC->m_c[3] - (int)weightedColors[s].m_c[3];
+
+			int ie = (pweights[0] * dl * dl) + (pweights[1] * dcr * dcr) + (pweights[2] * dcb * dcb) + (pweights[3] * dca * dca);
+
+			total_err += ie;
+			if (total_err > best_err_so_far)
+				break;
+		}
+	}
 #else
 	// Find RGB bounds as an approximation of the block's principle axis
 	uint32_t lr = 255, lg = 255, lb = 255, la = 255;
@@ -1774,9 +1831,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	int thresh[4 - 1];
 	for (uint32_t i = 0; i < (N - 1); i++)
 		thresh[i] = (dots[i] + dots[i + 1] + 1) >> 1;
-#endif
 
-	uint64_t total_err = 0;
 	if (perceptual)
 	{
 		// Transform block's interpolated colors to YCbCr
@@ -1822,6 +1877,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 				break;
 		}
 	}
+#endif
 	else
 	{
 		for (uint32_t i = 0; i < num_pixels; i++)
