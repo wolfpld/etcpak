@@ -1753,35 +1753,51 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 		_mm_storeu_si128( (__m128i *)cr1, _mm256_castsi256_si128( vRB3 ) );
 		_mm_storeu_si128( (__m128i *)cb1, _mm256_extracti128_si256( vRB3, 1 ) );
 
-		for (uint32_t i = 0; i < num_pixels; i++)
+		for (uint32_t i = 0; i < num_pixels; i+=4)
 		{
 			const color_rgba* pC = &pPixels[i];
 
-			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2] + a[3] * pC->m_c[3];
+			__m128i vC0 = _mm_loadu_si128( (const __m128i *)pC );
+			__m256i vC1 = _mm256_cvtepu8_epi16( vC0 );
+			__m256i vD0 = _mm256_madd_epi16( vC1, vLerpSub );
+			__m128i vD1 = _mm_hadd_epi32( _mm256_castsi256_si128( vD0 ), _mm256_extracti128_si256( vD0, 1 ) );
 
-			// Find approximate selector
-			uint32_t s = 0;
-			if (d >= thresh[2])
-				s = 3;
-			else if (d >= thresh[1])
-				s = 2;
-			else if (d >= thresh[0])
-				s = 1;
+			int dtable[4];
+			_mm_storeu_si128( (__m128i *)dtable, vD1 );
 
-			// Compute error
-			const int l2 = pC->m_c[0] * 109 + pC->m_c[1] * 366 + pC->m_c[2] * 37;
-			const int cr2 = ((int)pC->m_c[0] << 9) - l2;
-			const int cb2 = ((int)pC->m_c[2] << 9) - l2;
+			const uint32_t end = minimumu( i + 4, num_pixels );
+			for (uint32_t j=i; j<end; j++)
+			{
+				int d = dtable[j-i];
 
-			const int dl = (l1[s] - l2) >> 8;
-			const int dcr = (cr1[s] - cr2) >> 8;
-			const int dcb = (cb1[s] - cb2) >> 8;
+				// Find approximate selector
+				uint32_t s = 0;
+				if (d >= thresh[2])
+					s = 3;
+				else if (d >= thresh[1])
+					s = 2;
+				else if (d >= thresh[0])
+					s = 1;
 
-			const int dca = (int)pC->m_c[3] - (int)weightedColors[s].m_c[3];
+				// Compute error
+				const int l2 = pC->m_c[0] * 109 + pC->m_c[1] * 366 + pC->m_c[2] * 37;
+				const int cr2 = ((int)pC->m_c[0] << 9) - l2;
+				const int cb2 = ((int)pC->m_c[2] << 9) - l2;
 
-			int ie = (pweights[0] * dl * dl) + (pweights[1] * dcr * dcr) + (pweights[2] * dcb * dcb) + (pweights[3] * dca * dca);
+				const int dl = (l1[s] - l2) >> 8;
+				const int dcr = (cr1[s] - cr2) >> 8;
+				const int dcb = (cb1[s] - cb2) >> 8;
 
-			total_err += ie;
+				const int dca = (int)pC->m_c[3] - (int)weightedColors[s].m_c[3];
+
+				int ie = (pweights[0] * dl * dl) + (pweights[1] * dcr * dcr) + (pweights[2] * dcb * dcb) + (pweights[3] * dca * dca);
+
+				total_err += ie;
+				if (total_err > best_err_so_far)
+					break;
+
+				pC++;
+			}
 			if (total_err > best_err_so_far)
 				break;
 		}
