@@ -1718,8 +1718,9 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	__m128i vDots2 = _mm_shuffle_epi32( vDots1, _MM_SHUFFLE( 3, 3, 2, 1 ) );
 
 	__m128i vThresh0 = _mm_add_epi32( vDots1, vDots2 );
-	__m128i vThresh1 = _mm_add_epi32( vThresh0, _mm_set1_epi32( 1 ) );
-	__m128i vThresh = _mm_srai_epi32( vThresh1, 1 );
+	__m128i vThresh1 = _mm_sub_epi32( vThresh0, _mm_set1_epi32( 1 ) );
+	__m128i vThresh2 = _mm_srai_epi32( vThresh1, 1 );
+	__m128i vThresh = _mm_blend_epi32( vThresh2, _mm_set1_epi32( 0x7FFFFFFF ), 8 );
 
 	color_rgba weightedColors[4];
 	_mm_storeu_si128( (__m128i *)weightedColors, vLerp128 );
@@ -1730,7 +1731,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	memcpy( a, &lerp, 4 );
 
 	int thresh[4];
-	_mm_storeu_si128( (__m128i *)thresh, vThresh );
+	_mm_storeu_si128( (__m128i *)thresh, vThresh2 );
 
 	if (perceptual)
 	{
@@ -1768,16 +1769,10 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			const uint32_t end = minimumu( i + 4, num_pixels );
 			for (uint32_t j=i; j<end; j++)
 			{
-				int d = dtable[j-i];
-
 				// Find approximate selector
-				uint32_t s = 0;
-				if (d >= thresh[2])
-					s = 3;
-				else if (d >= thresh[1])
-					s = 2;
-				else if (d >= thresh[0])
-					s = 1;
+				__m128i vD = _mm_set1_epi32( dtable[j-i] );
+				__m128i vCmp = _mm_cmpgt_epi32( vD, vThresh );
+				uint32_t s = _mm_popcnt_u32( _mm_movemask_epi8( vCmp ) ) / 4;
 
 				// Compute error
 				const int l2 = pC->m_c[0] * 109 + pC->m_c[1] * 366 + pC->m_c[2] * 37;
