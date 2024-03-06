@@ -1725,14 +1725,6 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	color_rgba weightedColors[4];
 	_mm_storeu_si128( (__m128i *)weightedColors, vLerp128 );
 
-	const uint32_t N = 4;
-	uint8_t a[4];
-	uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
-	memcpy( a, &lerp, 4 );
-
-	int thresh[4];
-	_mm_storeu_si128( (__m128i *)thresh, vThresh2 );
-
 	if (perceptual)
 	{
 		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
@@ -1797,6 +1789,15 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 				break;
 		}
 	}
+	else
+	{
+		const uint32_t N = 4;
+		uint8_t a[4];
+		uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
+		memcpy( a, &lerp, 4 );
+
+		int thresh[4];
+		_mm_storeu_si128( (__m128i *)thresh, vThresh2 );
 #else
 	// Find RGB bounds as an approximation of the block's principle axis
 	uint32_t lr = 255, lg = 255, lb = 255, la = 255;
@@ -1888,9 +1889,9 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 				break;
 		}
 	}
-#endif
 	else
 	{
+#endif
 		for (uint32_t i = 0; i < num_pixels; i++)
 		{
 			const color_rgba* pC = &pPixels[i];
