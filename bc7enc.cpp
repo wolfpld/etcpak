@@ -1728,6 +1728,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	if (perceptual)
 	{
 		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
+
 		__m256i vL0 = _mm256_madd_epi16( vLerp, vPercWeights );
 		__m256i vL1 = _mm256_shuffle_epi32( vL0, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 		__m256i vL2 = _mm256_add_epi32( vL0, vL1 );
@@ -1758,6 +1759,24 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			int dtable[4];
 			_mm_storeu_si128( (__m128i *)dtable, vD1 );
 
+			__m256i v2L0 = _mm256_madd_epi16( vC1, vPercWeights );
+			__m256i v2L1 = _mm256_shuffle_epi32( v2L0, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+			__m256i v2L2 = _mm256_add_epi32( v2L0, v2L1 );
+			__m256i v2L3 = _mm256_shuffle_epi32( v2L2, _MM_SHUFFLE( 2, 0, 2, 0 ) );
+			__m128i v2L = _mm_blend_epi32( _mm256_castsi256_si128( v2L3 ), _mm256_extracti128_si256( v2L3, 1 ), 0xC );
+
+			__m256i v2RB0 = _mm256_blend_epi16( vC1, _mm256_setzero_si256(), 0xAA );
+			__m256i v2RB1 = _mm256_slli_epi32( v2RB0, 9 );
+			__m256i v2RB2 = _mm256_sub_epi32( v2RB1, v2L2 );
+			__m256i v2RB3 = _mm256_permutevar8x32_epi32( v2RB2, _mm256_set_epi32( 7, 5, 3, 1, 6, 4, 2, 0 ) );
+
+			// Transform block's interpolated colors to YCbCr
+			int l2t[4], cr2t[4], cb2t[4];
+
+			_mm_storeu_si128( (__m128i *)l2t, v2L );
+			_mm_storeu_si128( (__m128i *)cr2t, _mm256_castsi256_si128( v2RB3 ) );
+			_mm_storeu_si128( (__m128i *)cb2t, _mm256_extracti128_si256( v2RB3, 1 ) );
+
 			const uint32_t end = minimumu( i + 4, num_pixels );
 			for (uint32_t j=i; j<end; j++)
 			{
@@ -1767,9 +1786,9 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 				uint32_t s = _mm_popcnt_u32( _mm_movemask_epi8( vCmp ) ) / 4;
 
 				// Compute error
-				const int l2 = pC->m_c[0] * 109 + pC->m_c[1] * 366 + pC->m_c[2] * 37;
-				const int cr2 = ((int)pC->m_c[0] << 9) - l2;
-				const int cb2 = ((int)pC->m_c[2] << 9) - l2;
+				const int l2 = l2t[j-i];
+				const int cr2 = cr2t[j-i];
+				const int cb2 = cb2t[j-i];
 
 				const int dl = (l1[s] - l2) >> 8;
 				const int dcr = (cr1[s] - cr2) >> 8;
