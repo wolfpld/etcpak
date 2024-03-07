@@ -1807,8 +1807,13 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			{
 				// Find approximate selector
 				__m128i vD = _mm_set1_epi32( dtable[j-i] );
+#ifdef __AVX512VL__
+				__mmask8 vCmp = _mm_cmpgt_epi32_mask( vD, vThresh );
+				uint32_t s = _mm_popcnt_u32( vCmp );
+#else
 				__m128i vCmp = _mm_cmpgt_epi32( vD, vThresh );
 				uint32_t s = _mm_popcnt_u32( _mm_movemask_epi8( vCmp ) ) / 4;
+#endif
 
 				// Compute error
 				__m128i vPx = vPxT[s];
