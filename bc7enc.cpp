@@ -1727,6 +1727,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 	if (perceptual)
 	{
+		__m128i vPweights = _mm_loadu_si128((const __m128i *)pweights);
 		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
 
 		__m256i vL0 = _mm256_madd_epi16( vLerp, vPercWeights );
@@ -1740,12 +1741,21 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 		__m256i vRB2 = _mm256_sub_epi32( vRB1, vL2 );
 		__m256i vRB3 = _mm256_permutevar8x32_epi32( vRB2, _mm256_set_epi32( 7, 5, 3, 1, 6, 4, 2, 0 ) );
 
-		// Transform block's interpolated colors to YCbCr
-		int l1[4], cr1[4], cb1[4];
+		__m128i vCr = _mm256_castsi256_si128( vRB3 );
+		__m128i vCb = _mm256_extracti128_si256( vRB3, 1 );
+		__m128i vZero = _mm_setzero_si128();
 
-		_mm_storeu_si128( (__m128i *)l1, vL );
-		_mm_storeu_si128( (__m128i *)cr1, _mm256_castsi256_si128( vRB3 ) );
-		_mm_storeu_si128( (__m128i *)cb1, _mm256_extracti128_si256( vRB3, 1 ) );
+		__m128i vTmp0 = _mm_unpacklo_epi32( vL, vCb );
+		__m128i vTmp1 = _mm_unpacklo_epi32( vCr, vZero );
+		__m128i vTmp2 = _mm_unpackhi_epi32( vL, vCb );
+		__m128i vTmp3 = _mm_unpackhi_epi32( vCr, vZero );
+
+		__m128i vPxT[4] = {
+			_mm_unpacklo_epi32( vTmp0, vTmp1 ),
+			_mm_unpackhi_epi32( vTmp0, vTmp1 ),
+			_mm_unpacklo_epi32( vTmp2, vTmp3 ),
+			_mm_unpackhi_epi32( vTmp2, vTmp3 )
+		};
 
 		for (uint32_t i = 0; i < num_pixels; i+=4)
 		{
@@ -1770,6 +1780,21 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			__m256i v2RB2 = _mm256_sub_epi32( v2RB1, v2L2 );
 			__m256i v2RB3 = _mm256_permutevar8x32_epi32( v2RB2, _mm256_set_epi32( 7, 5, 3, 1, 6, 4, 2, 0 ) );
 
+			__m128i v2Cr = _mm256_castsi256_si128( v2RB3 );
+			__m128i v2Cb = _mm256_extracti128_si256( v2RB3, 1 );
+
+			__m128i v2Tmp0 = _mm_unpacklo_epi32( v2L, v2Cb );
+			__m128i v2Tmp1 = _mm_unpacklo_epi32( v2Cr, vZero );
+			__m128i v2Tmp2 = _mm_unpackhi_epi32( v2L, v2Cb );
+			__m128i v2Tmp3 = _mm_unpackhi_epi32( v2Cr, vZero );
+
+			__m128i v2PxT[4] = {
+				_mm_unpacklo_epi32( v2Tmp0, v2Tmp1 ),
+				_mm_unpackhi_epi32( v2Tmp0, v2Tmp1 ),
+				_mm_unpacklo_epi32( v2Tmp2, v2Tmp3 ),
+				_mm_unpackhi_epi32( v2Tmp2, v2Tmp3 )
+			};
+
 			// Transform block's interpolated colors to YCbCr
 			int l2t[4], cr2t[4], cb2t[4];
 
@@ -1786,17 +1811,20 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 				uint32_t s = _mm_popcnt_u32( _mm_movemask_epi8( vCmp ) ) / 4;
 
 				// Compute error
-				const int l2 = l2t[j-i];
-				const int cr2 = cr2t[j-i];
-				const int cb2 = cb2t[j-i];
+				__m128i vPx = vPxT[s];
+				__m128i v2Px = v2PxT[j-i];
 
-				const int dl = (l1[s] - l2) >> 8;
-				const int dcr = (cr1[s] - cr2) >> 8;
-				const int dcb = (cb1[s] - cb2) >> 8;
+				__m128i vSub = _mm_sub_epi32( vPx, v2Px );
+				__m128i vShift = _mm_srai_epi32( vSub, 8 );
+				__m128i vMul0 = _mm_mullo_epi32( vShift, vShift );
+				__m128i vMul1 = _mm_mullo_epi32( vMul0, vPweights );
+				__m128i vAdd0 = _mm_shuffle_epi32( vMul1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+				__m128i vAdd1 = _mm_add_epi32( vMul1, vAdd0 );
+				__m128i vAdd2 = _mm_shuffle_epi32( vAdd1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+				__m128i vAdd3 = _mm_add_epi32( vAdd1, vAdd2 );
 
 				const int dca = (int)pC->m_c[3] - (int)weightedColors[s].m_c[3];
-
-				int ie = (pweights[0] * dl * dl) + (pweights[1] * dcr * dcr) + (pweights[2] * dcb * dcb) + (pweights[3] * dca * dca);
+				int ie = _mm_cvtsi128_si32( vAdd3 ) + (pweights[3] * dca * dca);
 
 				total_err += ie;
 				if (total_err > best_err_so_far)
