@@ -1816,16 +1816,19 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 				__m128i vSub = _mm_sub_epi32( vPx, v2Px );
 				__m128i vShift = _mm_srai_epi32( vSub, 8 );
-				__m128i vMul0 = _mm_mullo_epi32( vShift, vShift );
+
+				const int dca = (int)pC->m_c[3] - (int)weightedColors[s].m_c[3];
+				__m128i vAlpha0 = _mm_set1_epi32( dca );
+				__m128i vAlpha1 = _mm_blend_epi32( vShift, vAlpha0, 8 );
+
+				__m128i vMul0 = _mm_mullo_epi32( vAlpha1, vAlpha1 );
 				__m128i vMul1 = _mm_mullo_epi32( vMul0, vPweights );
 				__m128i vAdd0 = _mm_shuffle_epi32( vMul1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 				__m128i vAdd1 = _mm_add_epi32( vMul1, vAdd0 );
 				__m128i vAdd2 = _mm_shuffle_epi32( vAdd1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
 				__m128i vAdd3 = _mm_add_epi32( vAdd1, vAdd2 );
 
-				const int dca = (int)pC->m_c[3] - (int)weightedColors[s].m_c[3];
-				int ie = _mm_cvtsi128_si32( vAdd3 ) + (pweights[3] * dca * dca);
-
+				int ie = _mm_cvtsi128_si32( vAdd3 );
 				total_err += ie;
 				if (total_err > best_err_so_far)
 					break;
