@@ -1497,8 +1497,78 @@ static uint64_t color_cell_compression(uint32_t mode, const color_cell_compresso
 	return pResults->m_best_overall_err;
 }
 
-static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, const color_rgba *pPixels, bool perceptual, uint32_t pweights[4], uint64_t best_err_so_far)
+static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba *pPixels, bool perceptual, uint32_t pweights[4], uint64_t best_err_so_far)
 {
+	uint64_t total_err = 0;
+
+#ifdef __AVX2__
+	__m128i vMax2, vMin2;
+
+	if( num_pixels > 4 )
+	{
+		__m128i vMax1a, vMax1b, vMin1a, vMin1b;
+
+		if( num_pixels > 8 )
+		{
+			memset( pPixels + num_pixels, 0, (16 - num_pixels) * sizeof( color_rgba ) );
+			__m256i vMax0a = _mm256_loadu_si256( (const __m256i *)pPixels );
+			__m256i vMax0b = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
+
+			memset( pPixels + num_pixels, 0xFF, (16 - num_pixels) * sizeof( color_rgba ) );
+			__m256i vMin0a = _mm256_loadu_si256( (const __m256i *)pPixels );
+			__m256i vMin0b = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
+
+			__m256i vMax1 = _mm256_max_epu8( vMax0a, vMax0b );
+			__m256i vMin1 = _mm256_min_epu8( vMin0a, vMin0b );
+
+			vMax1a = _mm256_castsi256_si128( vMax1 );
+			vMax1b = _mm256_extracti128_si256( vMax1, 1 );
+
+			vMin1a = _mm256_castsi256_si128( vMin1 );
+			vMin1b = _mm256_extracti128_si256( vMin1, 1 );
+		}
+		else
+		{
+			memset( pPixels + num_pixels, 0, (8 - num_pixels) * sizeof( color_rgba ) );
+			vMax1a = _mm_loadu_si128( (const __m128i *)pPixels );
+			vMax1b = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
+
+			memset( pPixels + num_pixels, 0xFF, (8 - num_pixels) * sizeof( color_rgba ) );
+			vMin1a = _mm_loadu_si128( (const __m128i *)pPixels );
+			vMin1b = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
+		}
+
+		vMax2 = _mm_max_epu8( vMax1a, vMax1b );
+		vMin2 = _mm_min_epu8( vMin1a, vMin1b );
+	}
+	else
+	{
+		memset( pPixels + num_pixels, 0, (4 - num_pixels) * sizeof( color_rgba ) );
+		vMax2 = _mm_loadu_si128( (const __m128i *)pPixels );
+		memset( pPixels + num_pixels, 0xFF, (4 - num_pixels) * sizeof( color_rgba ) );
+		vMin2 = _mm_loadu_si128( (const __m128i *)pPixels );
+	}
+
+	__m128i vMax3 = _mm_shuffle_epi32( vMax2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m128i vMin3 = _mm_shuffle_epi32( vMin2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+
+	__m128i vMax4 = _mm_max_epu8( vMax2, vMax3 );
+	__m128i vMin4 = _mm_min_epu8( vMin2, vMin3 );
+
+	__m128i vMax5 = _mm_shuffle_epi32( vMax4, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m128i vMin5 = _mm_shuffle_epi32( vMin4, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+
+	__m128i vMax6 = _mm_max_epu8( vMax4, vMax5 );
+	__m128i vMin6 = _mm_min_epu8( vMin4, vMin5 );
+
+	__m256i vMin7 = _mm256_cvtepu8_epi16( vMin6 );
+
+	color_rgba lowColor, highColor;
+	auto aa = _mm_cvtsi128_si32( vMin6 );
+	auto bb = _mm_cvtsi128_si32( vMax6 );
+	memcpy( &lowColor, &aa, sizeof( lowColor ) );
+	memcpy( &highColor, &bb, sizeof( highColor ) );
+#else
 	// Find RGB bounds as an approximation of the block's principle axis
 	uint32_t lr = 255, lg = 255, lb = 255;
 	uint32_t hr = 0, hg = 0, hb = 0;
@@ -1515,6 +1585,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, const colo
 		
 	color_rgba lowColor; color_quad_u8_set(&lowColor, lr, lg, lb, 0);
 	color_rgba highColor; color_quad_u8_set(&highColor, hr, hg, hb, 0);
+#endif
 
 	// Place endpoints at bbox diagonals and compute interpolated colors 
 	const uint32_t N = 8;
@@ -1542,7 +1613,6 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, const colo
 	for (uint32_t i = 0; i < (N - 1); i++)
 		thresh[i] = (dots[i] + dots[i + 1] + 1) >> 1;
 
-	uint64_t total_err = 0;
 	if (perceptual)
 	{
 		// Transform block's interpolated colors to YCbCr
