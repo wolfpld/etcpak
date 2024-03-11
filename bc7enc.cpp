@@ -1772,7 +1772,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	__m256i vMin7 = _mm256_cvtepu8_epi16( vMin6 );
 
 	__m128i vBc7Weights2a = _mm_loadu_si128( (const __m128i *)g_bc7_weights2 );
-	__m128i vBc7Weights2b = _mm_shuffle_epi8( vBc7Weights2a, _mm_set_epi8( 12, 12, 12, 12, 8, 8, 8, 8, 4, 4, 4, 4, 0, 0, 0, 0 ) );
+	__m128i vBc7Weights2b = _mm_shuffle_epi8( vBc7Weights2a, _mm_set_epi32( 0x0c0c0c0c, 0x08080808, 0x04040404, 0 ) );
 	__m256i vBc7Weights2c = _mm256_cvtepu8_epi16( vBc7Weights2b );
 
 	__m128i vLerpSub128 = _mm_subs_epu8( vMax6, vMin6 );
