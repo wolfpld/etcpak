@@ -1663,7 +1663,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		weightedColors[i].m_c[2] = (uint8_t)((lowColor.m_c[2] * (64 - g_bc7_weights3[i]) + highColor.m_c[2] * g_bc7_weights3[i] + 32) >> 6);
 	}
 
-	uint8_t a[3] = { highColor.m_c[0] - lowColor.m_c[0], highColor.m_c[1] - lowColor.m_c[1], highColor.m_c[2] - lowColor.m_c[2] };
+	uint8_t a[3] = { uint8_t(highColor.m_c[0] - lowColor.m_c[0]), uint8_t(highColor.m_c[1] - lowColor.m_c[1]), uint8_t(highColor.m_c[2] - lowColor.m_c[2]) };
 
 	int dots[8];
 	for (uint32_t i = 0; i < N; i++)
