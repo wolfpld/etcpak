@@ -1584,7 +1584,10 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	__m512i vLerpAdd = _mm512_adds_epu16( vLerpSum, _mm512_set1_epi16( 32 ) );
 	__m512i vLerp = _mm512_srli_epi16( vLerpAdd, 6 );
 	__m256i vLerp256a = _mm256_packus_epi16( _mm512_castsi512_si256( vLerp ), _mm512_extracti64x4_epi64( vLerp, 1 ) );
-	__m256 vLerp256 = _mm256_permute4x64_epi64( vLerp256a, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+	__m256i vLerp256 = _mm256_permute4x64_epi64( vLerp256a, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+
+	__m512i vDots0 = _mm512_madd_epi16( vLerp, vLerpSub );
+	__m256i vDots1a = _mm256_hadd_epi32( _mm512_castsi512_si256( vDots0 ), _mm512_extracti64x4_epi64( vDots0, 1 ) );
 #  else
 	__m256i vBc7Weights3ca = _mm256_cvtepu8_epi16( _mm256_castsi256_si128( vBc7Weights3b ) );
 	__m256i vBc7Weights3cb = _mm256_cvtepu8_epi16( _mm256_extracti128_si256( vBc7Weights3b, 1 ) );
@@ -1592,9 +1595,9 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	__m256i vMin7 = _mm256_cvtepu8_epi16( vMin6 );
 	__m256i vMin8 = _mm256_slli_epi16( vMin7, 6 );
 
-	__m256i vLerpSub = _mm256_cvtepu8_epi16( vLerpSub128 );
-	__m256i vLerpMula = _mm256_mullo_epi16( vLerpSub, vBc7Weights3ca );
-	__m256i vLerpMulb = _mm256_mullo_epi16( vLerpSub, vBc7Weights3cb );
+	__m256i vLerpSub256 = _mm256_cvtepu8_epi16( vLerpSub128 );
+	__m256i vLerpMula = _mm256_mullo_epi16( vLerpSub256, vBc7Weights3ca );
+	__m256i vLerpMulb = _mm256_mullo_epi16( vLerpSub256, vBc7Weights3cb );
 	__m256i vLerpSuma = _mm256_adds_epu16( vLerpMula, vMin8 );
 	__m256i vLerpSumb = _mm256_adds_epu16( vLerpMulb, vMin8 );
 	__m256i vLerpAdda = _mm256_adds_epu16( vLerpSuma, _mm256_set1_epi16( 32 ) );
@@ -1604,10 +1607,29 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	__m128i vLerp128a = _mm_packus_epi16( _mm256_castsi256_si128( vLerpa ), _mm256_extracti128_si256( vLerpa, 1 ) );
 	__m128i vLerp128b = _mm_packus_epi16( _mm256_castsi256_si128( vLerpb ), _mm256_extracti128_si256( vLerpb, 1 ) );
 	__m256i vLerp256 = _mm256_insertf128_si256( _mm256_castsi128_si256( vLerp128a ), vLerp128b, 1 );
+
+	__m256i vDots0a = _mm256_madd_epi16( vLerpa, vLerpSub256 );
+	__m256i vDots0b = _mm256_madd_epi16( vLerpb, vLerpSub256 );
+	__m256i vDots1a = _mm256_hadd_epi32( vDots0a, vDots0b );
 #  endif
+
+	__m256i vDots1 = _mm256_permute4x64_epi64( vDots1a, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+	__m256i vDots2 = _mm256_permutevar8x32_epi32( vDots1, _mm256_set_epi32( 7, 7, 6, 5, 4, 3, 2, 1 ) );
+
+	__m256i vThresh0 = _mm256_add_epi32( vDots1, vDots2 );
+	__m256i vThresh1 = _mm256_add_epi32( vThresh0, _mm256_set1_epi32( 1 ) );
+	__m256i vThresh2 = _mm256_srai_epi32( vThresh1, 1 );
+	__m256i vThresh = _mm256_blend_epi32( vThresh2, _mm256_set1_epi32( 0x7FFFFFFF ), 128 );
 
 	color_rgba weightedColors[8];
 	_mm256_storeu_si256( (__m256i *)weightedColors, vLerp256 );
+
+	uint8_t a[4];
+	uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
+	memcpy( a, &lerp, 4 );
+
+	int thresh[8];
+	_mm256_storeu_si256( (__m256i *)thresh, vThresh2 );
 
 	const uint32_t N = 8;
 #else
@@ -1640,20 +1662,17 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		weightedColors[i].m_c[1] = (uint8_t)((lowColor.m_c[1] * (64 - g_bc7_weights3[i]) + highColor.m_c[1] * g_bc7_weights3[i] + 32) >> 6);
 		weightedColors[i].m_c[2] = (uint8_t)((lowColor.m_c[2] * (64 - g_bc7_weights3[i]) + highColor.m_c[2] * g_bc7_weights3[i] + 32) >> 6);
 	}
-#endif
 
-	// Compute dots and thresholds
-	const int ar = highColor.m_c[0] - lowColor.m_c[0];
-	const int ag = highColor.m_c[1] - lowColor.m_c[1];
-	const int ab = highColor.m_c[2] - lowColor.m_c[2];
+	uint8_t a[3] = { highColor.m_c[0] - lowColor.m_c[0], highColor.m_c[1] - lowColor.m_c[1], highColor.m_c[2] - lowColor.m_c[2] };
 
 	int dots[8];
 	for (uint32_t i = 0; i < N; i++)
-		dots[i] = weightedColors[i].m_c[0] * ar + weightedColors[i].m_c[1] * ag + weightedColors[i].m_c[2] * ab;
+		dots[i] = weightedColors[i].m_c[0] * a[0] + weightedColors[i].m_c[1] * a[1] + weightedColors[i].m_c[2] * a[2];
 
 	int thresh[8 - 1];
 	for (uint32_t i = 0; i < (N - 1); i++)
 		thresh[i] = (dots[i] + dots[i + 1] + 1) >> 1;
+#endif
 
 	if (perceptual)
 	{
@@ -1671,7 +1690,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		{
 			const color_rgba *pC = &pPixels[i];
 
-			int d = ar * pC->m_c[0] + ag * pC->m_c[1] + ab * pC->m_c[2];
+			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2];
 
 			// Find approximate selector
 			uint32_t s = 0;
@@ -1712,7 +1731,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		{
 			const color_rgba *pC = &pPixels[i];
 
-			int d = ar * pC->m_c[0] + ag * pC->m_c[1] + ab * pC->m_c[2];
+			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2];
 
 			// Find approximate selector
 			uint32_t s = 0;
