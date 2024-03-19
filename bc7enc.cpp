@@ -1648,10 +1648,8 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		__m512i vRB1 = _mm512_slli_epi32( vRB0, 9 );
 		__m512i vRB2 = _mm512_sub_epi32( vRB1, vL2 );
 		__m512i vRB3 = _mm512_permutexvar_epi32( _mm512_set_epi32( 15, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 0 ), vRB2 );
-
-		_mm256_storeu_si256( (__m256i *)l1, vL );
-		_mm256_storeu_si256( (__m256i *)cr1, _mm512_castsi512_si256( vRB3 ) );
-		_mm256_storeu_si256( (__m256i *)cb1, _mm512_extracti64x4_epi64( vRB3, 1 ) );
+		__m256i vR = _mm512_castsi512_si256( vRB3 );
+		__m256i vB = _mm512_extracti64x4_epi64( vRB3, 1 );
 #else
 		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
 		__m256i vL0a = _mm256_madd_epi16( vLerpa, vPercWeights );
@@ -1676,11 +1674,11 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		__m256i vR = _mm256_blend_epi32( vRB3a, vRB3b, 0xF0 );
 		__m256i vB0 = _mm256_blend_epi32( vRB3a, vRB3b, 0x0F );
 		__m256i vB = _mm256_permute4x64_epi64( vB0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+#endif
 
 		_mm256_storeu_si256( (__m256i *)l1, vL );
 		_mm256_storeu_si256( (__m256i *)cr1, vR );
 		_mm256_storeu_si256( (__m256i *)cb1, vB );
-#endif
 
 		for (uint32_t i = 0; i < num_pixels; i++)
 		{
