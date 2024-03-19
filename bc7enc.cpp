@@ -2017,13 +2017,6 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 				_mm_unpackhi_epi32( v2Tmp2, v2Tmp3 )
 			};
 
-			// Transform block's interpolated colors to YCbCr
-			int l2t[4], cr2t[4], cb2t[4];
-
-			_mm_storeu_si128( (__m128i *)l2t, v2L );
-			_mm_storeu_si128( (__m128i *)cr2t, _mm256_castsi256_si128( v2RB3 ) );
-			_mm_storeu_si128( (__m128i *)cb2t, _mm256_extracti128_si256( v2RB3, 1 ) );
-
 			const uint32_t end = minimumu( i + 4, num_pixels );
 			for (uint32_t j=i; j<end; j++)
 			{
