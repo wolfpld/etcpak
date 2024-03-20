@@ -1561,12 +1561,6 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	__m128i vMax6 = _mm_max_epu8( vMax4, vMax5 );
 	__m128i vMin6 = _mm_min_epu8( vMin4, vMin5 );
 
-	color_rgba lowColor, highColor;
-	auto aa = _mm_cvtsi128_si32( vMin6 );
-	auto bb = _mm_cvtsi128_si32( vMax6 );
-	memcpy( &lowColor, &aa, sizeof( lowColor ) );
-	memcpy( &highColor, &bb, sizeof( highColor ) );
-
 	__m256i vBc7Weights3a = _mm256_loadu_si256( (const __m256i *)g_bc7_weights3 );
 	__m256i vBc7Weights3b = _mm256_shuffle_epi8( vBc7Weights3a, _mm256_set_epi32( 0x0c0c0c0c, 0x08080808, 0x04040404, 0, 0x0c0c0c0c, 0x08080808, 0x04040404, 0 ) );
 	__m128i vLerpSub128 = _mm_subs_epu8( vMax6, vMin6 );
@@ -1577,8 +1571,8 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	__m256i vMin6a = _mm256_set_m128i( vMin6, vMin6 );
 	__m512i vMin7 = _mm512_cvtepu8_epi16( vMin6a );
 
-	__m256i vLerpSub256 = _mm256_set_m128i( vLerpSub128, vLerpSub128 );
-	__m512i vLerpSub = _mm512_cvtepu8_epi16( vLerpSub256 );
+	__m256i vLerpSub256 = _mm256_cvtepu8_epi16( vLerpSub128 );
+	__m512i vLerpSub = _mm512_broadcast_i32x2( _mm256_castsi256_si128( vLerpSub256 ) );
 	__m512i vLerpMul = _mm512_mullo_epi16( vLerpSub, vBc7Weights3c );
 	__m512i vLerpSum = _mm512_adds_epu16( vLerpMul, _mm512_slli_epi16( vMin7, 6 ) );
 	__m512i vLerpAdd = _mm512_adds_epu16( vLerpSum, _mm512_set1_epi16( 32 ) );
@@ -1617,23 +1611,15 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	__m256i vDots2 = _mm256_permutevar8x32_epi32( vDots1, _mm256_set_epi32( 7, 7, 6, 5, 4, 3, 2, 1 ) );
 
 	__m256i vThresh0 = _mm256_add_epi32( vDots1, vDots2 );
-	__m256i vThresh1 = _mm256_add_epi32( vThresh0, _mm256_set1_epi32( 1 ) );
+	__m256i vThresh1 = _mm256_sub_epi32( vThresh0, _mm256_set1_epi32( 1 ) );
 	__m256i vThresh2 = _mm256_srai_epi32( vThresh1, 1 );
 	__m256i vThresh = _mm256_blend_epi32( vThresh2, _mm256_set1_epi32( 0x7FFFFFFF ), 128 );
-
-	color_rgba weightedColors[8];
-	_mm256_storeu_si256( (__m256i *)weightedColors, vLerp256 );
-
-	uint8_t a[4];
-	uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
-	memcpy( a, &lerp, 4 );
-
-	int thresh[8];
-	_mm256_storeu_si256( (__m256i *)thresh, vThresh2 );
 
 	if( perceptual )
 	{
 		int l1[8], cr1[8], cb1[8];
+		__m128i vPweights = _mm_loadu_si128((const __m128i *)pweights);
+		__m256i vPercWeights256 = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
 
 #ifdef __AVX512BW__
 		__m512i vPercWeights = _mm512_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
@@ -1651,9 +1637,8 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		__m256i vR = _mm512_castsi512_si256( vRB3 );
 		__m256i vB = _mm512_extracti64x4_epi64( vRB3, 1 );
 #else
-		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
-		__m256i vL0a = _mm256_madd_epi16( vLerpa, vPercWeights );
-		__m256i vL0b = _mm256_madd_epi16( vLerpb, vPercWeights );
+		__m256i vL0a = _mm256_madd_epi16( vLerpa, vPercWeights256 );
+		__m256i vL0b = _mm256_madd_epi16( vLerpb, vPercWeights256 );
 		__m256i vL1a = _mm256_shuffle_epi32( vL0a, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 		__m256i vL1b = _mm256_shuffle_epi32( vL0b, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 		__m256i vL2a = _mm256_add_epi32( vL0a, vL1a );
@@ -1680,47 +1665,115 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		_mm256_storeu_si256( (__m256i *)cr1, vR );
 		_mm256_storeu_si256( (__m256i *)cb1, vB );
 
-		for (uint32_t i = 0; i < num_pixels; i++)
+		__m256i vZero = _mm256_setzero_si256();
+
+		__m256i vTmp0 = _mm256_unpacklo_epi32( vL, vB );
+		__m256i vTmp1 = _mm256_unpacklo_epi32( vR, vZero );
+		__m256i vTmp2 = _mm256_unpackhi_epi32( vL, vB );
+		__m256i vTmp3 = _mm256_unpackhi_epi32( vR, vZero );
+
+		__m256i vTmp4 = _mm256_unpacklo_epi32( vTmp0, vTmp1 );
+		__m256i vTmp5 = _mm256_unpackhi_epi32( vTmp0, vTmp1 );
+		__m256i vTmp6 = _mm256_unpacklo_epi32( vTmp2, vTmp3 );
+		__m256i vTmp7 = _mm256_unpackhi_epi32( vTmp2, vTmp3 );
+
+		__m128i vPxT[8] = {
+			_mm256_castsi256_si128( vTmp4 ),
+			_mm256_castsi256_si128( vTmp5 ),
+			_mm256_castsi256_si128( vTmp6 ),
+			_mm256_castsi256_si128( vTmp7 ),
+			_mm256_extracti128_si256( vTmp4, 1 ),
+			_mm256_extracti128_si256( vTmp5, 1 ),
+			_mm256_extracti128_si256( vTmp6, 1 ),
+			_mm256_extracti128_si256( vTmp7, 1 )
+		};
+
+		for (uint32_t i = 0; i < num_pixels; i+=4)
 		{
 			const color_rgba *pC = &pPixels[i];
 
-			int d = a[0] * pC->m_c[0] + a[1] * pC->m_c[1] + a[2] * pC->m_c[2];
+			__m128i vC0 = _mm_loadu_si128( (const __m128i *)pC );
+			__m256i vC1 = _mm256_cvtepu8_epi16( vC0 );
+			__m256i vD0 = _mm256_madd_epi16( vC1, vLerpSub256 );
+			__m128i vD1 = _mm_hadd_epi32( _mm256_castsi256_si128( vD0 ), _mm256_extracti128_si256( vD0, 1 ) );
 
-			// Find approximate selector
-			uint32_t s = 0;
-			if (d >= thresh[6])
-				s = 7;
-			else if (d >= thresh[5])
-				s = 6;
-			else if (d >= thresh[4])
-				s = 5;
-			else if (d >= thresh[3])
-				s = 4;
-			else if (d >= thresh[2])
-				s = 3;
-			else if (d >= thresh[1])
-				s = 2;
-			else if (d >= thresh[0])
-				s = 1;
+			int dtable[4];
+			_mm_storeu_si128( (__m128i *)dtable, vD1 );
 
-			// Compute error
-			const int l2 = pC->m_c[0] * 109 + pC->m_c[1] * 366 + pC->m_c[2] * 37;
-			const int cr2 = ((int)pC->m_c[0] << 9) - l2;
-			const int cb2 = ((int)pC->m_c[2] << 9) - l2;
+			__m256i v2L0 = _mm256_madd_epi16( vC1, vPercWeights256 );
+			__m256i v2L1 = _mm256_shuffle_epi32( v2L0, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+			__m256i v2L2 = _mm256_add_epi32( v2L0, v2L1 );
+			__m256i v2L3 = _mm256_shuffle_epi32( v2L2, _MM_SHUFFLE( 2, 0, 2, 0 ) );
+			__m128i v2L = _mm_blend_epi32( _mm256_castsi256_si128( v2L3 ), _mm256_extracti128_si256( v2L3, 1 ), 0xC );
 
-			const int dl = (l1[s] - l2) >> 8;
-			const int dcr = (cr1[s] - cr2) >> 8;
-			const int dcb = (cb1[s] - cb2) >> 8;
+			__m256i v2RB0 = _mm256_blend_epi16( vC1, _mm256_setzero_si256(), 0xAA );
+			__m256i v2RB1 = _mm256_slli_epi32( v2RB0, 9 );
+			__m256i v2RB2 = _mm256_sub_epi32( v2RB1, v2L2 );
+			__m256i v2RB3 = _mm256_permutevar8x32_epi32( v2RB2, _mm256_set_epi32( 7, 5, 3, 1, 6, 4, 2, 0 ) );
 
-			int ie = (pweights[0] * dl * dl) + (pweights[1] * dcr * dcr) + (pweights[2] * dcb * dcb);
+			__m128i v2Cr = _mm256_castsi256_si128( v2RB3 );
+			__m128i v2Cb = _mm256_extracti128_si256( v2RB3, 1 );
 
-			total_err += ie;
+			__m128i v2Tmp0 = _mm_unpacklo_epi32( v2L, v2Cb );
+			__m128i v2Tmp1 = _mm_unpacklo_epi32( v2Cr, _mm256_castsi256_si128( vZero ) );
+			__m128i v2Tmp2 = _mm_unpackhi_epi32( v2L, v2Cb );
+			__m128i v2Tmp3 = _mm_unpackhi_epi32( v2Cr, _mm256_castsi256_si128( vZero ) );
+
+			__m128i v2PxT[4] = {
+				_mm_unpacklo_epi32( v2Tmp0, v2Tmp1 ),
+				_mm_unpackhi_epi32( v2Tmp0, v2Tmp1 ),
+				_mm_unpacklo_epi32( v2Tmp2, v2Tmp3 ),
+				_mm_unpackhi_epi32( v2Tmp2, v2Tmp3 )
+			};
+
+			const uint32_t end = minimumu( i + 4, num_pixels );
+			for (uint32_t j=i; j<end; j++)
+			{
+				// Find approximate selector
+				__m256i vD = _mm256_set1_epi32( dtable[j-i] );
+#ifdef __AVX512VL__
+				__mmask8 vCmp = _mm256_cmpgt_epi32_mask( vD, vThresh );
+				uint32_t s = _mm_popcnt_u32( vCmp );
+#else
+				__m256i vCmp = _mm256_cmpgt_epi32( vD, vThresh );
+				uint32_t s = _mm_popcnt_u32( _mm256_movemask_epi8( vCmp ) ) / 4;
+#endif
+
+				// Compute error
+				__m128i vPx = vPxT[s];
+				__m128i v2Px = v2PxT[j-i];
+
+				__m128i vSub = _mm_sub_epi32( vPx, v2Px );
+				__m128i vShift = _mm_srai_epi32( vSub, 8 );
+				__m128i vMul0 = _mm_mullo_epi32( vShift, vShift );
+				__m128i vMul1 = _mm_mullo_epi32( vMul0, vPweights );
+				__m128i vAdd0 = _mm_shuffle_epi32( vMul1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+				__m128i vAdd1 = _mm_add_epi32( vMul1, vAdd0 );
+				__m128i vAdd2 = _mm_shuffle_epi32( vAdd1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+				__m128i vAdd3 = _mm_add_epi32( vAdd1, vAdd2 );
+
+				int ie = _mm_cvtsi128_si32( vAdd3 );
+				total_err += ie;
+				if (total_err > best_err_so_far)
+					break;
+
+				pC++;
+			}
 			if (total_err > best_err_so_far)
 				break;
 		}
 	}
 	else
 	{
+		color_rgba weightedColors[8];
+		_mm256_storeu_si256( (__m256i *)weightedColors, vLerp256 );
+
+		uint8_t a[4];
+		uint32_t lerp = _mm_cvtsi128_si32( vLerpSub128 );
+		memcpy( a, &lerp, 4 );
+
+		int thresh[8];
+		_mm256_storeu_si256( (__m256i *)thresh, vThresh2 );
 #else
 	// Find RGB bounds as an approximation of the block's principle axis
 	uint32_t lr = 255, lg = 255, lb = 255;
