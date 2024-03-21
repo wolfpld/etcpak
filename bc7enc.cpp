@@ -513,7 +513,7 @@ static inline color_rgba scale_color(const color_rgba *pC, const color_cell_comp
 	return results;
 }
 
-static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const color_rgba *pE2, bool perceptual, const uint32_t weights[4])
+static inline uint32_t compute_color_distance_rgb(const color_rgba *pE1, const color_rgba *pE2, bool perceptual, const uint32_t weights[4])
 {
 #ifdef __AVX2__
 	uint32_t e1, e2;
@@ -585,7 +585,7 @@ static inline uint64_t compute_color_distance_rgb(const color_rgba *pE1, const c
 #endif
 }
 
-static inline uint64_t compute_color_distance_rgba(const color_rgba *pE1, const color_rgba *pE2, bool perceptual, const uint32_t weights[4])
+static inline uint32_t compute_color_distance_rgba(const color_rgba *pE1, const color_rgba *pE2, bool perceptual, const uint32_t weights[4])
 {
 	int da = (int)pE1->m_c[3] - (int)pE2->m_c[3];
 	return compute_color_distance_rgb(pE1, pE2, perceptual, weights) + (weights[3] * (uint32_t)(da * da));
@@ -749,7 +749,7 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	const int dg = actualMaxColor.m_c[1] - lg;
 	const int db = actualMaxColor.m_c[2] - lb;
 	
-	uint64_t total_err = 0;
+	uint32_t total_err = 0;
 
 	if (pComp_params->m_force_selectors)
 	{
@@ -757,7 +757,7 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 		{
 			const uint32_t best_sel = pComp_params->m_selectors[i];
 
-			uint64_t best_err;
+			uint32_t best_err;
 			if (pParams->m_has_alpha)
 				best_err = compute_color_distance_rgba(&weightedColors[best_sel], &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
 			else
@@ -788,8 +788,8 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 				int best_sel = (int)((float)((r - lr) * dr + (g - lg) * dg + (b - lb) * db + (a - la) * da) * f + .5f);
 				best_sel = clampi(best_sel, 1, N - 1);
 
-				uint64_t err0 = compute_color_distance_rgba(&weightedColors[best_sel - 1], pC, false, pParams->m_weights);
-				uint64_t err1 = compute_color_distance_rgba(&weightedColors[best_sel], pC, false, pParams->m_weights);
+				uint32_t err0 = compute_color_distance_rgba(&weightedColors[best_sel - 1], pC, false, pParams->m_weights);
+				uint32_t err1 = compute_color_distance_rgba(&weightedColors[best_sel], pC, false, pParams->m_weights);
 
 				if (err1 > err0)
 				{
@@ -815,11 +815,11 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 				int sel = (int)((float)((r - lr) * dr + (g - lg) * dg + (b - lb) * db) * f + .5f);
 				sel = clampi(sel, 1, N - 1);
 
-				uint64_t err0 = compute_color_distance_rgb(&weightedColors[sel - 1], pC, false, pParams->m_weights);
-				uint64_t err1 = compute_color_distance_rgb(&weightedColors[sel], pC, false, pParams->m_weights);
+				uint32_t err0 = compute_color_distance_rgb(&weightedColors[sel - 1], pC, false, pParams->m_weights);
+				uint32_t err1 = compute_color_distance_rgb(&weightedColors[sel], pC, false, pParams->m_weights);
 
 				int best_sel = sel;
-				uint64_t best_err = err1;
+				uint32_t best_err = err1;
 				if (err0 < best_err)
 				{
 					best_err = err0;
@@ -838,12 +838,12 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 		{
 			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 			{
-				uint64_t best_err = UINT64_MAX;
+				uint32_t best_err = UINT32_MAX;
 				uint32_t best_sel = 0;
 
 				for (uint32_t j = 0; j < N; j++)
 				{
-					uint64_t err = compute_color_distance_rgba(&weightedColors[j], &pParams->m_pPixels[i], true, pParams->m_weights);
+					uint32_t err = compute_color_distance_rgba(&weightedColors[j], &pParams->m_pPixels[i], true, pParams->m_weights);
 					if (err < best_err)
 					{
 						best_err = err;
@@ -859,12 +859,12 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 		{
 			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 			{
-				uint64_t best_err = UINT64_MAX;
+				uint32_t best_err = UINT32_MAX;
 				uint32_t best_sel = 0;
 
 				for (uint32_t j = 0; j < N; j++)
 				{
-					uint64_t err = compute_color_distance_rgb(&weightedColors[j], &pParams->m_pPixels[i], true, pParams->m_weights);
+					uint32_t err = compute_color_distance_rgb(&weightedColors[j], &pParams->m_pPixels[i], true, pParams->m_weights);
 					if (err < best_err)
 					{
 						best_err = err;
