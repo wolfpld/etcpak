@@ -834,14 +834,13 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	}
 	else
 	{
-		// TODO: This could be improved.
-		for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+		if (pParams->m_has_alpha)
 		{
-			uint64_t best_err = UINT64_MAX;
-			uint32_t best_sel = 0;
-
-			if (pParams->m_has_alpha)
+			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 			{
+				uint64_t best_err = UINT64_MAX;
+				uint32_t best_sel = 0;
+
 				for (uint32_t j = 0; j < N; j++)
 				{
 					uint64_t err = compute_color_distance_rgba(&weightedColors[j], &pParams->m_pPixels[i], true, pParams->m_weights);
@@ -851,9 +850,18 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 						best_sel = j;
 					}
 				}
+
+				total_err += best_err;
+				pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 			}
-			else
+		}
+		else
+		{
+			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 			{
+				uint64_t best_err = UINT64_MAX;
+				uint32_t best_sel = 0;
+
 				for (uint32_t j = 0; j < N; j++)
 				{
 					uint64_t err = compute_color_distance_rgb(&weightedColors[j], &pParams->m_pPixels[i], true, pParams->m_weights);
@@ -863,11 +871,10 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 						best_sel = j;
 					}
 				}
+
+				total_err += best_err;
+				pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 			}
-
-			total_err += best_err;
-
-			pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 		}
 	}
 
