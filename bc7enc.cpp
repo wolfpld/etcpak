@@ -1624,9 +1624,9 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 #ifdef __AVX512BW__
 		__m512i vPercWeights = _mm512_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
 		__m512i vL0 = _mm512_madd_epi16( vLerp, vPercWeights );
-		__m512i vL1 = _mm512_shuffle_epi32( vL0, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+		__m512i vL1 = _mm512_shuffle_epi32( vL0, (_MM_PERM_ENUM)_MM_SHUFFLE( 2, 3, 0, 1 ) );
 		__m512i vL2 = _mm512_add_epi32( vL0, vL1 );
-		__m512i vL3 = _mm512_shuffle_epi32( vL2, _MM_SHUFFLE( 2, 0, 2, 0 ) );
+		__m512i vL3 = _mm512_shuffle_epi32( vL2, (_MM_PERM_ENUM)_MM_SHUFFLE( 2, 0, 2, 0 ) );
 		__m256i vL4 = _mm256_blend_epi32( _mm512_castsi512_si256( vL3 ), _mm512_extracti64x4_epi64( vL3, 1 ), 0xCC );
 		__m256i vL = _mm256_permute4x64_epi64( vL4, _MM_SHUFFLE( 3, 1, 2, 0 ) );
 
