@@ -515,41 +515,47 @@ static inline color_rgba scale_color(const color_rgba *pC, const color_cell_comp
 }
 
 #ifdef __AVX512BW__
-static inline __m128i compute_color_distance_rgb_perc_4x_512(const color_rgba *pE1, const color_rgba *pE2, const uint32_t weights[4])
+static inline __m512i compute_ycbcr_128x4( const color_rgba *pC )
 {
 	uint32_t px;
-	memcpy( &px, pE2, 4 );
+	memcpy( &px, pC, 4 );
 
-	__m512i vE1 = _mm512_cvtepu8_epi32( _mm_loadu_si128((const __m128i*)pE1) );
+	__m128i vPercWeights = _mm_set_epi32( 0, 37, 366, 109 );
+
 	__m128i vE2 = _mm_cvtepu8_epi32( _mm_cvtsi32_si128( px ) );
+	__m128i vL1 = _mm_mullo_epi32( vE2, vPercWeights );
+	__m128i vL2 = _mm_shuffle_epi32( vL1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m128i vL3 = _mm_add_epi32( vL1, vL2 );
+	__m128i vL4 = _mm_shuffle_epi32( vL3, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m128i vL5 = _mm_add_epi32( vL3, vL4 );
+	__m128i vL6 = _mm_blend_epi32( _mm_setzero_si128(), vL5, 0x1 );
+	__m128i vCrb1 = _mm_slli_epi32( vE2, 9 );
+	__m128i vCrb2 = _mm_sub_epi32( vCrb1, vL5 );
+	__m128i vCrb3 = _mm_and_si128( vCrb2, _mm_set_epi64x( 0xFFFFFFFF, 0xFFFFFFFF ) );
+	__m128i vCrb4 = _mm_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
+	__m128i vD1 = _mm_or_si128( vL6, vCrb4 );
 
-	__m512i vPercWeights512 = _mm512_set_epi32( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
-	__m128i vPercWeights = _mm512_castsi512_si128( vPercWeights512 );
-	__m512i vL1a = _mm512_mullo_epi32( vE1, vPercWeights512 );
-	__m128i vL1b = _mm_mullo_epi32( vE2, vPercWeights );
-	__m512i vL2a = _mm512_shuffle_epi32( vL1a, _MM_SHUFFLE( 2, 3, 0, 1 ) );
-	__m128i vL2b = _mm_shuffle_epi32( vL1b, _MM_SHUFFLE( 2, 3, 0, 1 ) );
-	__m512i vL3a = _mm512_add_epi32( vL1a, vL2a );
-	__m128i vL3b = _mm_add_epi32( vL1b, vL2b );
-	__m512i vL4a = _mm512_shuffle_epi32( vL3a, _MM_SHUFFLE( 1, 0, 3, 2 ) );
-	__m128i vL4b = _mm_shuffle_epi32( vL3b, _MM_SHUFFLE( 1, 0, 3, 2 ) );
-	__m512i vL5a = _mm512_add_epi32( vL3a, vL4a );
-	__m128i vL5b = _mm_add_epi32( vL3b, vL4b );
-	__m512i vL6a = _mm512_mask_blend_epi32( 0x1111, _mm512_setzero_si512(), vL5a );
-	__m128i vL6b = _mm_blend_epi32( _mm_setzero_si128(), vL5b, 0x1 );
-	__m512i vCrb1a = _mm512_slli_epi32( vE1, 9 );
-	__m128i vCrb1b = _mm_slli_epi32( vE2, 9 );
-	__m512i vCrb2a = _mm512_sub_epi32( vCrb1a, vL5a );
-	__m128i vCrb2b = _mm_sub_epi32( vCrb1b, vL5b );
-	__m512i vCrb3a = _mm512_and_si512( vCrb2a, _mm512_set_epi64( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF ) );
-	__m128i vCrb3b = _mm_and_si128( vCrb2b, _mm_set_epi64x( 0xFFFFFFFF, 0xFFFFFFFF ) );
-	__m512i vCrb4a = _mm512_shuffle_epi32( vCrb3a, _MM_SHUFFLE( 3, 2, 0, 3 ) );
-	__m128i vCrb4b = _mm_shuffle_epi32( vCrb3b, _MM_SHUFFLE( 3, 2, 0, 3 ) );
+	return _mm512_broadcast_i32x4( vD1 );
+}
 
-	__m512i vD1a = _mm512_or_si512( vL6a, vCrb4a );
-	__m128i vD1b = _mm_or_si128( vL6b, vCrb4b );
-	__m512i vD1c = _mm512_broadcast_i32x4( vD1b );
-	__m512i vD2 = _mm512_sub_epi32( vD1a, vD1c );
+static inline __m128i compute_color_distance_rgb_perc_4x_512(const color_rgba *pE1, const __m512i vD1c, const uint32_t weights[4])
+{
+	__m512i vE1 = _mm512_cvtepu8_epi32( _mm_loadu_si128((const __m128i*)pE1) );
+
+	__m512i vPercWeights = _mm512_set_epi32( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
+	__m512i vL1 = _mm512_mullo_epi32( vE1, vPercWeights );
+	__m512i vL2 = _mm512_shuffle_epi32( vL1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m512i vL3 = _mm512_add_epi32( vL1, vL2 );
+	__m512i vL4 = _mm512_shuffle_epi32( vL3, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m512i vL5 = _mm512_add_epi32( vL3, vL4 );
+	__m512i vL6 = _mm512_mask_blend_epi32( 0x1111, _mm512_setzero_si512(), vL5 );
+	__m512i vCrb1 = _mm512_slli_epi32( vE1, 9 );
+	__m512i vCrb2 = _mm512_sub_epi32( vCrb1, vL5 );
+	__m512i vCrb3 = _mm512_and_si512( vCrb2, _mm512_set_epi64( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF ) );
+	__m512i vCrb4 = _mm512_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
+
+	__m512i vD1 = _mm512_or_si512( vL6, vCrb4 );
+	__m512i vD2 = _mm512_sub_epi32( vD1, vD1c );
 	__m512i vDelta = _mm512_srai_epi32( vD2, 8 );
 
 	__m512i vWeights = _mm512_broadcast_i32x4( _mm_loadu_si128( (const __m128i*)weights ) );
@@ -915,7 +921,8 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 			case 4:
 				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 				{
-					__m128i err1 = compute_color_distance_rgb_perc_4x_512(&weightedColors[0], &pParams->m_pPixels[i], pParams->m_weights);
+					__m512i px = compute_ycbcr_128x4( &pParams->m_pPixels[i] );
+					__m128i err1 = compute_color_distance_rgb_perc_4x_512(&weightedColors[0], px, pParams->m_weights);
 					__m128i min0 = _mm_shuffle_epi32( err1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
 					__m128i min1 = _mm_min_epi32( err1, min0 );
 					__m128i min2 = _mm_shuffle_epi32( min1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
@@ -929,8 +936,9 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 			case 8:
 				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 				{
-					__m128i err1 = compute_color_distance_rgb_perc_4x_512(&weightedColors[0], &pParams->m_pPixels[i], pParams->m_weights);
-					__m128i err2 = compute_color_distance_rgb_perc_4x_512(&weightedColors[4], &pParams->m_pPixels[i], pParams->m_weights);
+					__m512i px = compute_ycbcr_128x4( &pParams->m_pPixels[i] );
+					__m128i err1 = compute_color_distance_rgb_perc_4x_512(&weightedColors[0], px, pParams->m_weights);
+					__m128i err2 = compute_color_distance_rgb_perc_4x_512(&weightedColors[4], px, pParams->m_weights);
 					__m128i min0 = _mm_min_epi32( err1, err2 );
 					__m128i min1 = _mm_shuffle_epi32( min0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
 					__m128i min2 = _mm_min_epi32( min0, min1 );
@@ -947,10 +955,11 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 			case 16:
 				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 				{
-					__m128i err1 = compute_color_distance_rgb_perc_4x_512(&weightedColors[0], &pParams->m_pPixels[i], pParams->m_weights);
-					__m128i err2 = compute_color_distance_rgb_perc_4x_512(&weightedColors[4], &pParams->m_pPixels[i], pParams->m_weights);
-					__m128i err3 = compute_color_distance_rgb_perc_4x_512(&weightedColors[8], &pParams->m_pPixels[i], pParams->m_weights);
-					__m128i err4 = compute_color_distance_rgb_perc_4x_512(&weightedColors[12], &pParams->m_pPixels[i], pParams->m_weights);
+					__m512i px = compute_ycbcr_128x4( &pParams->m_pPixels[i] );
+					__m128i err1 = compute_color_distance_rgb_perc_4x_512(&weightedColors[0], px, pParams->m_weights);
+					__m128i err2 = compute_color_distance_rgb_perc_4x_512(&weightedColors[4], px, pParams->m_weights);
+					__m128i err3 = compute_color_distance_rgb_perc_4x_512(&weightedColors[8], px, pParams->m_weights);
+					__m128i err4 = compute_color_distance_rgb_perc_4x_512(&weightedColors[12], px, pParams->m_weights);
 					__m128i min0 = _mm_min_epi32( err1, err2 );
 					__m128i min1 = _mm_min_epi32( err3, err4 );
 					__m128i min2 = _mm_min_epi32( min0, min1 );
