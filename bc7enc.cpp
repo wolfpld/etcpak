@@ -1093,10 +1093,11 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 					__m128i min1 = _mm_min_epi32( err1, min0 );
 					__m128i min2 = _mm_shuffle_epi32( min1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 					__m128i min3 = _mm_min_epi32( min1, min2 );
-					uint32_t mask = _mm_cmpeq_epi32_mask( min3, err1 );
+					__m128i mask0 = _mm_cmpeq_epi32( min3, err1 );
+					uint32_t mask = _mm_movemask_epi8( mask0 );
 
 					total_err += _mm_cvtsi128_si32( min3 );
-					pResults->m_pSelectors_temp[i] = (uint8_t)std::countr_zero( mask );
+					pResults->m_pSelectors_temp[i] = (uint8_t)( std::countr_zero( mask ) / 4 );
 				}
 				break;
 			}
@@ -1115,12 +1116,14 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 					__m128i min2 = _mm_min_epi32( min0, min1 );
 					__m128i min3 = _mm_shuffle_epi32( min2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 					__m128i min4 = _mm_min_epi32( min2, min3 );
+					__m128i mask0 = _mm_cmpeq_epi32( min4, err1 );
+					__m128i mask1 = _mm_cmpeq_epi32( min4, err2 );
 					uint32_t mask =
-						(uint32_t(_mm_cmpeq_epi32_mask( min4, err1 )) << 0) |
-						(uint32_t(_mm_cmpeq_epi32_mask( min4, err2 )) << 4);
+						(uint32_t(_mm_movemask_epi8( mask0 )) << 0) |
+						(uint32_t(_mm_movemask_epi8( mask1 )) << 16);
 
 					total_err += _mm_cvtsi128_si32( min4 );
-					pResults->m_pSelectors_temp[i] = (uint8_t)std::countr_zero( mask );
+					pResults->m_pSelectors_temp[i] = (uint8_t)( std::countr_zero( mask ) / 4 );
 				}
 				break;
 			}
@@ -1147,14 +1150,18 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 					__m128i min4 = _mm_min_epi32( min2, min3 );
 					__m128i min5 = _mm_shuffle_epi32( min4, _MM_SHUFFLE( 2, 3, 0, 1 ) );
 					__m128i min6 = _mm_min_epi32( min4, min5 );
-					uint32_t mask =
-						(uint32_t(_mm_cmpeq_epi32_mask( min6, err1 )) << 0) |
-						(uint32_t(_mm_cmpeq_epi32_mask( min6, err2 )) << 4) |
-						(uint32_t(_mm_cmpeq_epi32_mask( min6, err3 )) << 8) |
-						(uint32_t(_mm_cmpeq_epi32_mask( min6, err4 )) << 12);
+					__m128i mask0 = _mm_cmpeq_epi32( min6, err1 );
+					__m128i mask1 = _mm_cmpeq_epi32( min6, err2 );
+					__m128i mask2 = _mm_cmpeq_epi32( min6, err3 );
+					__m128i mask3 = _mm_cmpeq_epi32( min6, err4 );
+					uint64_t mask =
+						(uint64_t(_mm_movemask_epi8( mask0 )) << 0) |
+						(uint64_t(_mm_movemask_epi8( mask1 )) << 16) |
+						(uint64_t(_mm_movemask_epi8( mask2 )) << 32) |
+						(uint64_t(_mm_movemask_epi8( mask3 )) << 48);
 
 					total_err += _mm_cvtsi128_si32( min6 );
-					pResults->m_pSelectors_temp[i] = (uint8_t)std::countr_zero( mask );
+					pResults->m_pSelectors_temp[i] = (uint8_t)( std::countr_zero( mask ) / 4 );
 				}
 				break;
 			}
