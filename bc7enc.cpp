@@ -1103,16 +1103,16 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	}
 	else
 	{
-		color_rgba actualMinColor = scale_color(&quant[0], pParams);
-		color_rgba actualMaxColor = scale_color(&quant[1], pParams);
+		quant[0] = scale_color(&quant[0], pParams);
+		quant[1] = scale_color(&quant[1], pParams);
 
-		weightedColors[0] = actualMinColor;
-		weightedColors[N - 1] = actualMaxColor;
+		weightedColors[0] = quant[0];
+		weightedColors[N - 1] = quant[1];
 
 		const uint32_t nc = pParams->m_has_alpha ? 4 : 3;
 		for (uint32_t i = 1; i < (N - 1); i++)
 			for (uint32_t j = 0; j < nc; j++)
-				weightedColors[i].m_c[j] = (uint8_t)((actualMinColor.m_c[j] * (64 - pParams->m_pSelector_weights[i]) + actualMaxColor.m_c[j] * pParams->m_pSelector_weights[i] + 32) >> 6);
+				weightedColors[i].m_c[j] = (uint8_t)((quant[0].m_c[j] * (64 - pParams->m_pSelector_weights[i]) + quant[1].m_c[j] * pParams->m_pSelector_weights[i] + 32) >> 6);
 
 		if (pParams->m_has_alpha)
 		{
@@ -1607,7 +1607,7 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 
 				for (int p = 0; p < 2; p++)
 				{
-					color_rgba xMinColor, xMaxColor;
+					color_rgba xColor[2];
 
 					// Notes: The pbit controls which quantization intervals are selected.
 					// total_levels=2^(comp_bits+1), where comp_bits=4 for mode 0, etc.
@@ -1620,30 +1620,31 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 						{
 							int vl = (int)(xl.m_c[c] * 31.0f);
 							vl += (xl.m_c[c] > g_mode7_rgba_midpoints[vl][p]);
-							xMinColor.m_c[c] = (uint8_t)clampi(vl * 2 + p, p, 63 - 1 + p);
+							xColor[0].m_c[c] = (uint8_t)clampi(vl * 2 + p, p, 63 - 1 + p);
 
 							int vh = (int)(xh.m_c[c] * 31.0f);
 							vh += (xh.m_c[c] > g_mode7_rgba_midpoints[vh][p]);
-							xMaxColor.m_c[c] = (uint8_t)clampi(vh * 2 + p, p, 63 - 1 + p);
+							xColor[1].m_c[c] = (uint8_t)clampi(vh * 2 + p, p, 63 - 1 + p);
 						}
 					}
 					else
 					{
 						for (uint32_t c = 0; c < 4; c++)
 						{
-							xMinColor.m_c[c] = (uint8_t)(clampi(((int)((xl.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
-							xMaxColor.m_c[c] = (uint8_t)(clampi(((int)((xh.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
+							xColor[0].m_c[c] = (uint8_t)(clampi(((int)((xl.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
+							xColor[1].m_c[c] = (uint8_t)(clampi(((int)((xh.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
 						}
 					}
 
-					color_rgba scaledLow = scale_color(&xMinColor, pParams);
-					color_rgba scaledHigh = scale_color(&xMaxColor, pParams);
+					color_rgba scaled[2];
+					scaled[0] = scale_color(&xColor[0], pParams);
+					scaled[1] = scale_color(&xColor[1], pParams);
 
 					float err0 = 0, err1 = 0;
 					for (int i = 0; i < totalComps; i++)
 					{
-						err0 += squaref(scaledLow.m_c[i] - xl.m_c[i] * 255.0f);
-						err1 += squaref(scaledHigh.m_c[i] - xh.m_c[i] * 255.0f);
+						err0 += squaref(scaled[0].m_c[i] - xl.m_c[i] * 255.0f);
+						err1 += squaref(scaled[1].m_c[i] - xh.m_c[i] * 255.0f);
 					}
 
 					if (p == 1)
@@ -1657,10 +1658,10 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 						best_err0 = err0;
 						best_pbits[0] = p;
 
-						bestMinColor.m_c[0] = xMinColor.m_c[0] >> 1;
-						bestMinColor.m_c[1] = xMinColor.m_c[1] >> 1;
-						bestMinColor.m_c[2] = xMinColor.m_c[2] >> 1;
-						bestMinColor.m_c[3] = xMinColor.m_c[3] >> 1;
+						bestMinColor.m_c[0] = xColor[0].m_c[0] >> 1;
+						bestMinColor.m_c[1] = xColor[0].m_c[1] >> 1;
+						bestMinColor.m_c[2] = xColor[0].m_c[2] >> 1;
+						bestMinColor.m_c[3] = xColor[0].m_c[3] >> 1;
 					}
 
 					if (err1 < best_err1)
@@ -1668,10 +1669,10 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 						best_err1 = err1;
 						best_pbits[1] = p;
 
-						bestMaxColor.m_c[0] = xMaxColor.m_c[0] >> 1;
-						bestMaxColor.m_c[1] = xMaxColor.m_c[1] >> 1;
-						bestMaxColor.m_c[2] = xMaxColor.m_c[2] >> 1;
-						bestMaxColor.m_c[3] = xMaxColor.m_c[3] >> 1;
+						bestMaxColor.m_c[0] = xColor[1].m_c[0] >> 1;
+						bestMaxColor.m_c[1] = xColor[1].m_c[1] >> 1;
+						bestMaxColor.m_c[2] = xColor[1].m_c[2] >> 1;
+						bestMaxColor.m_c[3] = xColor[1].m_c[3] >> 1;
 					}
 				}
 			}
@@ -1715,35 +1716,36 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 
 				for (int p = 0; p < 2; p++)
 				{
-					color_rgba xMinColor, xMaxColor;
+					color_rgba xColor[2];
 					if (pParams->m_comp_bits == 6)
 					{
 						for (uint32_t c = 0; c < 4; c++)
 						{
 							int vl = (int)(xl.m_c[c] * 63.0f);
 							vl += (xl.m_c[c] > g_mode1_rgba_midpoints[vl][p]);
-							xMinColor.m_c[c] = (uint8_t)clampi(vl * 2 + p, p, 127 - 1 + p);
+							xColor[0].m_c[c] = (uint8_t)clampi(vl * 2 + p, p, 127 - 1 + p);
 
 							int vh = (int)(xh.m_c[c] * 63.0f);
 							vh += (xh.m_c[c] > g_mode1_rgba_midpoints[vh][p]);
-							xMaxColor.m_c[c] = (uint8_t)clampi(vh * 2 + p, p, 127 - 1 + p);
+							xColor[1].m_c[c] = (uint8_t)clampi(vh * 2 + p, p, 127 - 1 + p);
 						}
 					}
 					else
 					{
 						for (uint32_t c = 0; c < 4; c++)
 						{
-							xMinColor.m_c[c] = (uint8_t)(clampi(((int)((xl.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
-							xMaxColor.m_c[c] = (uint8_t)(clampi(((int)((xh.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
+							xColor[0].m_c[c] = (uint8_t)(clampi(((int)((xl.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
+							xColor[1].m_c[c] = (uint8_t)(clampi(((int)((xh.m_c[c] * scalep - p) / 2.0f + .5f)) * 2 + p, p, iscalep - 1 + p));
 						}
 					}
 
-					color_rgba scaledLow = scale_color(&xMinColor, pParams);
-					color_rgba scaledHigh = scale_color(&xMaxColor, pParams);
+					color_rgba scaled[2];
+					scaled[0] = scale_color(&xColor[0], pParams);
+					scaled[1] = scale_color(&xColor[1], pParams);
 
 					float err = 0;
 					for (int i = 0; i < totalComps; i++)
-						err += squaref((scaledLow.m_c[i] / 255.0f) - xl.m_c[i]) + squaref((scaledHigh.m_c[i] / 255.0f) - xh.m_c[i]);
+						err += squaref((scaled[0].m_c[i] / 255.0f) - xl.m_c[i]) + squaref((scaled[1].m_c[i] / 255.0f) - xh.m_c[i]);
 
 					if (p == 1)
 						err *= pComp_params->m_pbit1_weight;
@@ -1755,8 +1757,8 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 						best_pbits[1] = p;
 						for (uint32_t j = 0; j < 4; j++)
 						{
-							bestMinColor.m_c[j] = xMinColor.m_c[j] >> 1;
-							bestMaxColor.m_c[j] = xMaxColor.m_c[j] >> 1;
+							bestMinColor.m_c[j] = xColor[0].m_c[j] >> 1;
+							bestMaxColor.m_c[j] = xColor[1].m_c[j] >> 1;
 						}
 					}
 				}
