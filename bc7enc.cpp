@@ -970,8 +970,7 @@ static uint64_t pack_mode7_to_one_color(const color_cell_compressor_params* pPar
 static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHigh, const uint32_t pbits[2], const color_cell_compressor_params *pParams, color_cell_compressor_results *pResults,
 	const bc7enc_compress_block_params* pComp_params)
 {
-	color_rgba quantMinColor = *pLow;
-	color_rgba quantMaxColor = *pHigh;
+	color_rgba quant[2] = { *pLow, *pHigh };
 
 	if (pParams->m_has_pbits)
 	{
@@ -985,42 +984,41 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 			maxPBit = pbits[1];
 		}
 
-		quantMinColor.m_c[0] = (uint8_t)((pLow->m_c[0] << 1) | minPBit);
-		quantMinColor.m_c[1] = (uint8_t)((pLow->m_c[1] << 1) | minPBit);
-		quantMinColor.m_c[2] = (uint8_t)((pLow->m_c[2] << 1) | minPBit);
-		quantMinColor.m_c[3] = (uint8_t)((pLow->m_c[3] << 1) | minPBit);
+		quant[0].m_c[0] = (uint8_t)((pLow->m_c[0] << 1) | minPBit);
+		quant[0].m_c[1] = (uint8_t)((pLow->m_c[1] << 1) | minPBit);
+		quant[0].m_c[2] = (uint8_t)((pLow->m_c[2] << 1) | minPBit);
+		quant[0].m_c[3] = (uint8_t)((pLow->m_c[3] << 1) | minPBit);
 
-		quantMaxColor.m_c[0] = (uint8_t)((pHigh->m_c[0] << 1) | maxPBit);
-		quantMaxColor.m_c[1] = (uint8_t)((pHigh->m_c[1] << 1) | maxPBit);
-		quantMaxColor.m_c[2] = (uint8_t)((pHigh->m_c[2] << 1) | maxPBit);
-		quantMaxColor.m_c[3] = (uint8_t)((pHigh->m_c[3] << 1) | maxPBit);
+		quant[1].m_c[0] = (uint8_t)((pHigh->m_c[0] << 1) | maxPBit);
+		quant[1].m_c[1] = (uint8_t)((pHigh->m_c[1] << 1) | maxPBit);
+		quant[1].m_c[2] = (uint8_t)((pHigh->m_c[2] << 1) | maxPBit);
+		quant[1].m_c[3] = (uint8_t)((pHigh->m_c[3] << 1) | maxPBit);
 	}
 
-	color_rgba actualMinColor = scale_color(&quantMinColor, pParams);
-	color_rgba actualMaxColor = scale_color(&quantMaxColor, pParams);
-
-	const uint32_t N = pParams->m_num_selector_weights;
-
 	color_rgba weightedColors[16];
-	weightedColors[0] = actualMinColor;
-	weightedColors[N - 1] = actualMaxColor;
-
-	const uint32_t nc = pParams->m_has_alpha ? 4 : 3;
-	for (uint32_t i = 1; i < (N - 1); i++)
-		for (uint32_t j = 0; j < nc; j++)
-			weightedColors[i].m_c[j] = (uint8_t)((actualMinColor.m_c[j] * (64 - pParams->m_pSelector_weights[i]) + actualMaxColor.m_c[j] * pParams->m_pSelector_weights[i] + 32) >> 6);
-
-	const int lr = actualMinColor.m_c[0];
-	const int lg = actualMinColor.m_c[1];
-	const int lb = actualMinColor.m_c[2];
-	const int dr = actualMaxColor.m_c[0] - lr;
-	const int dg = actualMaxColor.m_c[1] - lg;
-	const int db = actualMaxColor.m_c[2] - lb;
-	
+	const uint32_t N = pParams->m_num_selector_weights;
 	uint32_t total_err = 0;
 
 	if (pComp_params->m_force_selectors || !pParams->m_perceptual)
 	{
+		color_rgba actualMinColor = scale_color(&quant[0], pParams);
+		color_rgba actualMaxColor = scale_color(&quant[1], pParams);
+
+		weightedColors[0] = actualMinColor;
+		weightedColors[N - 1] = actualMaxColor;
+
+		const uint32_t nc = pParams->m_has_alpha ? 4 : 3;
+		for (uint32_t i = 1; i < (N - 1); i++)
+			for (uint32_t j = 0; j < nc; j++)
+				weightedColors[i].m_c[j] = (uint8_t)((actualMinColor.m_c[j] * (64 - pParams->m_pSelector_weights[i]) + actualMaxColor.m_c[j] * pParams->m_pSelector_weights[i] + 32) >> 6);
+
+		const int lr = actualMinColor.m_c[0];
+		const int lg = actualMinColor.m_c[1];
+		const int lb = actualMinColor.m_c[2];
+		const int dr = actualMaxColor.m_c[0] - lr;
+		const int dg = actualMaxColor.m_c[1] - lg;
+		const int db = actualMaxColor.m_c[2] - lb;
+
 		if (pComp_params->m_force_selectors)
 		{
 			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
@@ -1105,6 +1103,17 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	}
 	else
 	{
+		color_rgba actualMinColor = scale_color(&quant[0], pParams);
+		color_rgba actualMaxColor = scale_color(&quant[1], pParams);
+
+		weightedColors[0] = actualMinColor;
+		weightedColors[N - 1] = actualMaxColor;
+
+		const uint32_t nc = pParams->m_has_alpha ? 4 : 3;
+		for (uint32_t i = 1; i < (N - 1); i++)
+			for (uint32_t j = 0; j < nc; j++)
+				weightedColors[i].m_c[j] = (uint8_t)((actualMinColor.m_c[j] * (64 - pParams->m_pSelector_weights[i]) + actualMaxColor.m_c[j] * pParams->m_pSelector_weights[i] + 32) >> 6);
+
 		if (pParams->m_has_alpha)
 		{
 #if defined __AVX512BW__ && defined __AVX512VL__
