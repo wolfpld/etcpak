@@ -1019,84 +1019,87 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	
 	uint32_t total_err = 0;
 
-	if (pComp_params->m_force_selectors)
+	if (pComp_params->m_force_selectors || !pParams->m_perceptual)
 	{
-		for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+		if (pComp_params->m_force_selectors)
 		{
-			const uint32_t best_sel = pComp_params->m_selectors[i];
-
-			uint32_t best_err;
-			if (pParams->m_has_alpha)
-				best_err = compute_color_distance_rgba(&weightedColors[best_sel], &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
-			else
-				best_err = compute_color_distance_rgb(&weightedColors[best_sel], &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
-
-			total_err += best_err;
-
-			pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
-		}
-	}
-	else if (!pParams->m_perceptual)
-	{
-		if (pParams->m_has_alpha)
-		{
-			const int la = actualMinColor.m_c[3];
-			const int da = actualMaxColor.m_c[3] - la;
-
-			const float f = N / (float)(squarei(dr) + squarei(dg) + squarei(db) + squarei(da) + .00000125f);
-
 			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 			{
-				const color_rgba *pC = &pParams->m_pPixels[i];
-				int r = pC->m_c[0];
-				int g = pC->m_c[1];
-				int b = pC->m_c[2];
-				int a = pC->m_c[3];
+				const uint32_t best_sel = pComp_params->m_selectors[i];
 
-				int best_sel = (int)((float)((r - lr) * dr + (g - lg) * dg + (b - lb) * db + (a - la) * da) * f + .5f);
-				best_sel = clampi(best_sel, 1, N - 1);
+				uint32_t best_err;
+				if (pParams->m_has_alpha)
+					best_err = compute_color_distance_rgba(&weightedColors[best_sel], &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
+				else
+					best_err = compute_color_distance_rgb(&weightedColors[best_sel], &pParams->m_pPixels[i], pParams->m_perceptual, pParams->m_weights);
 
-				uint32_t err0 = compute_color_distance_rgba(&weightedColors[best_sel - 1], pC, false, pParams->m_weights);
-				uint32_t err1 = compute_color_distance_rgba(&weightedColors[best_sel], pC, false, pParams->m_weights);
-
-				if (err1 > err0)
-				{
-					err1 = err0;
-					--best_sel;
-				}
-				total_err += err1;
+				total_err += best_err;
 
 				pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 			}
 		}
 		else
 		{
-			const float f = N / (float)(squarei(dr) + squarei(dg) + squarei(db) + .00000125f);
-
-			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+			if (pParams->m_has_alpha)
 			{
-				const color_rgba *pC = &pParams->m_pPixels[i];
-				int r = pC->m_c[0];
-				int g = pC->m_c[1];
-				int b = pC->m_c[2];
+				const int la = actualMinColor.m_c[3];
+				const int da = actualMaxColor.m_c[3] - la;
 
-				int sel = (int)((float)((r - lr) * dr + (g - lg) * dg + (b - lb) * db) * f + .5f);
-				sel = clampi(sel, 1, N - 1);
+				const float f = N / (float)(squarei(dr) + squarei(dg) + squarei(db) + squarei(da) + .00000125f);
 
-				uint32_t err0 = compute_color_distance_rgb(&weightedColors[sel - 1], pC, false, pParams->m_weights);
-				uint32_t err1 = compute_color_distance_rgb(&weightedColors[sel], pC, false, pParams->m_weights);
-
-				int best_sel = sel;
-				uint32_t best_err = err1;
-				if (err0 < best_err)
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 				{
-					best_err = err0;
-					best_sel = sel - 1;
+					const color_rgba *pC = &pParams->m_pPixels[i];
+					int r = pC->m_c[0];
+					int g = pC->m_c[1];
+					int b = pC->m_c[2];
+					int a = pC->m_c[3];
+
+					int best_sel = (int)((float)((r - lr) * dr + (g - lg) * dg + (b - lb) * db + (a - la) * da) * f + .5f);
+					best_sel = clampi(best_sel, 1, N - 1);
+
+					uint32_t err0 = compute_color_distance_rgba(&weightedColors[best_sel - 1], pC, false, pParams->m_weights);
+					uint32_t err1 = compute_color_distance_rgba(&weightedColors[best_sel], pC, false, pParams->m_weights);
+
+					if (err1 > err0)
+					{
+						err1 = err0;
+						--best_sel;
+					}
+					total_err += err1;
+
+					pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 				}
+			}
+			else
+			{
+				const float f = N / (float)(squarei(dr) + squarei(dg) + squarei(db) + .00000125f);
 
-				total_err += best_err;
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					const color_rgba *pC = &pParams->m_pPixels[i];
+					int r = pC->m_c[0];
+					int g = pC->m_c[1];
+					int b = pC->m_c[2];
 
-				pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
+					int sel = (int)((float)((r - lr) * dr + (g - lg) * dg + (b - lb) * db) * f + .5f);
+					sel = clampi(sel, 1, N - 1);
+
+					uint32_t err0 = compute_color_distance_rgb(&weightedColors[sel - 1], pC, false, pParams->m_weights);
+					uint32_t err1 = compute_color_distance_rgb(&weightedColors[sel], pC, false, pParams->m_weights);
+
+					int best_sel = sel;
+					uint32_t best_err = err1;
+					if (err0 < best_err)
+					{
+						best_err = err0;
+						best_sel = sel - 1;
+					}
+
+					total_err += best_err;
+
+					pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
+				}
 			}
 		}
 	}
