@@ -515,6 +515,22 @@ static inline color_rgba scale_color(const color_rgba *pC, const color_cell_comp
 }
 
 #ifdef __AVX2__
+static inline void scale_color_x2( const color_rgba* pC, color_rgba* pOut, const color_cell_compressor_params* pParams )
+{
+	const uint32_t n = pParams->m_comp_bits + (pParams->m_has_pbits ? 1 : 0);
+	assert((n >= 4) && (n <= 8));
+
+	uint64_t px;
+	memcpy( &px, pC, 8 );
+
+	__m128i vPx = _mm_cvtepu8_epi16( _mm_set_epi64x( 0, px ) );
+	__m128i vShift = _mm_slli_epi16( vPx, 8 - n );
+	__m128i vShift2 = _mm_srli_epi16( vShift, n );
+	__m128i vOr = _mm_or_si128( vShift, vShift2 );
+	__m128i vShuffle = _mm_shuffle_epi8( vOr, _mm_set_epi8( 0, 0, 0, 0, 0, 0, 0, 0, 14, 12, 10, 8, 6, 4, 2, 0 ) );
+	_mm_storel_epi64( (__m128i*)pOut, vShuffle );
+}
+
 static inline __m256i compute_ycbcr_128x2( const color_rgba *pC )
 {
 	uint32_t px;
@@ -1103,8 +1119,12 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	}
 	else
 	{
+#ifdef __AVX2__
+		scale_color_x2( quant, quant, pParams );
+#else
 		quant[0] = scale_color(&quant[0], pParams);
 		quant[1] = scale_color(&quant[1], pParams);
+#endif
 
 		weightedColors[0] = quant[0];
 		weightedColors[N - 1] = quant[1];
@@ -1637,8 +1657,12 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 					}
 
 					color_rgba scaled[2];
+#ifdef __AVX2__
+					scale_color_x2( xColor, scaled, pParams );
+#else
 					scaled[0] = scale_color(&xColor[0], pParams);
 					scaled[1] = scale_color(&xColor[1], pParams);
+#endif
 
 					float err0 = 0, err1 = 0;
 					for (int i = 0; i < totalComps; i++)
@@ -1740,8 +1764,12 @@ static uint64_t find_optimal_solution(uint32_t mode, vec4F xl, vec4F xh, const c
 					}
 
 					color_rgba scaled[2];
+#ifdef __AVX2__
+					scale_color_x2( xColor, scaled, pParams );
+#else
 					scaled[0] = scale_color(&xColor[0], pParams);
 					scaled[1] = scale_color(&xColor[1], pParams);
+#endif
 
 					float err = 0;
 					for (int i = 0; i < totalComps; i++)
