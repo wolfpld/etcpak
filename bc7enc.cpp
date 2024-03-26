@@ -538,6 +538,30 @@ static inline __m256i compute_ycbcr_128x2( const color_rgba *pC )
 	return _mm256_broadcastsi128_si256( vD1 );
 }
 
+static inline __m256i compute_ycbcr_128x2_a( const color_rgba *pC )
+{
+	uint32_t px;
+	memcpy( &px, pC, 4 );
+
+	__m128i vPercWeights = _mm_set_epi32( 0, 37, 366, 109 );
+
+	__m128i vE2 = _mm_cvtepu8_epi32( _mm_cvtsi32_si128( px ) );
+	__m128i vL1 = _mm_mullo_epi32( vE2, vPercWeights );
+	__m128i vL2 = _mm_shuffle_epi32( vL1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m128i vL3 = _mm_add_epi32( vL1, vL2 );
+	__m128i vL4 = _mm_shuffle_epi32( vL3, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m128i vL5 = _mm_add_epi32( vL3, vL4 );
+	__m128i vL6 = _mm_blend_epi32( _mm_setzero_si128(), vL5, 0x1 );
+	__m128i vCrb1 = _mm_slli_epi32( vE2, 9 );
+	__m128i vCrb2 = _mm_sub_epi32( vCrb1, vL5 );
+	__m128i vCrb3 = _mm_and_si128( vCrb2, _mm_set_epi64x( 0xFFFFFFFF, 0xFFFFFFFF ) );
+	__m128i vCrb4 = _mm_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
+	__m128i vD1 = _mm_or_si128( vL6, vCrb4 );
+	__m128i vD2 = _mm_blend_epi32( vD1, vE2, 0x8 );
+
+	return _mm256_broadcastsi128_si256( vD2 );
+}
+
 static inline __m256i compute_ycbcr_256( const color_rgba* pC )
 {
 	uint32_t px0, px1;
@@ -560,6 +584,30 @@ static inline __m256i compute_ycbcr_256( const color_rgba* pC )
 	return _mm256_or_si256( vL6, vCrb4 );
 }
 
+static inline __m256i compute_ycbcr_256_a( const color_rgba* pC )
+{
+	uint32_t px0, px1;
+	memcpy( &px0, pC, 4 );
+	memcpy( &px1, pC + 1, 4 );
+	__m256i vE1 = _mm256_cvtepu8_epi32( _mm_set1_epi64x( px0 | ( uint64_t(px1) << 32 ) ) );
+
+	__m256i vPercWeights = _mm256_set_epi32( 0, 37, 366, 109, 0, 37, 366, 109 );
+	__m256i vL1 = _mm256_mullo_epi32( vE1, vPercWeights );
+	__m256i vL2 = _mm256_shuffle_epi32( vL1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m256i vL3 = _mm256_add_epi32( vL1, vL2 );
+	__m256i vL4 = _mm256_shuffle_epi32( vL3, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m256i vL5 = _mm256_add_epi32( vL3, vL4 );
+	__m256i vL6 = _mm256_blend_epi32( _mm256_setzero_si256(), vL5, 0x11 );
+	__m256i vCrb1 = _mm256_slli_epi32( vE1, 9 );
+	__m256i vCrb2 = _mm256_sub_epi32( vCrb1, vL5 );
+	__m256i vCrb3 = _mm256_and_si256( vCrb2, _mm256_set_epi64x( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF ) );
+	__m256i vCrb4 = _mm256_shuffle_epi32( vCrb3, (_MM_PERM_ENUM)_MM_SHUFFLE( 3, 2, 0, 3 ) );
+	__m256i vD1 = _mm256_or_si256( vL6, vCrb4 );
+	__m256i vD2 = _mm256_blend_epi32( vD1, vE1, 0x88 );
+
+	return vD2;
+}
+
 static inline __m128i compute_color_distance_rgb_perc_2x2_256(const __m256i vD1, const __m256i vD1b, const __m256i vD1c, const __m256i vWeights)
 {
 	__m256i vD2a = _mm256_sub_epi32( vD1, vD1c );
@@ -567,6 +615,32 @@ static inline __m128i compute_color_distance_rgb_perc_2x2_256(const __m256i vD1,
 	__m256i vDelta1a = _mm256_srai_epi32( vD2a, 8 );
 	__m256i vDelta1b = _mm256_srai_epi32( vD2b, 8 );
 
+	__m256i vDelta2a = _mm256_mullo_epi32( vDelta1a, vDelta1a );
+	__m256i vDelta2b = _mm256_mullo_epi32( vDelta1b, vDelta1b );
+	__m256i vDelta3a = _mm256_mullo_epi32( vDelta2a, vWeights );
+	__m256i vDelta3b = _mm256_mullo_epi32( vDelta2b, vWeights );
+	__m256i vDelta4a = _mm256_shuffle_epi32( vDelta3a, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m256i vDelta4b = _mm256_shuffle_epi32( vDelta3b, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m256i vDelta5a = _mm256_add_epi32( vDelta3a, vDelta4a );
+	__m256i vDelta5b = _mm256_add_epi32( vDelta3b, vDelta4b );
+	__m256i vDelta6a = _mm256_shuffle_epi32( vDelta5a, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m256i vDelta6b = _mm256_shuffle_epi32( vDelta5b, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m256i vDelta7a = _mm256_add_epi32( vDelta5a, vDelta6a );
+	__m256i vDelta7b = _mm256_add_epi32( vDelta5b, vDelta6b );
+	__m256i vDelta8 = _mm256_unpacklo_epi32( vDelta7a, vDelta7b );
+	__m256i vDelta9 = _mm256_permutevar8x32_epi32( vDelta8, _mm256_set_epi32( 0, 0, 0, 0, 5, 1, 4, 0 ) );
+
+	return _mm256_castsi256_si128( vDelta9 );
+}
+
+static inline __m128i compute_color_distance_rgb_perc_2x2_256_a(const __m256i vD1, const __m256i vD1b, const __m256i vD1c, const __m256i vWeights)
+{
+	__m256i vD2a = _mm256_sub_epi32( vD1, vD1c );
+	__m256i vD2b = _mm256_sub_epi32( vD1b, vD1c );
+	__m256i vDelta0a = _mm256_srai_epi32( vD2a, 8 );
+	__m256i vDelta0b = _mm256_srai_epi32( vD2b, 8 );
+	__m256i vDelta1a = _mm256_blend_epi32( vDelta0a, vD2a, 0x88 );
+	__m256i vDelta1b = _mm256_blend_epi32( vDelta0b, vD2b, 0x88 );
 	__m256i vDelta2a = _mm256_mullo_epi32( vDelta1a, vDelta1a );
 	__m256i vDelta2b = _mm256_mullo_epi32( vDelta1b, vDelta1b );
 	__m256i vDelta3a = _mm256_mullo_epi32( vDelta2a, vWeights );
@@ -610,6 +684,30 @@ static inline __m512i compute_ycbcr_128x4( const color_rgba *pC )
 	return _mm512_broadcast_i32x4( vD1 );
 }
 
+static inline __m512i compute_ycbcr_128x4_a( const color_rgba *pC )
+{
+	uint32_t px;
+	memcpy( &px, pC, 4 );
+
+	__m128i vPercWeights = _mm_set_epi32( 0, 37, 366, 109 );
+
+	__m128i vE2 = _mm_cvtepu8_epi32( _mm_cvtsi32_si128( px ) );
+	__m128i vL1 = _mm_mullo_epi32( vE2, vPercWeights );
+	__m128i vL2 = _mm_shuffle_epi32( vL1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m128i vL3 = _mm_add_epi32( vL1, vL2 );
+	__m128i vL4 = _mm_shuffle_epi32( vL3, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m128i vL5 = _mm_add_epi32( vL3, vL4 );
+	__m128i vL6 = _mm_blend_epi32( _mm_setzero_si128(), vL5, 0x1 );
+	__m128i vCrb1 = _mm_slli_epi32( vE2, 9 );
+	__m128i vCrb2 = _mm_sub_epi32( vCrb1, vL5 );
+	__m128i vCrb3 = _mm_and_si128( vCrb2, _mm_set_epi64x( 0xFFFFFFFF, 0xFFFFFFFF ) );
+	__m128i vCrb4 = _mm_shuffle_epi32( vCrb3, _MM_SHUFFLE( 3, 2, 0, 3 ) );
+	__m128i vD1 = _mm_or_si128( vL6, vCrb4 );
+	__m128i vD2 = _mm_blend_epi32( vD1, vE2, 0x8 );
+
+	return _mm512_broadcast_i32x4( vD2 );
+}
+
 static inline __m512i compute_ycbcr_512( const color_rgba* pC )
 {
 	__m512i vE1 = _mm512_cvtepu8_epi32( _mm_loadu_si128((const __m128i*)pC) );
@@ -629,12 +727,49 @@ static inline __m512i compute_ycbcr_512( const color_rgba* pC )
 	return _mm512_or_si512( vL6, vCrb4 );
 }
 
+static inline __m512i compute_ycbcr_512_a( const color_rgba* pC )
+{
+	__m512i vE1 = _mm512_cvtepu8_epi32( _mm_loadu_si128((const __m128i*)pC) );
+
+	__m512i vPercWeights = _mm512_set_epi32( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
+	__m512i vL1 = _mm512_mullo_epi32( vE1, vPercWeights );
+	__m512i vL2 = _mm512_shuffle_epi32( vL1, (_MM_PERM_ENUM)_MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m512i vL3 = _mm512_add_epi32( vL1, vL2 );
+	__m512i vL4 = _mm512_shuffle_epi32( vL3, (_MM_PERM_ENUM)_MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m512i vL5 = _mm512_add_epi32( vL3, vL4 );
+	__m512i vL6 = _mm512_mask_blend_epi32( 0x1111, _mm512_setzero_si512(), vL5 );
+	__m512i vCrb1 = _mm512_slli_epi32( vE1, 9 );
+	__m512i vCrb2 = _mm512_sub_epi32( vCrb1, vL5 );
+	__m512i vCrb3 = _mm512_and_si512( vCrb2, _mm512_set_epi64( 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF ) );
+	__m512i vCrb4 = _mm512_shuffle_epi32( vCrb3, (_MM_PERM_ENUM)_MM_SHUFFLE( 3, 2, 0, 3 ) );
+	__m512i vD1 = _mm512_or_si512( vL6, vCrb4 );
+	__m512i vD2 = _mm512_mask_blend_epi32( 0x8888, vD1, vE1 );
+
+	return vD2;
+}
+
 static inline __m128i compute_color_distance_rgb_perc_4x_512(const __m512i vD1, const __m512i vD1c, const __m512i vWeights)
 {
 	__m512i vD2 = _mm512_sub_epi32( vD1, vD1c );
 	__m512i vDelta = _mm512_srai_epi32( vD2, 8 );
 
 	__m512i vDelta2 = _mm512_mullo_epi32( vDelta, vDelta );
+	__m512i vDelta3 = _mm512_mullo_epi32( vDelta2, vWeights );
+	__m512i vDelta4 = _mm512_shuffle_epi32( vDelta3, (_MM_PERM_ENUM)_MM_SHUFFLE( 2, 3, 0, 1 ) );
+	__m512i vDelta5 = _mm512_add_epi32( vDelta3, vDelta4 );
+	__m512i vDelta6 = _mm512_shuffle_epi32( vDelta5, (_MM_PERM_ENUM)_MM_SHUFFLE( 1, 0, 3, 2 ) );
+	__m512i vDelta7 = _mm512_add_epi32( vDelta5, vDelta6 );
+	__m512i vDelta8 = _mm512_permutexvar_epi32( _mm512_castsi128_si512( _mm_set_epi32( 12, 8, 4, 0 ) ), vDelta7 );
+
+	return _mm512_castsi512_si128( vDelta8 );
+}
+
+static inline __m128i compute_color_distance_rgb_perc_4x_512_a(const __m512i vD1, const __m512i vD1c, const __m512i vWeights)
+{
+	__m512i vD2 = _mm512_sub_epi32( vD1, vD1c );
+	__m512i vDelta = _mm512_srai_epi32( vD2, 8 );
+	__m512i vDelta1 = _mm512_mask_blend_epi32( 0x8888, vDelta, vD2 );
+	__m512i vDelta2 = _mm512_mullo_epi32( vDelta1, vDelta1 );
 	__m512i vDelta3 = _mm512_mullo_epi32( vDelta2, vWeights );
 	__m512i vDelta4 = _mm512_shuffle_epi32( vDelta3, (_MM_PERM_ENUM)_MM_SHUFFLE( 2, 3, 0, 1 ) );
 	__m512i vDelta5 = _mm512_add_epi32( vDelta3, vDelta4 );
@@ -969,6 +1104,185 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	{
 		if (pParams->m_has_alpha)
 		{
+#if defined __AVX512BW__ && defined __AVX512VL__
+			__m512i px[16];
+			for( uint32_t i=0; i<pParams->m_num_pixels; i++ )
+			{
+				px[i] = compute_ycbcr_128x4_a( &pParams->m_pPixels[i] );
+			}
+
+			__m512i weights = _mm512_broadcast_i32x4( _mm_loadu_si128( (const __m128i*)pParams->m_weights ) );
+			switch(N)
+			{
+			case 4:
+			{
+				__m512i wc0 = compute_ycbcr_512_a(&weightedColors[0]);
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					__m128i err1 = compute_color_distance_rgb_perc_4x_512_a(wc0, px[i], weights);
+					__m128i min0 = _mm_shuffle_epi32( err1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+					__m128i min1 = _mm_min_epi32( err1, min0 );
+					__m128i min2 = _mm_shuffle_epi32( min1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+					__m128i min3 = _mm_min_epi32( min1, min2 );
+					uint32_t mask = _mm_cmpeq_epi32_mask( min3, err1 );
+
+					total_err += _mm_cvtsi128_si32( min3 );
+					pResults->m_pSelectors_temp[i] = (uint8_t)std::countr_zero( mask );
+				}
+				break;
+			}
+			case 8:
+			{
+				__m512i wc0 = compute_ycbcr_512_a(&weightedColors[0]);
+				__m512i wc4 = compute_ycbcr_512_a(&weightedColors[4]);
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					__m128i err1 = compute_color_distance_rgb_perc_4x_512_a(wc0, px[i], weights);
+					__m128i err2 = compute_color_distance_rgb_perc_4x_512_a(wc4, px[i], weights);
+					__m128i min0 = _mm_min_epi32( err1, err2 );
+					__m128i min1 = _mm_shuffle_epi32( min0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+					__m128i min2 = _mm_min_epi32( min0, min1 );
+					__m128i min3 = _mm_shuffle_epi32( min2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+					__m128i min4 = _mm_min_epi32( min2, min3 );
+					uint32_t mask =
+						(uint32_t(_mm_cmpeq_epi32_mask( min4, err1 )) << 0) |
+						(uint32_t(_mm_cmpeq_epi32_mask( min4, err2 )) << 4);
+
+					total_err += _mm_cvtsi128_si32( min4 );
+					pResults->m_pSelectors_temp[i] = (uint8_t)std::countr_zero( mask );
+				}
+				break;
+			}
+			case 16:
+			{
+				__m512i wc0 = compute_ycbcr_512_a(&weightedColors[0]);
+				__m512i wc4 = compute_ycbcr_512_a(&weightedColors[4]);
+				__m512i wc8 = compute_ycbcr_512_a(&weightedColors[8]);
+				__m512i wc12 = compute_ycbcr_512_a(&weightedColors[12]);
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					__m128i err1 = compute_color_distance_rgb_perc_4x_512_a(wc0, px[i], weights);
+					__m128i err2 = compute_color_distance_rgb_perc_4x_512_a(wc4, px[i], weights);
+					__m128i err3 = compute_color_distance_rgb_perc_4x_512_a(wc8, px[i], weights);
+					__m128i err4 = compute_color_distance_rgb_perc_4x_512_a(wc12, px[i], weights);
+					__m128i min0 = _mm_min_epi32( err1, err2 );
+					__m128i min1 = _mm_min_epi32( err3, err4 );
+					__m128i min2 = _mm_min_epi32( min0, min1 );
+					__m128i min3 = _mm_shuffle_epi32( min2, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+					__m128i min4 = _mm_min_epi32( min2, min3 );
+					__m128i min5 = _mm_shuffle_epi32( min4, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+					__m128i min6 = _mm_min_epi32( min4, min5 );
+					uint32_t mask =
+						(uint32_t(_mm_cmpeq_epi32_mask( min6, err1 )) << 0) |
+						(uint32_t(_mm_cmpeq_epi32_mask( min6, err2 )) << 4) |
+						(uint32_t(_mm_cmpeq_epi32_mask( min6, err3 )) << 8) |
+						(uint32_t(_mm_cmpeq_epi32_mask( min6, err4 )) << 12);
+
+					total_err += _mm_cvtsi128_si32( min6 );
+					pResults->m_pSelectors_temp[i] = (uint8_t)std::countr_zero( mask );
+				}
+				break;
+			}
+			default:
+				assert(false);
+			}
+#elif defined __AVX2__
+			__m256i px[16];
+			for( uint32_t i=0; i<pParams->m_num_pixels; i++ )
+			{
+				px[i] = compute_ycbcr_128x2_a( &pParams->m_pPixels[i] );
+			}
+
+			__m256i weights = _mm256_broadcastsi128_si256( _mm_loadu_si128( (const __m128i*)pParams->m_weights ) );
+			switch(N)
+			{
+			case 4:
+			{
+				__m256i wc0 = compute_ycbcr_256_a(&weightedColors[0]);
+				__m256i wc2 = compute_ycbcr_256_a(&weightedColors[2]);
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					__m128i err1 = compute_color_distance_rgb_perc_2x2_256_a(wc0, wc2, px[i], weights);
+					__m128i min0 = _mm_shuffle_epi32( err1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+					__m128i min1 = _mm_min_epi32( err1, min0 );
+					__m128i min2 = _mm_shuffle_epi32( min1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+					__m128i min3 = _mm_min_epi32( min1, min2 );
+					__m128i mask0 = _mm_cmpeq_epi32( min3, err1 );
+					uint32_t mask = _mm_movemask_epi8( mask0 );
+
+					total_err += _mm_cvtsi128_si32( min3 );
+					pResults->m_pSelectors_temp[i] = (uint8_t)( std::countr_zero( mask ) / 4 );
+				}
+				break;
+			}
+			case 8:
+			{
+				__m256i wc0 = compute_ycbcr_256_a(&weightedColors[0]);
+				__m256i wc2 = compute_ycbcr_256_a(&weightedColors[2]);
+				__m256i wc4 = compute_ycbcr_256_a(&weightedColors[4]);
+				__m256i wc6 = compute_ycbcr_256_a(&weightedColors[6]);
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					__m128i err1 = compute_color_distance_rgb_perc_2x2_256_a(wc0, wc2, px[i], weights);
+					__m128i err2 = compute_color_distance_rgb_perc_2x2_256_a(wc4, wc6, px[i], weights);
+					__m128i min0 = _mm_min_epi32( err1, err2 );
+					__m128i min1 = _mm_shuffle_epi32( min0, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+					__m128i min2 = _mm_min_epi32( min0, min1 );
+					__m128i min3 = _mm_shuffle_epi32( min2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+					__m128i min4 = _mm_min_epi32( min2, min3 );
+					__m128i mask0 = _mm_cmpeq_epi32( min4, err1 );
+					__m128i mask1 = _mm_cmpeq_epi32( min4, err2 );
+					uint32_t mask =
+						(uint32_t(_mm_movemask_epi8( mask0 )) << 0) |
+						(uint32_t(_mm_movemask_epi8( mask1 )) << 16);
+
+					total_err += _mm_cvtsi128_si32( min4 );
+					pResults->m_pSelectors_temp[i] = (uint8_t)( std::countr_zero( mask ) / 4 );
+				}
+				break;
+			}
+			case 16:
+			{
+				__m256i wc0 = compute_ycbcr_256_a(&weightedColors[0]);
+				__m256i wc2 = compute_ycbcr_256_a(&weightedColors[2]);
+				__m256i wc4 = compute_ycbcr_256_a(&weightedColors[4]);
+				__m256i wc6 = compute_ycbcr_256_a(&weightedColors[6]);
+				__m256i wc8 = compute_ycbcr_256_a(&weightedColors[8]);
+				__m256i wc10 = compute_ycbcr_256_a(&weightedColors[10]);
+				__m256i wc12 = compute_ycbcr_256_a(&weightedColors[12]);
+				__m256i wc14 = compute_ycbcr_256_a(&weightedColors[14]);
+				for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
+				{
+					__m128i err1 = compute_color_distance_rgb_perc_2x2_256_a(wc0, wc2, px[i], weights);
+					__m128i err2 = compute_color_distance_rgb_perc_2x2_256_a(wc4, wc6, px[i], weights);
+					__m128i err3 = compute_color_distance_rgb_perc_2x2_256_a(wc8, wc10, px[i], weights);
+					__m128i err4 = compute_color_distance_rgb_perc_2x2_256_a(wc12, wc14, px[i], weights);
+					__m128i min0 = _mm_min_epi32( err1, err2 );
+					__m128i min1 = _mm_min_epi32( err3, err4 );
+					__m128i min2 = _mm_min_epi32( min0, min1 );
+					__m128i min3 = _mm_shuffle_epi32( min2, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+					__m128i min4 = _mm_min_epi32( min2, min3 );
+					__m128i min5 = _mm_shuffle_epi32( min4, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+					__m128i min6 = _mm_min_epi32( min4, min5 );
+					__m128i mask0 = _mm_cmpeq_epi32( min6, err1 );
+					__m128i mask1 = _mm_cmpeq_epi32( min6, err2 );
+					__m128i mask2 = _mm_cmpeq_epi32( min6, err3 );
+					__m128i mask3 = _mm_cmpeq_epi32( min6, err4 );
+					uint64_t mask =
+						(uint64_t(_mm_movemask_epi8( mask0 )) << 0) |
+						(uint64_t(_mm_movemask_epi8( mask1 )) << 16) |
+						(uint64_t(_mm_movemask_epi8( mask2 )) << 32) |
+						(uint64_t(_mm_movemask_epi8( mask3 )) << 48);
+
+					total_err += _mm_cvtsi128_si32( min6 );
+					pResults->m_pSelectors_temp[i] = (uint8_t)( std::countr_zero( mask ) / 4 );
+				}
+				break;
+			}
+			default:
+				assert(false);
+			}
+#else
 			for (uint32_t i = 0; i < pParams->m_num_pixels; i++)
 			{
 				uint32_t best_err = UINT32_MAX;
@@ -987,6 +1301,7 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 				total_err += best_err;
 				pResults->m_pSelectors_temp[i] = (uint8_t)best_sel;
 			}
+#endif
 		}
 		else
 		{
