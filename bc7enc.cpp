@@ -60,6 +60,9 @@ static inline vec4F *vec4F_normalize_in_place(vec4F *pV) { float s = pV->m_c[0] 
 static const uint32_t g_bc7_weights2[4] = { 0, 21, 43, 64 };
 static const uint32_t g_bc7_weights3[8] = { 0, 9, 18, 27, 37, 46, 55, 64 };
 static const uint32_t g_bc7_weights4[16] = { 0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64 };
+static const uint16_t g_bc7_weights2_16[4] = { 0, 21, 43, 64 };
+static const uint16_t g_bc7_weights3_16[8] = { 0, 9, 18, 27, 37, 46, 55, 64 };
+static const uint16_t g_bc7_weights4_16[16] = { 0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64 };
 // Precomputed weight constants used during least fit determination. For each entry in g_bc7_weights[]: w * w, (1.0f - w) * w, (1.0f - w) * (1.0f - w), w
 static const float g_bc7_weights2x[4 * 4] = { 0.000000f, 0.000000f, 1.000000f, 0.000000f, 0.107666f, 0.220459f, 0.451416f, 0.328125f, 0.451416f, 0.220459f, 0.107666f, 0.671875f, 1.000000f, 0.000000f, 0.000000f, 1.000000f };
 static const float g_bc7_weights3x[8 * 4] = { 0.000000f, 0.000000f, 1.000000f, 0.000000f, 0.019775f, 0.120850f, 0.738525f, 0.140625f, 0.079102f, 0.202148f, 0.516602f, 0.281250f, 0.177979f, 0.243896f, 0.334229f, 0.421875f, 0.334229f, 0.243896f, 0.177979f, 0.578125f, 0.516602f, 0.202148f,
@@ -477,6 +480,7 @@ struct color_cell_compressor_params
 	const color_rgba *m_pPixels;
 	uint32_t m_num_selector_weights;
 	const uint32_t *m_pSelector_weights;
+	const uint16_t *m_pSelector_weights16;
 	const vec4F *m_pSelector_weightsx;
 	uint32_t m_comp_bits;
 	uint32_t m_weights[4];
@@ -3257,6 +3261,7 @@ void encode_bc7_block(void* pBlock, const bc7_optimization_results* pResults)
 static void handle_alpha_block_mode5(const color_rgba* pPixels, const bc7enc_compress_block_params* pComp_params, color_cell_compressor_params* pParams, uint32_t lo_a, uint32_t hi_a, bc7_optimization_results* pOpt_results5, uint64_t* pMode5_err, uint64_t* pMode5_alpha_err)
 {
 	pParams->m_pSelector_weights = g_bc7_weights2;
+	pParams->m_pSelector_weights16 = g_bc7_weights2_16;
 	pParams->m_pSelector_weightsx = (const vec4F*)g_bc7_weights2x;
 	pParams->m_num_selector_weights = 4;
 
@@ -3359,6 +3364,7 @@ static void handle_alpha_block(void *pBlock, const color_rgba *pPixels, const bc
 	assert((pComp_params->m_mode_mask & (1 << 6)) || (pComp_params->m_mode_mask & (1 << 5)) || (pComp_params->m_mode_mask & (1 << 7)));
 
 	pParams->m_pSelector_weights = g_bc7_weights4;
+	pParams->m_pSelector_weights16 = g_bc7_weights4_16;
 	pParams->m_pSelector_weightsx = (const vec4F *)g_bc7_weights4x;
 	pParams->m_num_selector_weights = 16;
 	pParams->m_comp_bits = 7;
@@ -3413,6 +3419,7 @@ static void handle_alpha_block(void *pBlock, const color_rgba *pPixels, const bc
 		const uint32_t trial_partition = estimate_partition(pPixels, pComp_params, pParams->m_weights, 7);
 
 		pParams->m_pSelector_weights = g_bc7_weights2;
+		pParams->m_pSelector_weights16 = g_bc7_weights2_16;
 		pParams->m_pSelector_weightsx = (const vec4F*)g_bc7_weights2x;
 		pParams->m_num_selector_weights = 4;
 		pParams->m_comp_bits = 5;
@@ -3531,6 +3538,7 @@ static void handle_opaque_block(void *pBlock, const color_rgba *pPixels, const b
 	if (pComp_params->m_mode_mask & (1 << 6))
 	{
 		pParams->m_pSelector_weights = g_bc7_weights4;
+		pParams->m_pSelector_weights16 = g_bc7_weights4_16;
 		pParams->m_pSelector_weightsx = (const vec4F*)g_bc7_weights4x;
 		pParams->m_num_selector_weights = 16;
 		pParams->m_comp_bits = 7;
@@ -3556,6 +3564,7 @@ static void handle_opaque_block(void *pBlock, const color_rgba *pPixels, const b
 		const uint32_t trial_partition = estimate_partition(pPixels, pComp_params, pParams->m_weights, 1);
 		
 		pParams->m_pSelector_weights = g_bc7_weights3;
+		pParams->m_pSelector_weights16 = g_bc7_weights3_16;
 		pParams->m_pSelector_weightsx = (const vec4F *)g_bc7_weights3x;
 		pParams->m_num_selector_weights = 8;
 		pParams->m_comp_bits = 6;
