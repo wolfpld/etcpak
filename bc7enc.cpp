@@ -535,6 +535,21 @@ static inline void scale_color_x2( const color_rgba* pC, color_rgba* pOut, const
 	_mm_storel_epi64( (__m128i*)pOut, vShuffle );
 }
 
+static inline __m128i scale_color_x2_128( const color_rgba* pC, const color_cell_compressor_params* pParams )
+{
+	const uint32_t n = pParams->m_comp_bits + (pParams->m_has_pbits ? 1 : 0);
+	assert((n >= 4) && (n <= 8));
+
+	uint64_t px;
+	memcpy( &px, pC, 8 );
+
+	__m128i vPx = _mm_cvtepu8_epi16( _mm_set_epi64x( 0, px ) );
+	__m128i vShift = _mm_slli_epi16( vPx, 8 - n );
+	__m128i vShift2 = _mm_srli_epi16( vShift, n );
+	__m128i vOr = _mm_or_si128( vShift, vShift2 );
+	return vOr;
+}
+
 static inline __m256i compute_ycbcr_128x2( const color_rgba *pC )
 {
 	uint32_t px;
@@ -1124,11 +1139,91 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	else
 	{
 #ifdef __AVX2__
-		scale_color_x2( quant, quant, pParams );
+		__m128i vQuant = scale_color_x2_128( quant, pParams );
+		__m128i vMin = _mm_shuffle_epi32( vQuant, _MM_SHUFFLE( 1, 0, 1, 0 ) );
+		__m128i vMax = _mm_shuffle_epi32( vQuant, _MM_SHUFFLE( 3, 2, 3, 2 ) );
+		__m128i vSub = _mm_sub_epi16( vMax, vMin );
+		__m128i vMin64 = _mm_slli_epi16( vMin, 6 );
+		__m128i vMin32 = _mm_adds_epu16( vMin64, _mm_set1_epi16( 32 ) );
+		__m256i vMin256 = _mm256_broadcastsi128_si256( vMin32 );
+		__m256i vSub256 = _mm256_broadcastsi128_si256( vSub );
+
+		switch(N)
+		{
+		case 4:
+		{
+			uint64_t weights;
+			memcpy( &weights, pParams->m_pSelector_weights16, 8 );
+			__m256i vWeights0 = _mm256_set1_epi64x( weights );
+			__m256i vWeights1 = _mm256_shuffle_epi8( vWeights0, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vMul = _mm256_mullo_epi16( vSub256, vWeights1 );
+			__m256i vAdd = _mm256_add_epi16( vMin256, vMul );
+			__m256i vShift = _mm256_srai_epi16( vAdd, 6 );
+			__m128i vPack = _mm_packus_epi16( _mm256_castsi256_si128( vShift ), _mm256_extracti128_si256( vShift, 1 ) );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[0], vPack );
+			break;
+		}
+		case 8:
+		{
+			uint64_t weights[2];
+			memcpy( weights, pParams->m_pSelector_weights16, 16 );
+			__m256i vWeights0a = _mm256_set1_epi64x( weights[0] );
+			__m256i vWeights0b = _mm256_set1_epi64x( weights[1] );
+			__m256i vWeights1a = _mm256_shuffle_epi8( vWeights0a, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vWeights1b = _mm256_shuffle_epi8( vWeights0b, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vMula = _mm256_mullo_epi16( vSub256, vWeights1a );
+			__m256i vMulb = _mm256_mullo_epi16( vSub256, vWeights1b );
+			__m256i vAdda = _mm256_add_epi16( vMin256, vMula );
+			__m256i vAddb = _mm256_add_epi16( vMin256, vMulb );
+			__m256i vShifta = _mm256_srai_epi16( vAdda, 6 );
+			__m256i vShiftb = _mm256_srai_epi16( vAddb, 6 );
+			__m128i vPacka = _mm_packus_epi16( _mm256_castsi256_si128( vShifta ), _mm256_extracti128_si256( vShifta, 1 ) );
+			__m128i vPackb = _mm_packus_epi16( _mm256_castsi256_si128( vShiftb ), _mm256_extracti128_si256( vShiftb, 1 ) );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[0], vPacka );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[4], vPackb );
+			break;
+		}
+		case 16:
+		{
+			uint64_t weights[4];
+			memcpy( weights, pParams->m_pSelector_weights16, 32 );
+			__m256i vWeights0a = _mm256_set1_epi64x( weights[0] );
+			__m256i vWeights0b = _mm256_set1_epi64x( weights[1] );
+			__m256i vWeights0c = _mm256_set1_epi64x( weights[2] );
+			__m256i vWeights0d = _mm256_set1_epi64x( weights[3] );
+			__m256i vWeights1a = _mm256_shuffle_epi8( vWeights0a, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vWeights1b = _mm256_shuffle_epi8( vWeights0b, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vWeights1c = _mm256_shuffle_epi8( vWeights0c, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vWeights1d = _mm256_shuffle_epi8( vWeights0d, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vMula = _mm256_mullo_epi16( vSub256, vWeights1a );
+			__m256i vMulb = _mm256_mullo_epi16( vSub256, vWeights1b );
+			__m256i vMulc = _mm256_mullo_epi16( vSub256, vWeights1c );
+			__m256i vMuld = _mm256_mullo_epi16( vSub256, vWeights1d );
+			__m256i vAdda = _mm256_add_epi16( vMin256, vMula );
+			__m256i vAddb = _mm256_add_epi16( vMin256, vMulb );
+			__m256i vAddc = _mm256_add_epi16( vMin256, vMulc );
+			__m256i vAddd = _mm256_add_epi16( vMin256, vMuld );
+			__m256i vShifta = _mm256_srai_epi16( vAdda, 6 );
+			__m256i vShiftb = _mm256_srai_epi16( vAddb, 6 );
+			__m256i vShiftc = _mm256_srai_epi16( vAddc, 6 );
+			__m256i vShiftd = _mm256_srai_epi16( vAddd, 6 );
+			__m128i vPacka = _mm_packus_epi16( _mm256_castsi256_si128( vShifta ), _mm256_extracti128_si256( vShifta, 1 ) );
+			__m128i vPackb = _mm_packus_epi16( _mm256_castsi256_si128( vShiftb ), _mm256_extracti128_si256( vShiftb, 1 ) );
+			__m128i vPackc = _mm_packus_epi16( _mm256_castsi256_si128( vShiftc ), _mm256_extracti128_si256( vShiftc, 1 ) );
+			__m128i vPackd = _mm_packus_epi16( _mm256_castsi256_si128( vShiftd ), _mm256_extracti128_si256( vShiftd, 1 ) );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[0], vPacka );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[4], vPackb );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[8], vPackc );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[12], vPackd );
+			break;
+		}
+		default:
+			assert(false);
+			break;
+		}
 #else
 		quant[0] = scale_color(&quant[0], pParams);
 		quant[1] = scale_color(&quant[1], pParams);
-#endif
 
 		weightedColors[0] = quant[0];
 		weightedColors[N - 1] = quant[1];
@@ -1137,6 +1232,7 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 		for (uint32_t i = 1; i < (N - 1); i++)
 			for (uint32_t j = 0; j < nc; j++)
 				weightedColors[i].m_c[j] = (uint8_t)((quant[0].m_c[j] * (64 - pParams->m_pSelector_weights[i]) + quant[1].m_c[j] * pParams->m_pSelector_weights[i] + 32) >> 6);
+#endif
 
 		if (pParams->m_has_alpha)
 		{
