@@ -1138,7 +1138,70 @@ static uint64_t evaluate_solution(const color_rgba *pLow, const color_rgba *pHig
 	}
 	else
 	{
-#ifdef __AVX2__
+#ifdef __AVX512BW__
+		__m128i vQuant = scale_color_x2_128( quant, pParams );
+		__m128i vMin = _mm_shuffle_epi32( vQuant, _MM_SHUFFLE( 1, 0, 1, 0 ) );
+		__m128i vMax = _mm_shuffle_epi32( vQuant, _MM_SHUFFLE( 3, 2, 3, 2 ) );
+		__m128i vSub = _mm_sub_epi16( vMax, vMin );
+		__m128i vMin64 = _mm_slli_epi16( vMin, 6 );
+		__m128i vMin32 = _mm_adds_epu16( vMin64, _mm_set1_epi16( 32 ) );
+		__m256i vMin256 = _mm256_broadcastsi128_si256( vMin32 );
+		__m256i vSub256 = _mm256_broadcastsi128_si256( vSub );
+
+		switch(N)
+		{
+		case 4:
+		{
+			uint64_t weights;
+			memcpy( &weights, pParams->m_pSelector_weights16, 8 );
+			__m256i vWeights0 = _mm256_set1_epi64x( weights );
+			__m256i vWeights1 = _mm256_shuffle_epi8( vWeights0, _mm256_setr_epi64x( 0x100010001000100, 0x302030203020302, 0x504050405040504, 0x706070607060706 ) );
+			__m256i vMul = _mm256_mullo_epi16( vSub256, vWeights1 );
+			__m256i vAdd = _mm256_add_epi16( vMin256, vMul );
+			__m256i vShift = _mm256_srai_epi16( vAdd, 6 );
+			__m128i vPack = _mm_packus_epi16( _mm256_castsi256_si128( vShift ), _mm256_extracti128_si256( vShift, 1 ) );
+			_mm_storeu_si128( ( __m128i* )&weightedColors[0], vPack );
+			break;
+		}
+		case 8:
+		{
+			__m128i vWeights0 = _mm_loadu_si128( ( const __m128i* )pParams->m_pSelector_weights16 );
+			__m512i vWeights1 = _mm512_permutexvar_epi16( _mm512_set_epi64( 0x7000700070007, 0x6000600060006, 0x5000500050005, 0x4000400040004, 0x3000300030003, 0x2000200020002, 0x1000100010001, 0 ), _mm512_castsi128_si512( vWeights0 ) );
+			__m512i vSub512 = _mm512_broadcast_i64x4( vSub256 );
+			__m512i vMin512 = _mm512_broadcast_i64x4( vMin256 );
+			__m512i vMul = _mm512_mullo_epi16( vSub512, vWeights1 );
+			__m512i vAdd = _mm512_add_epi16( vMin512, vMul );
+			__m512i vShift = _mm512_srai_epi16( vAdd, 6 );
+			__m256i vPack0 = _mm256_packus_epi16( _mm512_castsi512_si256( vShift ), _mm512_extracti64x4_epi64( vShift, 1 ) );
+			__m256i vPack1 = _mm256_permute4x64_epi64( vPack0, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+			_mm256_storeu_si256( ( __m256i* )&weightedColors[0], vPack1 );
+		}
+		case 16:
+		{
+			__m256i vWeights0 = _mm256_loadu_si256( ( const __m256i* )pParams->m_pSelector_weights16 );
+			__m512i vWeights1a = _mm512_permutexvar_epi16( _mm512_set_epi64( 0x7000700070007, 0x6000600060006, 0x5000500050005, 0x4000400040004, 0x3000300030003, 0x2000200020002, 0x1000100010001, 0 ), _mm512_castsi256_si512( vWeights0 ) );
+			__m512i vWeights1b = _mm512_permutexvar_epi16( _mm512_set_epi64( 0xf000f000f000f, 0xe000e000e000e, 0xd000d000d000d, 0xc000c000c000c, 0xb000b000b000b, 0xa000a000a000a, 0x9000900090009, 0x8000800080008 ), _mm512_castsi256_si512( vWeights0 ) );
+			__m512i vSub512 = _mm512_broadcast_i64x4( vSub256 );
+			__m512i vMin512 = _mm512_broadcast_i64x4( vMin256 );
+			__m512i vMula = _mm512_mullo_epi16( vSub512, vWeights1a );
+			__m512i vMulb = _mm512_mullo_epi16( vSub512, vWeights1b );
+			__m512i vAdda = _mm512_add_epi16( vMin512, vMula );
+			__m512i vAddb = _mm512_add_epi16( vMin512, vMulb );
+			__m512i vShifta = _mm512_srai_epi16( vAdda, 6 );
+			__m512i vShiftb = _mm512_srai_epi16( vAddb, 6 );
+			__m256i vPack0a = _mm256_packus_epi16( _mm512_castsi512_si256( vShifta ), _mm512_extracti64x4_epi64( vShifta, 1 ) );
+			__m256i vPack0b = _mm256_packus_epi16( _mm512_castsi512_si256( vShiftb ), _mm512_extracti64x4_epi64( vShiftb, 1 ) );
+			__m256i vPack1a = _mm256_permute4x64_epi64( vPack0a, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+			__m256i vPack1b = _mm256_permute4x64_epi64( vPack0b, _MM_SHUFFLE( 3, 1, 2, 0 ) );
+			_mm256_storeu_si256( ( __m256i* )&weightedColors[0], vPack1a );
+			_mm256_storeu_si256( ( __m256i* )&weightedColors[8], vPack1b );
+			break;
+		}
+		default:
+			assert(false);
+			break;
+		}
+#elif defined __AVX2__
 		__m128i vQuant = scale_color_x2_128( quant, pParams );
 		__m128i vMin = _mm_shuffle_epi32( vQuant, _MM_SHUFFLE( 1, 0, 1, 0 ) );
 		__m128i vMax = _mm_shuffle_epi32( vQuant, _MM_SHUFFLE( 3, 2, 3, 2 ) );
