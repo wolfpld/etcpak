@@ -2468,6 +2468,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	{
 		int l1[8], cr1[8], cb1[8];
 		__m128i vPweights = _mm_loadu_si128((const __m128i *)pweights);
+		__m256i vPweights256 = _mm256_broadcastsi128_si256( vPweights );
 		__m256i vPercWeights256 = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
 
 #ifdef __AVX512BW__
@@ -2576,7 +2577,44 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 			};
 
 			const uint32_t end = minimumu( i + 4, num_pixels );
-			for (uint32_t j=i; j<end; j++)
+			uint32_t j = i;
+			for(; j<end-1; j += 2 )
+			{
+				__m256i vD1 = _mm256_set1_epi32( dtable[j-i] );
+				__m256i vD2 = _mm256_set1_epi32( dtable[j-i+1] );
+#ifdef __AVX512VL__
+				__mmask8 vCmp1 = _mm256_cmpgt_epi32_mask( vD1, vThresh );
+				__mmask8 vCmp2 = _mm256_cmpgt_epi32_mask( vD2, vThresh );
+				uint32_t s1 = _mm_popcnt_u32( vCmp1 );
+				uint32_t s2 = _mm_popcnt_u32( vCmp2 );
+#else
+				__m256i vCmp1 = _mm256_cmpgt_epi32( vD1, vThresh );
+				__m256i vCmp2 = _mm256_cmpgt_epi32( vD2, vThresh );
+				uint32_t s1 = _mm_popcnt_u32( _mm256_movemask_epi8( vCmp1 ) ) / 4;
+				uint32_t s2 = _mm_popcnt_u32( _mm256_movemask_epi8( vCmp2 ) ) / 4;
+#endif
+
+				__m256i vPx = _mm256_inserti128_si256( _mm256_castsi128_si256( vPxT[s1] ), vPxT[s2], 1 );
+				__m256i v2Px = _mm256_inserti128_si256( _mm256_castsi128_si256( v2PxT[j-i] ), v2PxT[j-i+1], 1 );
+
+				__m256i vSub = _mm256_sub_epi32( vPx, v2Px );
+				__m256i vShift = _mm256_srai_epi32( vSub, 8 );
+				__m256i vMul0 = _mm256_mullo_epi32( vShift, vShift );
+				__m256i vMul1 = _mm256_mullo_epi32( vMul0, vPweights256 );
+				__m256i vAdd0 = _mm256_shuffle_epi32( vMul1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+				__m256i vAdd1 = _mm256_add_epi32( vMul1, vAdd0 );
+				__m256i vAdd2 = _mm256_shuffle_epi32( vAdd1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+				__m256i vAdd3 = _mm256_add_epi32( vAdd1, vAdd2 );
+				__m128i vAdd4 = _mm_add_epi32( _mm256_castsi256_si128( vAdd3 ), _mm256_extracti128_si256( vAdd3, 1 ) );
+
+				int ie = _mm_cvtsi128_si32( vAdd4 );
+				total_err += ie;
+				if (total_err > best_err_so_far)
+					break;
+			}
+			if (total_err > best_err_so_far)
+				break;
+			for (; j<end; j++)
 			{
 				// Find approximate selector
 				__m256i vD = _mm256_set1_epi32( dtable[j-i] );
@@ -2605,8 +2643,6 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 				total_err += ie;
 				if (total_err > best_err_so_far)
 					break;
-
-				pC++;
 			}
 			if (total_err > best_err_so_far)
 				break;
@@ -2850,6 +2886,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	if (perceptual)
 	{
 		__m128i vPweights = _mm_loadu_si128((const __m128i *)pweights);
+		__m256i vPweights256 = _mm256_broadcastsi128_si256( vPweights );
 		__m256i vPercWeights = _mm256_set_epi16( 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109, 0, 37, 366, 109 );
 
 		__m256i vL0 = _mm256_madd_epi16( vLerp, vPercWeights );
@@ -2918,7 +2955,52 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			};
 
 			const uint32_t end = minimumu( i + 4, num_pixels );
-			for (uint32_t j=i; j<end; j++)
+			uint32_t j = i;
+			for(; j<end-1; j += 2 )
+			{
+				__m128i vD1 = _mm_set1_epi32( dtable[j-i] );
+				__m128i vD2 = _mm_set1_epi32( dtable[j-i+1] );
+#ifdef __AVX512VL__
+				__mmask8 vCmp1 = _mm_cmpgt_epi32_mask( vD1, vThresh );
+				__mmask8 vCmp2 = _mm_cmpgt_epi32_mask( vD2, vThresh );
+				uint32_t s1 = _mm_popcnt_u32( vCmp1 );
+				uint32_t s2 = _mm_popcnt_u32( vCmp2 );
+#else
+				__m128i vCmp1 = _mm_cmpgt_epi32( vD1, vThresh );
+				__m128i vCmp2 = _mm_cmpgt_epi32( vD2, vThresh );
+				uint32_t s1 = _mm_popcnt_u32( _mm_movemask_epi8( vCmp1 ) ) / 4;
+				uint32_t s2 = _mm_popcnt_u32( _mm_movemask_epi8( vCmp2 ) ) / 4;
+#endif
+
+				__m256i vPx = _mm256_inserti128_si256( _mm256_castsi128_si256( vPxT[s1] ), vPxT[s2], 1 );
+				__m256i v2Px = _mm256_inserti128_si256( _mm256_castsi128_si256( v2PxT[j-i] ), v2PxT[j-i+1], 1 );
+
+				__m256i vSub = _mm256_sub_epi32( vPx, v2Px );
+				__m256i vShift = _mm256_srai_epi32( vSub, 8 );
+
+				const int dca1 = (int)pC->m_c[3] - (int)weightedColors[s1].m_c[3];
+				const int dca2 = (int)(pC+1)->m_c[3] - (int)weightedColors[s2].m_c[3];
+				__m256i vAlpha0 = _mm256_set_epi32( dca2, dca2, dca2, dca2, dca1, dca1, dca1, dca1 );
+				__m256i vAlpha1 = _mm256_blend_epi32( vShift, vAlpha0, 0x88 );
+
+				__m256i vMul0 = _mm256_mullo_epi32( vAlpha1, vAlpha1 );
+				__m256i vMul1 = _mm256_mullo_epi32( vMul0, vPweights256 );
+				__m256i vAdd0 = _mm256_shuffle_epi32( vMul1, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+				__m256i vAdd1 = _mm256_add_epi32( vMul1, vAdd0 );
+				__m256i vAdd2 = _mm256_shuffle_epi32( vAdd1, _MM_SHUFFLE( 1, 0, 3, 2 ) );
+				__m256i vAdd3 = _mm256_add_epi32( vAdd1, vAdd2 );
+				__m128i vAdd4 = _mm_add_epi32( _mm256_castsi256_si128( vAdd3 ), _mm256_extracti128_si256( vAdd3, 1 ) );
+
+				int ie = _mm_cvtsi128_si32( vAdd4 );
+				total_err += ie;
+				if (total_err > best_err_so_far)
+					break;
+
+				pC += 2;
+			}
+			if (total_err > best_err_so_far)
+				break;
+			for (; j<end; j++)
 			{
 				// Find approximate selector
 				__m128i vD = _mm_set1_epi32( dtable[j-i] );
