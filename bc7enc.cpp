@@ -2359,6 +2359,17 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 
 		if( num_pixels > 8 )
 		{
+#if defined __AVX512BW__ && defined __AVX512VL__
+			__mmask8 mask = ( 1 << (num_pixels - 8) ) - 1;
+			__m256i vPxa = _mm256_loadu_si256( (const __m256i *)pPixels );
+			__m256i vPxb = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
+
+			__m256i vMax0a = vPxa;
+			__m256i vMax0b = _mm256_mask_blend_epi32( mask, _mm256_setzero_si256(), vPxb );
+
+			__m256i vMin0a = vPxa;
+			__m256i vMin0b = _mm256_mask_blend_epi32( mask, _mm256_set1_epi8( -1 ), vPxb );
+#else
 			memset( pPixels + num_pixels, 0, (16 - num_pixels) * sizeof( color_rgba ) );
 			__m256i vMax0a = _mm256_loadu_si256( (const __m256i *)pPixels );
 			__m256i vMax0b = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
@@ -2366,6 +2377,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 			memset( pPixels + num_pixels, 0xFF, (16 - num_pixels) * sizeof( color_rgba ) );
 			__m256i vMin0a = _mm256_loadu_si256( (const __m256i *)pPixels );
 			__m256i vMin0b = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
+#endif
 
 			__m256i vMax1 = _mm256_max_epu8( vMax0a, vMax0b );
 			__m256i vMin1 = _mm256_min_epu8( vMin0a, vMin0b );
@@ -2378,6 +2390,17 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 		}
 		else
 		{
+#if defined __AVX512BW__ && defined __AVX512VL__
+			__mmask8 mask = ( 1 << (num_pixels - 4) ) - 1;
+			__m128i vPxa = _mm_loadu_si128( (const __m128i *)pPixels );
+			__m128i vPxb = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
+
+			vMax1a = vPxa;
+			vMax1b = _mm_mask_blend_epi32( mask, _mm_setzero_si128(), vPxb );
+
+			vMin1a = vPxa;
+			vMin1b = _mm_mask_blend_epi32( mask, _mm_set1_epi8( -1 ), vPxb );
+#else
 			memset( pPixels + num_pixels, 0, (8 - num_pixels) * sizeof( color_rgba ) );
 			vMax1a = _mm_loadu_si128( (const __m128i *)pPixels );
 			vMax1b = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
@@ -2385,6 +2408,7 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 			memset( pPixels + num_pixels, 0xFF, (8 - num_pixels) * sizeof( color_rgba ) );
 			vMin1a = _mm_loadu_si128( (const __m128i *)pPixels );
 			vMin1b = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
+#endif
 		}
 
 		vMax2 = _mm_max_epu8( vMax1a, vMax1b );
@@ -2392,10 +2416,17 @@ static uint64_t color_cell_compression_est_mode1(uint32_t num_pixels, color_rgba
 	}
 	else
 	{
+#if defined __AVX512BW__ && defined __AVX512VL__
+		__mmask8 mask = ( 1 << num_pixels ) - 1;
+		__m128i vPx = _mm_loadu_si128( (const __m128i *)pPixels );
+		vMax2 = _mm_mask_blend_epi32( mask, _mm_setzero_si128(), vPx );
+		vMin2 = _mm_mask_blend_epi32( mask, _mm_set1_epi8( -1 ), vPx );
+#else
 		memset( pPixels + num_pixels, 0, (4 - num_pixels) * sizeof( color_rgba ) );
 		vMax2 = _mm_loadu_si128( (const __m128i *)pPixels );
 		memset( pPixels + num_pixels, 0xFF, (4 - num_pixels) * sizeof( color_rgba ) );
 		vMin2 = _mm_loadu_si128( (const __m128i *)pPixels );
+#endif
 	}
 
 	__m128i vMax3 = _mm_shuffle_epi32( vMax2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
@@ -2806,6 +2837,17 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 
 		if( num_pixels > 8 )
 		{
+#if defined __AVX512BW__ && defined __AVX512VL__
+			__mmask8 mask = ( 1 << (num_pixels - 8) ) - 1;
+			__m256i vPxa = _mm256_loadu_si256( (const __m256i *)pPixels );
+			__m256i vPxb = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
+
+			__m256i vMax0a = vPxa;
+			__m256i vMax0b = _mm256_mask_blend_epi32( mask, _mm256_setzero_si256(), vPxb );
+
+			__m256i vMin0a = vPxa;
+			__m256i vMin0b = _mm256_mask_blend_epi32( mask, _mm256_set1_epi8( -1 ), vPxb );
+#else
 			memset( pPixels + num_pixels, 0, (16 - num_pixels) * sizeof( color_rgba ) );
 			__m256i vMax0a = _mm256_loadu_si256( (const __m256i *)pPixels );
 			__m256i vMax0b = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
@@ -2813,6 +2855,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			memset( pPixels + num_pixels, 0xFF, (16 - num_pixels) * sizeof( color_rgba ) );
 			__m256i vMin0a = _mm256_loadu_si256( (const __m256i *)pPixels );
 			__m256i vMin0b = _mm256_loadu_si256( (const __m256i *)( pPixels + 8 ) );
+#endif
 
 			__m256i vMax1 = _mm256_max_epu8( vMax0a, vMax0b );
 			__m256i vMin1 = _mm256_min_epu8( vMin0a, vMin0b );
@@ -2825,6 +2868,17 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 		}
 		else
 		{
+#if defined __AVX512BW__ && defined __AVX512VL__
+			__mmask8 mask = ( 1 << (num_pixels - 4) ) - 1;
+			__m128i vPxa = _mm_loadu_si128( (const __m128i *)pPixels );
+			__m128i vPxb = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
+
+			vMax1a = vPxa;
+			vMax1b = _mm_mask_blend_epi32( mask, _mm_setzero_si128(), vPxb );
+
+			vMin1a = vPxa;
+			vMin1b = _mm_mask_blend_epi32( mask, _mm_set1_epi8( -1 ), vPxb );
+#else
 			memset( pPixels + num_pixels, 0, (8 - num_pixels) * sizeof( color_rgba ) );
 			vMax1a = _mm_loadu_si128( (const __m128i *)pPixels );
 			vMax1b = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
@@ -2832,6 +2886,7 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 			memset( pPixels + num_pixels, 0xFF, (8 - num_pixels) * sizeof( color_rgba ) );
 			vMin1a = _mm_loadu_si128( (const __m128i *)pPixels );
 			vMin1b = _mm_loadu_si128( (const __m128i *)( pPixels + 4 ) );
+#endif
 		}
 
 		vMax2 = _mm_max_epu8( vMax1a, vMax1b );
@@ -2839,10 +2894,17 @@ static uint64_t color_cell_compression_est_mode7(uint32_t num_pixels, color_rgba
 	}
 	else
 	{
+#if defined __AVX512BW__ && defined __AVX512VL__
+		__mmask8 mask = ( 1 << num_pixels ) - 1;
+		__m128i vPx = _mm_loadu_si128( (const __m128i *)pPixels );
+		vMax2 = _mm_mask_blend_epi32( mask, _mm_setzero_si128(), vPx );
+		vMin2 = _mm_mask_blend_epi32( mask, _mm_set1_epi8( -1 ), vPx );
+#else
 		memset( pPixels + num_pixels, 0, (4 - num_pixels) * sizeof( color_rgba ) );
 		vMax2 = _mm_loadu_si128( (const __m128i *)pPixels );
 		memset( pPixels + num_pixels, 0xFF, (4 - num_pixels) * sizeof( color_rgba ) );
 		vMin2 = _mm_loadu_si128( (const __m128i *)pPixels );
+#endif
 	}
 
 	__m128i vMax3 = _mm_shuffle_epi32( vMax2, _MM_SHUFFLE( 2, 3, 0, 1 ) );
