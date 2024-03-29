@@ -3298,11 +3298,6 @@ static uint32_t estimate_partition(const color_rgba *pPixels, const bc7enc_compr
 				total_subset_err += color_cell_compression_est_mode1(subset_total_colors[subset], &subset_colors[subset][0], pComp_params->m_perceptual, pweights, best_err);
 		}
 
-		if (partition < 16)
-		{
-			total_subset_err = (uint64_t)((double)total_subset_err * pComp_params->m_low_frequency_partition_weight + .5f);
-		}
-
 		if (total_subset_err < best_err)
 		{
 			best_err = total_subset_err;

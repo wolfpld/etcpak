@@ -49,8 +49,6 @@ struct bc7enc_compress_block_params
 	float m_mode6_error_weight;
 	float m_mode7_error_weight;
 
-	float m_low_frequency_partition_weight;
-
 	void clear()
 	{
 		memset(this, 0, sizeof(*this));
@@ -70,7 +68,6 @@ struct bc7enc_compress_block_params
 		printf("Bias mode 1 p-bits: %u\n", m_bias_mode1_pbits);
 		printf("p-bit 1 weight: %f\n", m_pbit1_weight);
 		printf("Mode error weights: %f %f %f %f\n", m_mode1_error_weight, m_mode5_error_weight, m_mode6_error_weight, m_mode7_error_weight);
-		printf("Low frequency partition weight: %f\n", m_low_frequency_partition_weight);
 	}
 };
 
@@ -108,7 +105,6 @@ inline void bc7enc_compress_block_params_init(bc7enc_compress_block_params *p)
 	p->m_mode5_error_weight = 1.0f;
 	p->m_mode6_error_weight = 1.0f;
 	p->m_mode7_error_weight = 1.0f;
-	p->m_low_frequency_partition_weight = 1.0f;
 	bc7enc_compress_block_params_init_perceptual_weights(p);
 }
 
