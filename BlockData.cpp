@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "bcdec.h"
 #include "BlockData.hpp"
 #include "ColorSpace.hpp"
 #include "Debug.hpp"
@@ -850,6 +851,8 @@ BitmapPtr BlockData::Decode()
         return DecodeBc4();
     case Bc5:
         return DecodeBc5();
+    case Bc7:
+        return DecodeBc7();
     default:
         assert( false );
         return nullptr;
@@ -1752,6 +1755,27 @@ BitmapPtr BlockData::DecodeBc5()
             uint64_t r = *src++;
             uint64_t g = *src++;
             DecodeBc5Part( r, g, dst, m_size.x );
+            dst += 4;
+        }
+        dst += m_size.x*3;
+    }
+
+    return ret;
+}
+
+BitmapPtr BlockData::DecodeBc7()
+{
+    auto ret = std::make_shared<Bitmap>( m_size );
+
+    const uint64_t* src = (const uint64_t*)( m_data + m_dataOffset );
+    uint32_t* dst = ret->Data();
+
+    for( int y=0; y<m_size.y/4; y++ )
+    {
+        for( int x=0; x<m_size.x/4; x++ )
+        {
+            bcdec_bc7( src, dst, m_size.x * 4 );
+            src += 2;
             dst += 4;
         }
         dst += m_size.x*3;

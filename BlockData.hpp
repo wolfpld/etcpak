@@ -59,6 +59,7 @@ private:
     etcpak_no_inline BitmapPtr DecodeBc3();
     etcpak_no_inline BitmapPtr DecodeBc4();
     etcpak_no_inline BitmapPtr DecodeBc5();
+    etcpak_no_inline BitmapPtr DecodeBc7();
 
     uint8_t* m_data;
     v2i m_size;
