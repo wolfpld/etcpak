@@ -114,6 +114,45 @@ BlockData::BlockData( const char* fn )
         m_size.y = *(data32+10);
         m_dataOffset = sizeof( uint32_t ) * 17 + *(data32+15);
     }
+    else if( *data32 == 0x20534444 )
+    {
+        // DDS
+        switch( *(data32+21) )
+        {
+        case 0x31545844:
+            m_type = Bc1;
+            m_dataOffset = 128;
+            break;
+        case 0x35545844:
+            m_type = Bc3;
+            m_dataOffset = 128;
+            break;
+        case 0x30315844:
+            m_dataOffset = 148;
+            switch( *(data32+32) )
+            {
+            case 77:
+                m_type = Bc4;
+                break;
+            case 85:
+                m_type = Bc5;
+                break;
+            case 98:
+                m_type = Bc7;
+                break;
+            default:
+                assert( false );
+                break;
+            };
+            break;
+        default:
+            assert( false );
+            break;
+        };
+
+        m_size.x = *(data32+4);
+        m_size.y = *(data32+3);
+    }
     else
     {
         assert( false );
