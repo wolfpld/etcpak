@@ -129,15 +129,25 @@ BlockData::BlockData( const char* fn )
             break;
         case 0x30315844:
             m_dataOffset = 148;
+            // DXGI_FORMAT_BCn
             switch( *(data32+32) )
             {
+            case 71:
+            case 72:
+                m_type = Bc1;
+                break;
             case 77:
+            case 78:
+                m_type = Bc3;
+                break;
+            case 80:
                 m_type = Bc4;
                 break;
-            case 85:
+            case 83:
                 m_type = Bc5;
                 break;
             case 98:
+            case 99:
                 m_type = Bc7;
                 break;
             default:
@@ -262,10 +272,10 @@ static void WriteDdsHeader( uint32_t* dst, BlockData::Type type, const v2i& size
     switch( type )
     {
     case BlockData::Bc4:
-        *dst++ = 77; // DXGI_FORMAT_BC4_UNORM
+        *dst++ = 80; // DXGI_FORMAT_BC4_UNORM
         break;
     case BlockData::Bc5:
-        *dst++ = 85; // DXGI_FORMAT_BC5_UNORM
+        *dst++ = 83; // DXGI_FORMAT_BC5_UNORM
         break;
     case BlockData::Bc7:
         *dst++ = 98; // DXGI_FORMAT_BC7_UNORM
