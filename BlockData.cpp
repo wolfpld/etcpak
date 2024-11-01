@@ -129,15 +129,25 @@ BlockData::BlockData( const char* fn )
             break;
         case 0x30315844:
             m_dataOffset = 148;
+            // DXGI_FORMAT_BCn
             switch( *(data32+32) )
             {
+            case 71:
+            case 72:
+                m_type = Bc1;
+                break;
             case 77:
+            case 78:
+                m_type = Bc3;
+                break;
+            case 80:
                 m_type = Bc4;
                 break;
-            case 85:
+            case 83:
                 m_type = Bc5;
                 break;
             case 98:
+            case 99:
                 m_type = Bc7;
                 break;
             default:
