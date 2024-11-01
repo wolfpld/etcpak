@@ -272,10 +272,10 @@ static void WriteDdsHeader( uint32_t* dst, BlockData::Type type, const v2i& size
     switch( type )
     {
     case BlockData::Bc4:
-        *dst++ = 77; // DXGI_FORMAT_BC4_UNORM
+        *dst++ = 80; // DXGI_FORMAT_BC4_UNORM
         break;
     case BlockData::Bc5:
-        *dst++ = 85; // DXGI_FORMAT_BC5_UNORM
+        *dst++ = 83; // DXGI_FORMAT_BC5_UNORM
         break;
     case BlockData::Bc7:
         *dst++ = 98; // DXGI_FORMAT_BC7_UNORM
