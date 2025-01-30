@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "libpng/png.h"
+#include <png.h>
 
 #include "Bitmap.hpp"
 #include "Debug.hpp"
