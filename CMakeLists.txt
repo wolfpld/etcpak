@@ -74,6 +74,7 @@ set(SOURCES
     System.cpp
     Tables.cpp
     TaskDispatch.cpp
+    TextureHeader.cpp
     Timing.cpp
 )
 

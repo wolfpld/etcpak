@@ -12,25 +12,13 @@
 #include "Bitmap.hpp"
 #include "ForceInline.hpp"
 #include "Vector.hpp"
+#include "TextureHeader.hpp"
 
 struct bc7enc_compress_block_params;
 
 class BlockData
 {
 public:
-    enum Type
-    {
-        Etc1,
-        Etc2_RGB,
-        Etc2_RGBA,
-        Etc2_R11,
-        Etc2_RG11,
-        Bc1,
-        Bc3,
-        Bc4,
-        Bc5,
-        Bc7
-    };
 
     enum Format
     {
@@ -39,8 +27,8 @@ public:
     };
 
     BlockData( const char* fn );
-    BlockData( const char* fn, const v2i& size, bool mipmap, Type type, Format format );
-    BlockData( const v2i& size, bool mipmap, Type type );
+    BlockData( const char* fn, const v2i& size, bool mipmap, CodecType type, Format format );
+    BlockData( const v2i& size, bool mipmap, CodecType type );
     ~BlockData();
 
     BitmapPtr Decode();
@@ -51,13 +39,12 @@ public:
     const v2i& Size() const { return m_size; }
 
 private:
-
     uint8_t* m_data;
     v2i m_size;
     size_t m_dataOffset;
     FILE* m_file;
     size_t m_maplen;
-    Type m_type;
+    CodecType m_type;
 };
 
 typedef std::shared_ptr<BlockData> BlockDataPtr;

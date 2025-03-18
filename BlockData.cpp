@@ -43,167 +43,43 @@ BlockData::BlockData( const char* fn )
     m_maplen = ftell( m_file );
     fseek( m_file, 0, SEEK_SET );
     m_data = (uint8_t*)mmap( nullptr, m_maplen, PROT_READ, MAP_SHARED, fileno( m_file ), 0 );
-
-    auto data32 = (uint32_t*)m_data;
-    if( *data32 == 0x03525650 )
-    {
-        // PVR
-        switch( *(data32+2) )
-        {
-        case 6:
-            m_type = Etc1;
-            break;
-        case 7:
-            m_type = Bc1;
-            break;
-        case 11:
-            m_type = Bc3;
-            break;
-        case 12:
-            m_type = Bc4;
-            break;
-        case 13:
-            m_type = Bc5;
-            break;
-        case 15:
-            m_type = Bc7;
-            break;
-        case 22:
-            m_type = Etc2_RGB;
-            break;
-        case 23:
-            m_type = Etc2_RGBA;
-            break;
-        case 25:
-            m_type = Etc2_R11;
-            break;
-        case 26:
-            m_type = Etc2_RG11;
-            break;
-        default:
-            assert( false );
-            break;
-        }
-
-        m_size.y = *(data32+6);
-        m_size.x = *(data32+7);
-        m_dataOffset = 52 + *(data32+12);
-    }
-    else if( *data32 == 0x58544BAB )
-    {
-        // KTX
-        switch( *(data32+7) )
-        {
-        case 0x9274:
-            m_type = Etc2_RGB;
-            break;
-        case 0x9278:
-            m_type = Etc2_RGBA;
-            break;
-        case 0x9270:
-            m_type = Etc2_R11;
-            break;
-        case 0x9272:
-            m_type = Etc2_RG11;
-            break;
-        default:
-            assert( false );
-            break;
-        }
-
-        m_size.x = *(data32+9);
-        m_size.y = *(data32+10);
-        m_dataOffset = sizeof( uint32_t ) * 17 + *(data32+15);
-    }
-    else if( *data32 == 0x20534444 )
-    {
-        // DDS
-        switch( *(data32+21) )
-        {
-        case 0x31545844:
-            m_type = Bc1;
-            m_dataOffset = 128;
-            break;
-        case 0x35545844:
-            m_type = Bc3;
-            m_dataOffset = 128;
-            break;
-        case 0x30315844:
-            m_dataOffset = 148;
-            // DXGI_FORMAT_BCn
-            switch( *(data32+32) )
-            {
-            case 71:
-            case 72:
-                m_type = Bc1;
-                break;
-            case 77:
-            case 78:
-                m_type = Bc3;
-                break;
-            case 80:
-                m_type = Bc4;
-                break;
-            case 83:
-                m_type = Bc5;
-                break;
-            case 98:
-            case 99:
-                m_type = Bc7;
-                break;
-            default:
-                assert( false );
-                break;
-            };
-            break;
-        default:
-            assert( false );
-            break;
-        };
-
-        m_size.x = *(data32+4);
-        m_size.y = *(data32+3);
-    }
-    else
-    {
-        assert( false );
-    }
+    ProcessHeader(m_data, m_type, m_size.x, m_size.y, m_dataOffset);
 }
 
-static void WritePvrHeader( uint32_t* dst, BlockData::Type type, const v2i& size, int levels )
+static void WritePvrHeader( uint32_t* dst, CodecType type, const v2i& size, int levels )
 {
     *dst++ = 0x03525650;  // version
     *dst++ = 0;           // flags
     switch( type )        // pixelformat[0]
     {
-    case BlockData::Etc1:
+    case CodecType::Etc1:
         *dst++ = 6;
         break;
-    case BlockData::Etc2_RGB:
+    case CodecType::Etc2_RGB:
         *dst++ = 22;
         break;
-    case BlockData::Etc2_RGBA:
+    case CodecType::Etc2_RGBA:
         *dst++ = 23;
         break;
-    case BlockData::Etc2_R11:
+    case CodecType::Etc2_R11:
         *dst++ = 25;
         break;
-    case BlockData::Etc2_RG11:
+    case CodecType::Etc2_RG11:
         *dst++ = 26;
         break;
-    case BlockData::Bc1:
+    case CodecType::Bc1:
         *dst++ = 7;
         break;
-    case BlockData::Bc3:
+    case CodecType::Bc3:
         *dst++ = 11;
         break;
-    case BlockData::Bc4:
+    case CodecType::Bc4:
         *dst++ = 12;
         break;
-    case BlockData::Bc5:
+    case CodecType::Bc5:
         *dst++ = 13;
         break;
-    case BlockData::Bc7:
+    case CodecType::Bc7:
         *dst++ = 15;
         break;
     default:
@@ -222,11 +98,11 @@ static void WritePvrHeader( uint32_t* dst, BlockData::Type type, const v2i& size
     *dst++ = 0;           // metadata size
 }
 
-static void WriteDdsHeader( uint32_t* dst, BlockData::Type type, const v2i& size, int levels )
+static void WriteDdsHeader( uint32_t* dst, CodecType type, const v2i& size, int levels )
 {
     const uint32_t flags = levels == 1 ? 0x1007 : 0x21007;
     uint32_t pitch = size.x * size.y / 2;
-    if( type == BlockData::Etc2_RGBA || type == BlockData::Bc3 || type == BlockData::Bc5 || type == BlockData::Bc7 || type == BlockData::Etc2_RG11 ) pitch *= 2;
+    if( type == CodecType::Etc2_RGBA || type == CodecType::Bc3 || type == CodecType::Bc5 || type == CodecType::Bc7 || type == CodecType::Etc2_RG11 ) pitch *= 2;
     const uint32_t caps = levels == 1 ? 0x1000 : 0x401008;
 
     *dst++ = 0x20534444;  // magic
@@ -243,19 +119,19 @@ static void WriteDdsHeader( uint32_t* dst, BlockData::Type type, const v2i& size
     *dst++ = 4;           // flags
     switch( type )
     {
-    case BlockData::Bc1:
+    case CodecType::Bc1:
         memcpy( dst++, "DXT1", 4 );
         break;
-    case BlockData::Bc3:
+    case CodecType::Bc3:
         memcpy( dst++, "DXT5", 4 );
         break;
-    case BlockData::Bc4:
+    case CodecType::Bc4:
         memcpy( dst++, "DX10", 4 );
         break;
-    case BlockData::Bc5:
+    case CodecType::Bc5:
         memcpy( dst++, "DX10", 4 );
         break;
-    case BlockData::Bc7:
+    case CodecType::Bc7:
         memcpy( dst++, "DX10", 4 );
         break;
     default:
@@ -268,17 +144,17 @@ static void WriteDdsHeader( uint32_t* dst, BlockData::Type type, const v2i& size
     memset( dst, 0, 16 );
     dst+= 4;
 
-    if( type == BlockData::Bc1 || type == BlockData::Bc3 ) return;
+    if( type == CodecType::Bc1 || type == CodecType::Bc3 ) return;
 
     switch( type )
     {
-    case BlockData::Bc4:
+    case CodecType::Bc4:
         *dst++ = 80; // DXGI_FORMAT_BC4_UNORM
         break;
-    case BlockData::Bc5:
+    case CodecType::Bc5:
         *dst++ = 83; // DXGI_FORMAT_BC5_UNORM
         break;
-    case BlockData::Bc7:
+    case CodecType::Bc7:
         *dst++ = 98; // DXGI_FORMAT_BC7_UNORM
         break;
     default:
@@ -291,7 +167,7 @@ static void WriteDdsHeader( uint32_t* dst, BlockData::Type type, const v2i& size
     *dst++ = 0; // miscFlags2
 }
 
-static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels, BlockData::Type type, BlockData::Format format )
+static uint8_t* OpenForWriting( const char* fn, size_t len, const v2i& size, FILE** f, int levels, CodecType type, BlockData::Format format )
 {
     *f = fopen( fn, "wb+" );
     assert( *f );
@@ -334,7 +210,7 @@ static int AdjustSizeForMipmaps( const v2i& size, int levels )
     return len;
 }
 
-BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type, Format format )
+BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, CodecType type, Format format )
     : m_size( size )
     , m_dataOffset( 52 )
     , m_maplen( m_size.x*m_size.y/2 )
@@ -374,7 +250,7 @@ BlockData::BlockData( const char* fn, const v2i& size, bool mipmap, Type type, F
     m_data = OpenForWriting( fn, m_maplen, m_size, &m_file, levels, type, format );
 }
 
-BlockData::BlockData( const v2i& size, bool mipmap, Type type )
+BlockData::BlockData( const v2i& size, bool mipmap, CodecType type )
     : m_size( size )
     , m_dataOffset( 52 )
     , m_file( nullptr )
@@ -401,10 +277,8 @@ BlockData::~BlockData()
         munmap( m_data, m_maplen );
         fclose( m_file );
     }
-    else
-    {
-        delete[] m_data;
-    }
+    
+    delete[] m_data;
 }
 
 void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither, bool useHeuristics )
