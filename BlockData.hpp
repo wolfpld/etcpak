@@ -51,15 +51,6 @@ public:
     const v2i& Size() const { return m_size; }
 
 private:
-    etcpak_no_inline BitmapPtr DecodeRGB();
-    etcpak_no_inline BitmapPtr DecodeRGBA();
-    etcpak_no_inline BitmapPtr DecodeR();
-    etcpak_no_inline BitmapPtr DecodeRG();
-    etcpak_no_inline BitmapPtr DecodeBc1();
-    etcpak_no_inline BitmapPtr DecodeBc3();
-    etcpak_no_inline BitmapPtr DecodeBc4();
-    etcpak_no_inline BitmapPtr DecodeBc5();
-    etcpak_no_inline BitmapPtr DecodeBc7();
 
     uint8_t* m_data;
     v2i m_size;

@@ -65,6 +65,7 @@ set(SOURCES
     ColorSpace.cpp
     DataProvider.cpp
     Debug.cpp
+    Decode.cpp
     Dither.cpp
     Error.cpp
     mmap.cpp
