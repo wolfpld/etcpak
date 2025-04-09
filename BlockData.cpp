@@ -390,4 +390,5 @@ BitmapPtr BlockData::Decode()
         assert( false );
         return nullptr;
     }
+    return ret;
 }
