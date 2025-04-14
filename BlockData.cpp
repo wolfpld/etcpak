@@ -277,8 +277,10 @@ BlockData::~BlockData()
         munmap( m_data, m_maplen );
         fclose( m_file );
     }
-    
-    delete[] m_data;
+    else
+    {
+        delete[] m_data;
+    }
 }
 
 void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool dither, bool useHeuristics )
