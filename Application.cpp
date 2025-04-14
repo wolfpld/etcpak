@@ -20,6 +20,7 @@
 #include "System.hpp"
 #include "TaskDispatch.hpp"
 #include "Timing.hpp"
+#include "TextureHeader.hpp"
 
 struct DebugCallback_t : public DebugLog::Callback
 {
@@ -62,7 +63,7 @@ int main( int argc, char** argv )
     bool dither = false;
     bool linearize = true;
     bool useHeuristics = true;
-    auto codec = BlockData::Type::Etc2_RGB;
+    auto codec = CodecType::Etc2_RGB;
     auto header = BlockData::Format::Pvr;
     unsigned int cpus = System::CPUCores();
 
@@ -111,16 +112,16 @@ int main( int argc, char** argv )
             dither = true;
             break;
         case 'c':
-            if( strcmp( optarg, "etc1" ) == 0 ) codec = BlockData::Etc1;
-            else if( strcmp( optarg, "etc2_r" ) == 0 ) codec = BlockData::Etc2_R11;
-            else if( strcmp( optarg, "etc2_rg" ) == 0 ) codec = BlockData::Etc2_RG11;
-            else if( strcmp( optarg, "etc2_rgb" ) == 0 ) codec = BlockData::Etc2_RGB;
-            else if( strcmp( optarg, "etc2_rgba" ) == 0 ) codec = BlockData::Etc2_RGBA;
-            else if( strcmp( optarg, "bc1" ) == 0 ) codec = BlockData::Bc1;
-            else if( strcmp( optarg, "bc3" ) == 0 ) codec = BlockData::Bc3;
-            else if( strcmp( optarg, "bc4" ) == 0 ) codec = BlockData::Bc4;
-            else if( strcmp( optarg, "bc5" ) == 0 ) codec = BlockData::Bc5;
-            else if( strcmp( optarg, "bc7" ) == 0 ) codec = BlockData::Bc7;
+            if( strcmp( optarg, "etc1" ) == 0 ) codec = CodecType::Etc1;
+            else if( strcmp( optarg, "etc2_r" ) == 0 ) codec = CodecType::Etc2_R11;
+            else if( strcmp( optarg, "etc2_rg" ) == 0 ) codec = CodecType::Etc2_RG11;
+            else if( strcmp( optarg, "etc2_rgb" ) == 0 ) codec = CodecType::Etc2_RGB;
+            else if( strcmp( optarg, "etc2_rgba" ) == 0 ) codec = CodecType::Etc2_RGBA;
+            else if( strcmp( optarg, "bc1" ) == 0 ) codec = CodecType::Bc1;
+            else if( strcmp( optarg, "bc3" ) == 0 ) codec = CodecType::Bc3;
+            else if( strcmp( optarg, "bc4" ) == 0 ) codec = CodecType::Bc4;
+            else if( strcmp( optarg, "bc5" ) == 0 ) codec = CodecType::Bc5;
+            else if( strcmp( optarg, "bc7" ) == 0 ) codec = CodecType::Bc7;
             else
             {
                 fprintf( stderr, "Unknown codec: %s\n", optarg );
@@ -171,11 +172,11 @@ int main( int argc, char** argv )
         output = argv[optind+1];
     }
 
-    const bool bgr = !( codec == BlockData::Bc1 || codec == BlockData::Bc3 || codec == BlockData::Bc4 || codec == BlockData::Bc5 || codec == BlockData::Bc7 );
-    const bool rgba = ( codec == BlockData::Etc2_RGBA || codec == BlockData::Bc3 || codec == BlockData::Bc7 );
+    const bool bgr = !( codec == CodecType::Bc1 || codec == CodecType::Bc3 || codec == CodecType::Bc4 || codec == CodecType::Bc5 || codec == CodecType::Bc7 );
+    const bool rgba = ( codec == CodecType::Etc2_RGBA || codec == CodecType::Bc3 || codec == CodecType::Bc7 );
 
     bc7enc_compress_block_params bc7params;
-    if( codec == BlockData::Bc7 )
+    if( codec == CodecType::Bc7 )
     {
         bc7enc_compress_block_init();
         bc7enc_compress_block_params_init( &bc7params );
