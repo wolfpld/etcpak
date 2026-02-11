@@ -722,11 +722,19 @@ static etcpak_force_inline void DecodeRGBAPart( uint64_t d, uint64_t alpha, uint
     }
 }
 
-static etcpak_force_inline void DecodeRPart( uint64_t r, uint32_t* dst, uint32_t w )
+static etcpak_force_inline void DecodeRPart( uint64_t r, uint32_t* dst, uint32_t w, bool isSigned = false )
 {
     r = _bswap64( r );
 
-    const int32_t base = ( r >> 56 )*8+4;
+    const int32_t base_byte = ( r >> 56 );
+    int32_t base;
+    if (isSigned) {
+        int32_t signed_base = (int8_t)base_byte;
+        if (signed_base == -128) signed_base = -127;
+        base = signed_base * 8;
+    } else {
+        base = base_byte * 8 + 4;
+    }
     const int32_t mul = ( r >> 52 ) & 0xF;
     const auto atbl = g_alpha[( r >> 48 ) & 0xF];
 
@@ -735,22 +743,39 @@ static etcpak_force_inline void DecodeRPart( uint64_t r, uint32_t* dst, uint32_t
         for ( int j=0; j<4; j++ )
         {
             const auto amod = atbl[(r >> ( 45 - j*3 - i*12 )) & 0x7];
-            const uint32_t rc = clampu8( ( base + amod * g_alpha11Mul[mul] )/8 );
+            const int32_t val = ( base + amod * g_alpha11Mul[mul] )/8;
+            const uint32_t rc = clampu8( isSigned ? val + 128 : val );
             dst[j*w+i] = rc | 0xFF000000;
         }
     }
 }
 
-static etcpak_force_inline void DecodeRGPart( uint64_t r, uint64_t g, uint32_t* dst, uint32_t w )
+static etcpak_force_inline void DecodeRGPart( uint64_t r, uint64_t g, uint32_t* dst, uint32_t w, bool isSigned = false )
 {
     r = _bswap64( r );
     g = _bswap64( g );
 
-    const int32_t rbase = ( r >> 56 )*8+4;
+    const int32_t rbase_byte = ( r >> 56 );
+    int32_t rbase;
+    if (isSigned) {
+        int32_t signed_rbase = (int8_t)rbase_byte;
+        if (signed_rbase == -128) signed_rbase = -127;
+        rbase = signed_rbase * 8;
+    } else {
+        rbase = rbase_byte * 8 + 4;
+    }
     const int32_t rmul = ( r >> 52 ) & 0xF;
     const auto rtbl = g_alpha[( r >> 48 ) & 0xF];
 
-    const int32_t gbase = ( g >> 56 )*8+4;
+    const int32_t gbase_byte = ( g >> 56 );
+    int32_t gbase;
+    if (isSigned) {
+        int32_t signed_gbase = (int8_t)gbase_byte;
+        if (signed_gbase == -128) signed_gbase = -127;
+        gbase = signed_gbase * 8;
+    } else {
+        gbase = gbase_byte * 8 + 4;
+    }
     const int32_t gmul = ( g >> 52 ) & 0xF;
     const auto gtbl = g_alpha[( g >> 48 ) & 0xF];
 
@@ -759,10 +784,12 @@ static etcpak_force_inline void DecodeRGPart( uint64_t r, uint64_t g, uint32_t* 
         for( int j=0; j<4; j++ )
         {
             const auto rmod = rtbl[(r >> ( 45 - j*3 - i*12 )) & 0x7];
-            const uint32_t rc = clampu8( ( rbase + rmod * g_alpha11Mul[rmul] )/8 );
+            const int32_t rval = ( rbase + rmod * g_alpha11Mul[rmul] )/8;
+            const uint32_t rc = clampu8( isSigned ? rval + 128 : rval );
 
             const auto gmod = gtbl[(g >> ( 45 - j*3 - i*12 )) & 0x7];
-            const uint32_t gc = clampu8( ( gbase + gmod * g_alpha11Mul[gmul] )/8 );
+            const int32_t gval = ( gbase + gmod * g_alpha11Mul[gmul] )/8;
+            const uint32_t gc = clampu8( isSigned ? gval + 128 : gval );
 
             dst[j*w+i] = rc | (gc << 8) | 0xFF000000;
         }
@@ -1225,21 +1252,21 @@ void DecodeRGBA(const uint64_t* src, uint32_t* dst, int32_t width, int32_t heigh
     }
 }
 
-void DecodeR(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height)
+void DecodeR(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height, bool isSigned)
 {
     for( int y=0; y < height/4; y++ )
     {
         for( int x=0; x < width/4; x++ )
         {
             uint64_t r = *src++;
-            DecodeRPart( r, dst, width );
+            DecodeRPart( r, dst, width, isSigned );
             dst += 4;
         }
         dst += width*3;
     }
 }
 
-void DecodeRG(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height)
+void DecodeRG(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height, bool isSigned)
 {
     for( int y=0; y < height/4; y++ )
     {
@@ -1247,7 +1274,7 @@ void DecodeRG(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height)
         {
             uint64_t r = *src++;
             uint64_t g = *src++;
-            DecodeRGPart( r, g, dst, width );
+            DecodeRGPart( r, g, dst, width, isSigned );
             dst += 4;
         }
         dst += width*3;
