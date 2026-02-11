@@ -12,8 +12,8 @@ etcpak_no_inline void DecodeBc5(const uint64_t* src, uint32_t* dst, int32_t widt
 etcpak_no_inline void DecodeBc7(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height);
 etcpak_no_inline void DecodeRGB(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height);
 etcpak_no_inline void DecodeRGBA(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height);
-etcpak_no_inline void DecodeR(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height);
-etcpak_no_inline void DecodeRG(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height);
+etcpak_no_inline void DecodeR(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height, bool isSigned = false);
+etcpak_no_inline void DecodeRG(const uint64_t* src, uint32_t* dst, int32_t width, int32_t height, bool isSigned = false);
 
 #endif
 
